@@ -41,6 +41,18 @@ AMP/
 
 NVIDIA DGX Spark GB10（121GB 统一内存，ARM64）
 
+## ⚠️ 工程手册（必读）
+
+**[docs/ENGINEERING.md](docs/ENGINEERING.md)** — 从旧项目完整迁移的工程知识：
+- 7 条真实踩过的 Bug 及修复（torch.cuda.synchronize、loss.item 多次调用、frozen backbone autograd、bf16→fp32 crash、YAML 类型陷阱、stale checkpoint、CD-SPI 静默空返回）
+- 性能权衡记录（max_length、batch_size 决策）
+- 全参数 FT 内存参考
+- 11 条已知陷阱（Opacus、AttnRes、torch.compile、设备不匹配等）
+- 训练代码强制规范（nohup 启动、tqdm、checkpoint、crash recovery、日志双通道、修改日志）
+- VersaPRM 数据速查
+
+**新 agent 在写任何训练代码之前必须先读 ENGINEERING.md。不要复现已知 Bug。**
+
 ## 旧项目参考
 
 - 路径：`/Users/Apple/project/FCL-PRM-cdspi`

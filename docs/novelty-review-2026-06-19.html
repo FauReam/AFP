@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>AMP 新颖性审查报告 · 2026-06-19</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75; color: #1a1a1a; background: #fafafa; }
+  h1 { font-size: 1.8em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
+  h2 { font-size: 1.3em; margin-top: 40px; color: #1e40af; }
+  h3 { font-size: 1.1em; margin-top: 28px; color: #374151; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.9em; }
+  th { background: #1e3a5f; color: white; padding: 8px 12px; text-align: left; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .verdict-novel { background: #dcfce7; border-left: 4px solid #16a34a; padding: 14px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .verdict-risk { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .verdict-danger { background: #fee2e2; border-left: 4px solid #ef4444; padding: 14px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .flag-novel { color: #16a34a; font-weight: bold; }
+  .flag-risk { color: #f59e0b; font-weight: bold; }
+  .flag-preempt { color: #ef4444; font-weight: bold; }
+  .score { display: inline-block; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; color: white; font-weight: bold; font-size: 0.85em; }
+  .score-novel { background: #16a34a; }
+  .score-partial { background: #f59e0b; }
+  .score-preempt { background: #ef4444; }
+  hr { margin: 36px 0; border: none; border-top: 1px solid #e5e7eb; }
+  .component-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 16px 0; }
+  .comp-item { padding: 10px 14px; border-radius: 6px; font-size: 0.88em; }
+  .comp-novel { background: #dcfce7; border: 1px solid #bbf7d0; }
+  .comp-partial { background: #fef3c7; border: 1px solid #fde68a; }
+  .comp-preempt { background: #fee2e2; border: 1px solid #fecaca; }
+  strong { color: #1e3a5f; }
+  .key-insight { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 8px; margin: 16px 0; font-size: 0.92em; }
+</style></head>
+<body>
+
+<h1>AMP 新颖性审查报告</h1>
+<p><strong>审查日期：</strong>2026-06-19 · <strong>搜索量：</strong>40+ 次跨库搜索 · <strong>筛选论文：</strong>~200 篇</p>
+<p><strong>数据源：</strong>arXiv API, Semantic Scholar, WebSearch</p>
+
+<hr>
+
+<h2>一、核心结论</h2>
+
+<div class="verdict-novel">
+  <strong>✅ AMP 作为完整系统是全新的。</strong>没有一篇论文描述了相同的组件组合。<br>
+  ⚠️ 但多个<strong>组件级别</strong>存在先例——需要精确的差异化定位。
+</div>
+
+<div class="verdict-risk">
+  <strong>风险评级：MEDIUM</strong><br>
+  LOW：精确复制 AMP 的论文不存在<br>
+  MEDIUM：组件级别的 prior art 可能让审稿人认为贡献是"增量"而非"突破"<br>
+  MEDIUM：MOSAIC (2025.06) 是哲学上最相似的工作，需要清楚区分
+</div>
+
+<hr>
+
+<h2>二、最接近的竞争对手（详细分析）</h2>
+
+<h3>🔶 MOSAIC — "Policy Search via Task Similarity in Collaborative Agentic Systems"</h3>
+<p><strong>2025年6月 · 最相似 · 需要严格区分</strong></p>
+
+<table>
+<tr><th>维度</th><th>MOSAIC</th><th>AMP</th></tr>
+<tr><td>领域</td><td>强化学习策略组合</td><td>通用神经网络训练</td></tr>
+<tr><td>交换什么</td><td>稀疏二元掩码（在冻结 backbone 上）</td><td>完整权重 + 子空间分析</td></tr>
+<tr><td>知识表示</td><td>Wasserstein 任务嵌入</td><td>权重空间中的知识子空间</td></tr>
+<tr><td>整合方式</td><td>Mask 的线性组合</td><td>W' = W_A + M⊙(W_B - W_A)（门控权重差分）</td></tr>
+<tr><td>信任</td><td>性能启发式（cosine > 0.5）</td><td>交互历史的函数（信任是学出来的）</td></tr>
+<tr><td>反馈</td><td>无</td><td>双向反馈（形成了对话）</td></tr>
+</table>
+
+<div class="key-insight">
+  <strong>区分策略：</strong>MOSAIC 和 AMP 共享"agent 自主选择学什么"的哲学，但<strong>所有技术机制都不同</strong>。审稿人如果知道 MOSAIC，会期待作者清楚说明差异。建议在论文 Related Work 中明确引用并区分 MOSAIC。
+</div>
+
+<h3>🔶 MAPL — "Model Agnostic Peer-to-peer Learning"</h3>
+<p><strong>2024 · P2P + 异构架构 · 但交换的不是权重</strong></p>
+
+<table>
+<tr><th>维度</th><th>MAPL</th><th>AMP</th></tr>
+<tr><td>交换什么</td><td>分类头权重 + class prototypes</td><td>完整模型权重</td></tr>
+<tr><td>学习机制</td><td>对比学习 prototype 对齐</td><td>权重空间分析 + 门控整合</td></tr>
+<tr><td>选择机制</td><td>Classifier weight cosine similarity</td><td>互动历史的 trust 函数</td></tr>
+<tr><td>反馈</td><td>无</td><td>有（双向对话）</td></tr>
+</table>
+
+<div class="key-insight">
+  <strong>MAPL 证明了 P2P + 异构架构可行</strong>——但它依赖 prototype 交换（需要任务结构匹配），AMP 的权重空间方法更通用。
+</div>
+
+<h3>🔶 DIMAT — "Decentralized Iterative Merging-And-Training" (CVPR 2024)</h3>
+<p><strong>P2P 去中心化合并 · 但没有自主性</strong></p>
+<ul>
+  <li>Agent 定期合并邻居模型（通过 permutation alignment）</li>
+  <li><strong>合并是确定性的、周期性的</strong>——不是 agent 自主决定</li>
+  <li>没有选择性整合（合的是全模型，不是知识子空间）</li>
+  <li>没有 trust 或 feedback</li>
+</ul>
+
+<h3>🔶 ATCL — "Agentic Trust Coordination for Federated Learning" (2026)</h3>
+<p><strong>用了 "Agentic" 这个词 · 但是在服务器端</strong></p>
+<ul>
+  <li>Agentic 用于<strong>服务器</strong>的信任管理——不是客户端的自主决策</li>
+  <li>Trust 用于"选哪些客户端参与聚合"——不是"学什么知识"</li>
+  <li>没有权重空间分析、门控整合、peer feedback</li>
+</ul>
+
+<hr>
+
+<h2>三、组件级先例分析</h2>
+
+<p>AMP 由 7 个核心组件构成。各自的文献状态：</p>
+
+<div class="component-grid">
+  <div class="comp-item comp-preempt">
+    <span class="score score-preempt">P</span> <strong>P2P 权重交换</strong><br>
+    MAPL, DIMAT, gossip learning 等已有
+  </div>
+  <div class="comp-item comp-novel">
+    <span class="score score-novel">N</span> <strong>权重子空间分析</strong><br>
+    Universal Weight Subspace (2025) 提供了理论基础，但未用于 peer learning
+  </div>
+  <div class="comp-item comp-partial">
+    <span class="score score-partial">A</span> <strong>Agent 自主决策</strong><br>
+    MOSAIC (RL 领域) 和 ATCL (服务器端) 有类似概念，但非客户端 + 权重空间
+  </div>
+  <div class="comp-item comp-preempt">
+    <span class="score score-preempt">P</span> <strong>门控公式 M⊙(W_B-W_A)</strong><br>
+    Model merging 文献（TALL-Mask, Ties-Merging）已用——但都在集中式 offline 场景
+  </div>
+  <div class="comp-item comp-partial">
+    <span class="score score-partial">A</span> <strong>Trust/声誉</strong><br>
+    Fed-Credit, Peer-Driven Reputation 已有——但用于"选客户端"，不是"决定学什么"
+  </div>
+  <div class="comp-item comp-novel">
+    <span class="score score-novel">N</span> <strong>双向 Feedback</strong><br>
+    <strong>零先例。</strong>这是 AMP 最干净的差异化点
+  </div>
+  <div class="comp-item comp-novel">
+    <span class="score score-novel">N</span> <strong>学术类比叙事</strong><br>
+    没有人用"学者引用论文"来类比模型权重交换
+  </div>
+</div>
+
+<p style="font-size:0.85em;color:#64748b;margin-top:12px;">
+  <span class="score score-novel">N</span> = Novel（无先例）
+  <span class="score score-partial">A</span> = Adjacent（有类似但不相同）
+  <span class="score score-preempt">P</span> = Pre-empted（已被做过，但 AMP 的用法不同）
+</p>
+
+<hr>
+
+<h2>四、最大的风险点：Model Merging 文献</h2>
+
+<div class="verdict-danger">
+  <strong>⚠️ 门控公式 W' = W_A + M⊙(W_B - W_A) 本身不是新东西。</strong>
+  <p>TALL-Mask、Ties-Merging、OBIM 等 Model Merging 论文已经用了这个公式来合并 fine-tuned 模型。</p>
+  <p><strong>但这不意味着 AMP 被抢占了。</strong></p>
+</div>
+
+<h3>关键差异：</h3>
+
+<table>
+<tr><th></th><th>Model Merging</th><th>AMP</th></tr>
+<tr><td><strong>场景</strong></td><td>集中式，offline，一次性合并</td><td>去中心化，online，实时交互</td></tr>
+<tr><td><strong>数据</strong></td><td>合并者能看到所有模型的训练数据和验证数据</td><td>每个 agent 只能看到自己的私有数据</td></tr>
+<tr><td><strong>M 的来源</strong></td><td>算法自动计算（saliency / sign consensus / magnitude）</td><td><strong>Agent 自主决定</strong>——基于 trust + 私有数据验证</td></tr>
+<tr><td><strong>双向性</strong></td><td>单向合并（A 和 B 合并成 C，A 和 B 不更新）</td><td><strong>双向互学习</strong>（A 从 B 学，B 也从 A 学）</td></tr>
+<tr><td><strong>反馈</strong></td><td>无</td><td>有——告知对方哪些被接受了</td></tr>
+</table>
+
+<div class="key-insight">
+  <strong>论文定位策略：</strong>承认门控公式来自 Model Merging 文献（诚实引用），但强调 AMP 的创新在于 <strong>M 是怎么来的</strong>（agent 自主、trust-driven、基于私有数据验证、双向反馈），而不是公式本身。
+</div>
+
+<hr>
+
+<h2>五、论文叙事建议</h2>
+
+<p>基于这次审查，建议论文把贡献聚焦在以下三个"只有 AMP 做了"的点：</p>
+
+<h3>Contribution 1：Agent 自主知识选择（最强）</h3>
+<p>现行 FL 中，<strong>服务器决定</strong>怎么聚合。AMP 中，<strong>每个 agent 自己决定</strong>学不学、学什么、学多少。<br>
+最接近的 MOSAIC 只做 RL 策略组合，ATCL 只在服务器端做 trust 管理。</p>
+
+<h3>Contribution 2：双向 Feedback 机制（唯一）</h3>
+<p><strong>没有任何现有工作</strong>让模型告知对方"我接受了你的哪些知识"。这个 feedback 通道把单向的"聚合"变成了双向的"对话"。</p>
+
+<h3>Contribution 3：基于私有数据验证的 trust（独特）</h3>
+<p>现有 trust-aware FL 在服务器端用公共指标评估客户端。AMP 的 trust 是<strong>每个 agent 在自己的私有数据上验证对方权重后建立的</strong>——这更符合"联邦"的精神：没有人能看到所有人的数据，所以信任必须是本地构建的。</p>
+
+<h3>叙事框架</h3>
+<div class="key-insight">
+  "现有 FL 聚合是初等运算（加权平均），AMP 将它升级为高等运算（选择性互学习）。<br>
+  就像学术界不把所有论文等权平均——学者选择性引用、基于同行评议建立信任、通过论文反馈进行对话。<br>
+  AMP 把这个知识传播机制形式化为一个数学协议。"
+</div>
+
+<hr>
+
+<h2>六、等第二个 Agent 之后</h2>
+<p>第二个 agent 正在审查<strong>跨模型/异构架构互学习</strong>的文献。它会告诉我们：</p>
+<ul>
+  <li>在异构模型 FL 领域，AMP 的竞争对手是谁</li>
+  <li>现有方法是否防御恶意注入</li>
+  <li>AMP 的"跨架构互学习"是否是一个独特的贡献维度</li>
+</ul>
+
+</body>
+</html>
