@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>AMP Phase 0 实验方案 · 2026-06-19</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75; color: #1a1a1a; background: #fafafa; }
+  h1 { font-size: 1.8em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
+  h2 { font-size: 1.3em; margin-top: 36px; color: #1e40af; }
+  h3 { font-size: 1.1em; margin-top: 24px; color: #374151; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.9em; }
+  th { background: #1e3a5f; color: white; padding: 10px 14px; text-align: left; }
+  td { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .exp-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin: 20px 0; }
+  .exp-a { border-left: 5px solid #2563eb; }
+  .exp-b { border-left: 5px solid #7c3aed; }
+  .exp-c { border-left: 5px solid #dc2626; }
+  .exp-card h2 { margin-top: 0; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.78em; font-weight: bold; color: white; }
+  .badge-blue { background: #2563eb; }
+  .badge-purple { background: #7c3aed; }
+  .badge-red { background: #dc2626; }
+  .key { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 8px; margin: 16px 0; font-size: 0.92em; }
+  .timeline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .timeline-item { padding: 16px; border-radius: 8px; text-align: center; }
+  .timeline-1 { background: #dbeafe; }
+  .timeline-2 { background: #fef3c7; }
+  .timeline-3 { background: #ede9fe; }
+  hr { margin: 40px 0; border: none; border-top: 1px solid #e5e7eb; }
+  strong { color: #1e3a5f; }
+</style></head>
+<body>
+
+<h1>AMP Phase 0 实验方案</h1>
+<p><strong>确定日期：</strong>2026-06-19 · <strong>设备：</strong>DGX Spark GB10 (121GB, ARM64) · <strong>总耗时：</strong>~12-18h</p>
+
+<hr>
+
+<h2>三个实验 · 三个主张</h2>
+
+<div class="exp-card exp-a">
+  <h2><span class="badge badge-blue">Experiment A</span> 同构：AMP vs FedAvg</h2>
+
+  <table>
+    <tr><td><strong>参与方</strong></td><td>Pythia-1.4B (math) ↔ Pythia-1.4B (code)</td></tr>
+    <tr><td><strong>对比</strong></td><td>AMP（24 自由度逐 block 门控）vs FedAvg（1 自由度标量 α）vs 不交换</td></tr>
+    <tr><td><strong>要证明</strong></td><td>24 个自由度的选择性更新 > 1 个自由度的线性平均</td></tr>
+    <tr><td><strong>核心指标</strong></td><td>自域保留（math 不退步）+ 跨域泛化（code 有进步）→ Pareto 前沿</td></tr>
+    <tr><td><strong>耗时</strong></td><td>~4-6h</td></tr>
+    <tr><td><strong>关键可视化</strong></td><td>24-block 门控热力图——math agent 保护哪些 block？code agent 保护哪些？是否不同？</td></tr>
+  </table>
+
+  <div class="key">
+    <strong>门控逻辑：</strong><br>
+    M[j] = clamp(1 − importance[j] / τ, 0, 1)<br>
+    importance[j] = mean(|W[j] − W_init[j]|)<br>
+    → 对 math 重要的 block → M 低 → 保护<br>
+    → 对 math 不重要的 block → M 高 → 开放学 code
+  </div>
+</div>
+
+<div class="exp-card exp-b">
+  <h2><span class="badge badge-purple">Experiment B</span> 异构：AMP 跨架构</h2>
+
+  <table>
+    <tr><td><strong>参与方</strong></td><td>Pythia-1.4B (math, 24 blocks) ↔ Pythia-160M (code, 12 blocks)</td></tr>
+    <tr><td><strong>对比</strong></td><td>AMP vs 不交换（FedAvg <strong>数学上不能运行</strong>——维度不匹配）</td></tr>
+    <tr><td><strong>要证明</strong></td><td>AMP 实现 FedAvg 不可能的事——跨架构权重知识传输</td></tr>
+    <tr><td><strong>映射策略</strong></td><td>2:1 层映射（24→12 group），每 group 的门控 = (1 − A重要性) × trust × B重要性</td></tr>
+    <tr><td><strong>简化版</strong></td><td>如果直接映射复杂：用私有数据做选择性知识蒸馏——A 在自己的数据上识别"B 能做对而 A 做错的样本"，只对低重要性 block 做 fine-tuning</td></tr>
+    <tr><td><strong>耗时</strong></td><td>~8-12h</td></tr>
+  </table>
+
+  <div class="key">
+    <strong>为什么 FedAvg 跑不了：</strong><br>
+    W_A[0].shape = (2048, 2048) · W_B[0].shape = (768, 768)<br>
+    → 逐元素加法不成立 → FedAvg 直接崩溃<br>
+    AMP 不需要逐元素对齐——它按功能 group 操作，用门控而非加法
+  </div>
+</div>
+
+<div class="exp-card exp-c">
+  <h2><span class="badge badge-red">Experiment C</span> 鲁棒：AMP 抗恶意注入</h2>
+
+  <table>
+    <tr><td><strong>参与方</strong></td><td>Pythia-1.4B (math, 诚实) + Pythia-1.4B (code, 恶意——注入噪声)</td></tr>
+    <tr><td><strong>对比</strong></td><td>AMP vs FedAvg，B 发送 W_B + ε·N(0,σ²)，ε ∈ {0.1, 0.3, 0.5, 1.0, 2.0}</td></tr>
+    <tr><td><strong>要证明</strong></td><td>AMP 的门控 + trust 机制在噪声维度上自动关闭 → 退化 ≈ 0；FedAvg 退化随 ε 增加</td></tr>
+    <tr><td><strong>防御机制</strong></td><td>trust(B) = exp(−λ · ||W_B − W_init|| / ||W_A − W_init||) → 异常大的 weight change → trust → 0 → M → 0</td></tr>
+    <tr><td><strong>耗时</strong></td><td>~2-3h（复用 A 的模型）</td></tr>
+  </table>
+</div>
+
+<hr>
+
+<h2>实施顺序</h2>
+
+<div class="timeline">
+  <div class="timeline-item timeline-1">
+    <strong>第 1 步</strong><br>
+    Experiment A<br>
+    <small>4-6h · 验证基本假设</small>
+  </div>
+  <div class="timeline-item timeline-2">
+    <strong>第 2 步</strong><br>
+    Experiment C<br>
+    <small>2-3h · 复用 A 的模型</small>
+  </div>
+  <div class="timeline-item timeline-3">
+    <strong>第 3 步</strong><br>
+    Experiment B<br>
+    <small>8-12h · 核心贡献</small>
+  </div>
+</div>
+
+<p><strong>A → C → B 的逻辑：</strong>先证明 AMP 优于 FedAvg（A），再证明 AMP 抵抗噪声（C），最后证明 AMP 能做 FedAvg 做不了的事（B）。每个实验为下一个提供信心。</p>
+
+<hr>
+
+<h2>评估矩阵</h2>
+
+<table>
+<tr><th>实验</th><th>方法</th><th>自域保留</th><th>跨域泛化</th><th>净收益</th><th>抗噪声</th></tr>
+<tr><td>A</td><td>不交换</td><td>0 (基准)</td><td>0 (基准)</td><td>0</td><td>—</td></tr>
+<tr><td>A</td><td>FedAvg</td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
+<tr><td>A</td><td><strong>AMP</strong></td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
+<tr><td>B</td><td>不交换</td><td>0 (基准)</td><td>0 (基准)</td><td>0</td><td>—</td></tr>
+<tr><td>B</td><td><strong>AMP</strong></td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
+<tr><td>C</td><td>FedAvg + noise</td><td>测 (退化)</td><td>—</td><td>—</td><td>❌</td></tr>
+<tr><td>C</td><td><strong>AMP + noise</strong></td><td>测 (~0)</td><td>—</td><td>—</td><td>✅</td></tr>
+</table>
+
+<hr>
+
+<h2>风险预案</h2>
+
+<table>
+<tr><th>如果...</th><th>则...</th></tr>
+<tr>
+  <td>A 的结果 AMP ≈ FedAvg</td>
+  <td>检查 per-block importance 是否真有差异。如果都差不多 → 说明 Pythia-1.4B backbone 使用模式均匀 → 这解释了旧项目 CKA=1.0 → 转向解释"为什么均匀"</td>
+</tr>
+<tr>
+  <td>A 的结果 AMP < FedAvg</td>
+  <td>门控引入过度正则化。降 τ 或换更重的本地训练（partial-FT 而非 head-only）</td>
+</tr>
+<tr>
+  <td>B 的跨架构映射不 work</td>
+  <td>先用 Simplified Heterogeneous Transfer（私有数据上选择性蒸馏）作为过渡</td>
+</tr>
+<tr>
+  <td>C 的噪声检测失败</td>
+  <td>换 trust 统计量：权重方向一致性、梯度角度、layer-wise 异常检测</td>
+</tr>
+</table>
+
+</body>
+</html>
