@@ -34,7 +34,9 @@ AMP/
 │   └── experiments/       # 实验脚本
 ├── experiments/           # 实验输出
 ├── configs/               # 实验配置
-└── docs/                  # 文档
+└── docs/
+    ├── internal/          # MD 文档（AI agent 用）
+    └── reports/           # HTML 报告（用户用）
 ```
 
 ## 设备
@@ -43,7 +45,7 @@ NVIDIA DGX Spark GB10（121GB 统一内存，ARM64）
 
 ## ⚠️ 工程手册（必读）
 
-**[docs/ENGINEERING.md](docs/ENGINEERING.md)** — 从旧项目完整迁移的工程知识：
+**[docs/internal/ENGINEERING.md](docs/internal/ENGINEERING.md)** — 从旧项目完整迁移的工程知识：
 - 7 条真实踩过的 Bug 及修复（torch.cuda.synchronize、loss.item 多次调用、frozen backbone autograd、bf16→fp32 crash、YAML 类型陷阱、stale checkpoint、CD-SPI 静默空返回）
 - 性能权衡记录（max_length、batch_size 决策）
 - 全参数 FT 内存参考
