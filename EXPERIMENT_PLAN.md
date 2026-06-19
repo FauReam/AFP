@@ -27,7 +27,7 @@ Experiment A:
 
 Experiment B:
   Agent A: Pythia-1.4B pretrained + 随机 PRM 分类头
-  Agent B: Pythia-160M pretrained + 随机 PRM 分类头
+  Agent B: TinyLlama-1.1B pretrained + 随机 PRM 分类头
 
 Experiment C:
   同 Experiment A 的设定，但 Agent B 是恶意方
@@ -179,88 +179,68 @@ AMP 在 Pareto 意义上严格优于 FedAvg:
 ### B.1 参与方
 
 ```
-Agent A: Pythia-1.4B (24 blocks, hidden=2048), 专精 math
-Agent B: Pythia-160M (12 blocks, hidden=768),  专精 code
+Agent A: Pythia-1.4B (24 blocks, GPT-NeoX, GELU, LayerNorm, learned pos)
+Agent B: TinyLlama-1.1B (22 blocks, LLaMA, SwiGLU, RMSNorm, RoPE)
+
+关键: 这不是同一家族的缩放，而是真正不同的架构
+      → 不同的 normalization、不同的 activation、不同的 position encoding
+      → 如果 AMP 能在这里传输知识，它证明了架构无关性
 ```
 
 ### B.2 为什么 FedAvg 不能跑
 
 ```
-FedAvg 要求 W_A 和 W_B 逐元素相加 → 维度不匹配:
-  W_A[0].shape = (2048, 2048)  ← 1.4B 的第 0 层
-  W_B[0].shape = (768, 768)    ← 160M 的第 0 层
-  → W_A[0] + W_B[0] → ❌ 维度不匹配
+维度差异:
+  Pythia 1.4B:  24 layers, hidden=2048, intermediate=8192
+  TinyLlama 1.1B: 22 layers, hidden=2048, intermediate=5632
+
+虽然 hidden dim 碰巧相同，但:
+  - Layer 数量不同 (24 ≠ 22)
+  - 内部权重形状不同 (intermediate 8192 ≠ 5632)
+  - Norm 类型不同 (LayerNorm ≠ RMSNorm)
+  - 参数的语义含义不同
+
+FedAvg 要求 W_A[i] + W_B[i] 语义对齐 → 不同架构下即使形状相同，加法也无意义
+AMP 不要求逐元素对齐 → 通过功能层面的知识映射桥接架构差异
 ```
 
-**AMP 不需要逐元素加法。它按 block 组操作，通过结构映射 + 重要性门控桥接架构差异。**
+### B.3 跨架构知识传输策略
 
-### B.3 跨架构映射策略
-
-#### 层映射（利用同源架构）
+由于是真正不同的架构，不能假设层间对应。Phase 0 采用**功能层面的知识映射**：
 
 ```
-Pythia-1.4B: 24 blocks → 分为 12 组，每组 2 个连续 block
-Pythia-160M: 12 blocks
+Step 1 — B 的权重在 A 的私有数据上"展示能力":
+  A 加载 W_B 到 TinyLlama-1.1B 模型
+  → 在自己的私有数据 D_A (math) 上跑推理
+  → 记录每个样本: A 预测对/错 vs B 预测对/错
+  → 得到 "B 比 A 强的样本集合" S_B_better
 
-映射:
-  B.block[0]  ↔  A.block[0:2]    (group 0)
-  B.block[1]  ↔  A.block[2:4]    (group 1)
-  ...
-  B.block[11] ↔  A.block[22:24]  (group 11)
+Step 2 — 识别 A 的"可塑区域":
+  A 计算 per-block importance（同 Experiment A）
+  → 低 importance 的 block = A 的"可塑区域"
+  → 这些 block 对 math 不那么关键，可以接受外部知识
+
+Step 3 — 对可塑区域做选择性 fine-tuning:
+  对 S_B_better 中的样本:
+    → A 以 B 的预测作为 soft target
+    → 但只在低 importance block 上反向传播
+    → 高 importance block 的梯度被置零（保护核心能力）
+
+Step 4 — 评估 trust:
+  trust(B) = |S_B_better| / |D_A|
+  B 能在多大比例的 A 的私有数据上比 A 做得好？
+  → 高 → B 的知识对 A 有用 → trust 高 → 后续交互中加大学习权重
 ```
 
-#### 门控计算（适配异构）
+### B.4 为什么用功能映射而非直接权重映射
 
 ```
-对 Agent A 的 12 个 block group:
+Phase 0 的核心目标是证明"跨架构知识传输可行且有用"。
+功能映射（用 B 在 A 数据上的表现指导 A 的选择性 fine-tuning）
+是最直接的证明方式——它不依赖任何架构假设。
 
-Step 1 — 计算 group 重要性:
-  importance_A_group[k] = mean(importance_A[2k], importance_A[2k+1])
-
-Step 2 — 获取 B 对应 block 的重要性:
-  B 也计算自己的 per-block 重要性（12 个值）
-  importance_B[k] = 归一化后的 B.block[k] 重要性
-
-Step 3 — 跨架构门控:
-  M_A_group[k] = clamp(1 - importance_A_group[k] / τ_A, 0, 1)
-                × trust(B)
-                × importance_B[k]
-
-  三项乘积:
-    (1 - A 的 group 重要性) → A 这边的"可塑空间"
-    trust(B)               → 对 B 的信任度
-    importance_B[k]         → B 这个 block 的知识"质量"
-
-Step 4 — 应用更新:
-  对 A 的 group k 内的两个 block:
-    W_A'[2k]   = W_A[2k]   + M_A_group[k] · Δ[2k]
-    W_A'[2k+1] = W_A[2k+1] + M_A_group[k] · Δ[2k+1]
-
-  其中 Δ 是 A 本地计算的"向 B 的知识方向靠拢"的更新向量
-  具体: 在 A 的私有数据上，对应该 group 的参数做一步梯度下降，
-        目标是最小化 A 和 B 在这些数据上的预测差异
-```
-
-### B.4 Phase 0 简化版（如果上述太复杂）
-
-```
-如果跨架构映射实现复杂度太高，Phase 0 可以用一个更简单的版本:
-
-Simple Heterogeneous Transfer:
-  A 收到 W_B 后:
-    1. 在自己的私有数据 D_A 上用 W_B 做推理
-       → 得到 B 在 D_A 上每个 sample 的预测
-    2. 识别 B 预测正确而 A 预测错误的样本
-       → 这些是"B 能教会 A 的东西"
-    3. 对那些样本，A 做 fine-tuning
-       → 但只更新 importance_A < τ 的 block（门控保护核心能力）
-    4. A 记录 B 的 help_rate = 被 B 纠正的样本数 / 总样本数
-       → 这个 help_rate 就是 trust 的初始 proxy
-
-  本质: 这是"用私有数据做选择性知识蒸馏"
-        — B 不传数据，A 不传数据
-        — B 只传权重，A 用自己的数据验证 B 的知识
-        — 门控确保 A 只在"非核心"block 上学习
+直接权重映射（学习从 TinyLlama weight space 到 Pythia weight space 的 projection）
+是一个更难的独立研究问题——留给 Phase 1。
 ```
 
 ### B.5 评估
@@ -353,15 +333,15 @@ AMP:
 ```
 本地训练:
   Expt A: 2 × Pythia-1.4B head-only 训练 ≈ 2.5h
-  Expt B: Pythia-1.4B + Pythia-160M 训练 ≈ 2h
+  Expt B: Pythia-1.4B + TinyLlama-1.1B head-only 训练 ≈ 3h
   Expt C: 复用 A 的模型，只做推理
 
 集成评估（每种方法）:
   AMP 集成 ≈ 0.5h
   FedAvg 集成 ≈ 0.3h
-  跨架构 AMP ≈ 1h
+  跨架构功能映射 ≈ 1.5h（需加载两个模型 + 推理 + 选择性 fine-tuning）
 
-总计: 约 12-18 小时（1-2 天，含调试）
+总计: 约 14-20 小时（1-2 天，含调试）
 ```
 
 ---
@@ -372,7 +352,7 @@ AMP:
 |---------|-------|
 | **A 的结果 AMP ≈ FedAvg** | 检查 per-block importance 是否真的有差异。如果所有 block 的 importance 差不多 → 说明对于 Pythia-1.4B + VersaPRM，backbone 使用模式是均匀的 → 这本身是一个发现（解释了为什么旧项目 CKA=1.0）。转向解释"为什么均匀"并测试其他模型/数据组合 |
 | **A 的结果 AMP < FedAvg** | 门控机制引入了过度正则化。降低 τ 让更多 block 开放。如果仍然差 → 说明"选择性"在 head-only 训练下不成立（head 没怎么动 backbone）。需要更重的本地训练（partial-FT 而非 head-only） |
-| **B 的跨架构映射不 work** | 先用 Simplifed Heterogeneous Transfer（私有数据上的选择性蒸馏）作为过渡方案。Phase 1 再深入解决直接权重空间映射 |
+| **B 的跨架构映射不 work** | 检查 B 在 A 数据上是否真的比 A 好——如果 TinyLlama 在 A 的 math 数据上表现不如 Pythia-1.4B，说明两模型间不存在知识差 → 换领域对（math-medical）或增大本地训练量增加专业化差异 |
 | **C 的噪声检测失败** | 如果 trust 函数对噪声不敏感，尝试其他统计量：权重方向一致性、梯度角度、layer-wise 的异常检测 |
 
 ---
