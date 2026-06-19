@@ -36,7 +36,7 @@ LOSS_FN = nn.BCEWithLogitsLoss()
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT / "src"))
 
-from afp.protocol import guess_hidden
+from AFP.protocol import guess_hidden
 
 OUT_DIR = PROJECT / "experiments" / "phase0_fivn"
 OUT_DIR.mkdir(parents=True, exist_ok=True)

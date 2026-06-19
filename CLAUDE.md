@@ -30,7 +30,7 @@ AFP/
 ├── scripts/
 │   ├── run_experiment_a.py      # 实验 A：训练 + AFP vs FedAvg vs 不交换
 │   └── generate_reports.py      # MD → HTML 报告生成
-├── src/afp/
+├── src/AFP/
 │   ├── protocol/                # AFP 交互协议核心
 │   ├── models/
 │   ├── data/

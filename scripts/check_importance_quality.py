@@ -21,7 +21,7 @@ import torch.nn as nn
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT / "src"))
 
-from afp.protocol import block_importance, guess_hidden
+from AFP.protocol import block_importance, guess_hidden
 # ponytail: import helpers from the IVN script via exec (scripts aren't packages)
 import importlib.util as _iu
 _ivn_path = PROJECT / "scripts" / "run_ivn_phase0.py"

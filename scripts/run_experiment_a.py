@@ -34,7 +34,7 @@ LOSS_FN = nn.BCEWithLogitsLoss()  # module-level, not re-created per evaluate()
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT / "src"))
 
-from afp.protocol import AFPAgent, block_importance, importance_cosine
+from AFP.protocol import AFPAgent, block_importance, importance_cosine
 
 DATA_DIR = PROJECT / "data" / "versaprm"
 OUT_DIR = PROJECT / "experiments" / "phase0_diagnostic"

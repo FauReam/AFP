@@ -85,7 +85,7 @@ Phase 0 只有 2 个 agent，不涉及：
 ## 三、工程问题
 
 ### 3.1 代码重复和设计不一致
-- `AFPAgent`（src/afp/protocol/agent.py）和 `FAgent`（run_fivn_phase0.py）是两个独立实现的类
+- `AFPAgent`（src/AFP/protocol/agent.py）和 `FAgent`（run_fivn_phase0.py）是两个独立实现的类
 - 共享大量逻辑但互不兼容
 - tokenizer 创建方式不统一
 - 无统一的 ModelRegistry 或 AgentFactory

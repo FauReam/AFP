@@ -35,7 +35,7 @@ LOSS_FN = nn.BCEWithLogitsLoss()
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT / "src"))
 
-from afp.protocol import (AFPAgent, block_importance, gate_linear, gate_rational,
+from AFP.protocol import (AFPAgent, block_importance, gate_linear, gate_rational,
                              guess_hidden, importance_cosine, mas_importance)
 
 OUT_DIR = PROJECT / "experiments" / "phase0_ivn"
