@@ -1,8 +1,12 @@
 """AFP integration operators — Phase 0.
 
 FedAvg:  W' = (1-α)W + α·W_other
-AFP:     W' = W + M⊙(W_other - W), M[j] = trust · clamp(1 - imp[j]/τ, 0, 1)
+AFP:     W' = W + M⊙(W_other - W), M[j] = gate(imp[j], τ)
+
+Gate functions: gate_rational (EWC-derived, default), gate_linear (ablation).
 """
+
+from .trust import gate_rational, gate_linear, _block_index
 
 N_BLOCKS = 24
 
@@ -14,25 +18,26 @@ def fedavg(w_self: dict, w_other: dict, alpha: float) -> dict:
 
 
 def afp_integrate(w_self: dict, w_other: dict, importance: list[float],
-                  trust: float = 1.0, tau: float = 0.5) -> dict:
+                  trust: float = 1.0, tau: float = 0.5,
+                  gate: str = "rational") -> dict:
     """Selective per-block update: W'[j] = W[j] + M[j]·(W_other[j] - W[j]).
 
-    M[j] = trust · clamp(1 - importance[j]/τ, 0, 1)
+    M[j] = trust · gate(imp[j], τ).
+    Gate functions (see trust.py):
+      "rational" — EWC-derived: τ/(τ+Ω). Smooth, principled (default).
+      "linear"   — Legacy: clamp(1-Ω/τ, 0, 1). Kept for ablation.
+
     High importance → low M → protected. Low importance → high M → open.
     """
+    gate_fn = gate_rational if gate == "rational" else gate_linear
+    gates = [trust * g for g in gate_fn(importance, tau)]
+
     result = {}
     for k in w_self:
-        if "layers." not in k or k not in w_other:
+        blk = _block_index(k)
+        if blk is None or k not in w_other:
             result[k] = w_self[k].clone()
             continue
-        try:
-            idx = int(k.split("layers.")[1].split(".")[0])
-        except (ValueError, IndexError):
-            result[k] = w_self[k].clone()
-            continue
-        if 0 <= idx < N_BLOCKS:
-            m = trust * max(0.0, min(1.0, 1.0 - importance[idx] / max(tau, 1e-8)))
-            result[k] = w_self[k] + m * (w_other[k] - w_self[k])
-        else:
-            result[k] = w_self[k].clone()
+        m = gates[blk]
+        result[k] = w_self[k] + m * (w_other[k] - w_self[k])
     return result

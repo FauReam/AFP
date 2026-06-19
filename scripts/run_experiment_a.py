@@ -21,6 +21,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import AutoTokenizer
 
@@ -179,7 +180,9 @@ def evaluate(agent: AFPAgent, domain: str, batch: int = 256):
             h = agent.backbone(input_ids=inp[i:end],
                                attention_mask=mask[i:end]).last_hidden_state
         logits = agent.head(h)
-        total_loss += LOSS_FN(logits, labs[i:end]).item() * (end - i)
+        # ponytail: reduction='sum' avoids batch-size-dependent mean scaling
+        total_loss += F.binary_cross_entropy_with_logits(
+            logits, labs[i:end], reduction='sum').item()
         preds = (torch.sigmoid(logits) >= 0.5).float()
         correct += (preds == labs[i:end]).sum().item()
         total += end - i

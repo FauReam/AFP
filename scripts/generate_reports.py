@@ -52,11 +52,8 @@ CSS = """<style>
 
 # Map md filenames to report titles
 REPORT_TITLES = {
-    "VISION": "AFP — 核心愿景与协议形式化",
-    "DIRECTION": "AFP — 研究方向与文献地图",
-    "EXPERIMENT_PLAN": "AFP Phase 0 — 实验方案 (v2)",
-    "ENGINEERING": "AFP — 工程手册",
-    "contribution-assessment": "AFP — 投稿级别评估",
+    "VISION": "AFP+IVN — 核心愿景",
+    "EXPERIMENT_PLAN": "AFP+IVN — Phase 0 实验方案",
 }
 
 
@@ -106,7 +103,7 @@ def convert_md_to_html(md_path: Path, title: str) -> str:
 {body_html}
 <hr>
 <footer style="color:#94a3b8;font-size:0.85em;text-align:center;padding:20px 0;">
-  AFP Project · Generated {TODAY} · Phase 0 v2
+  AFP+IVN Project · Generated {TODAY}
 </footer>
 </body>
 </html>"""
@@ -117,12 +114,10 @@ def main() -> int:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Files to convert
+    # ponytail: user-facing only. Internal/lit/engineering stay MD.
     targets = [
         "VISION.md",
-        "DIRECTION.md",
         "EXPERIMENT_PLAN.md",
-        "ENGINEERING.md",
-        "contribution-assessment.md",
     ]
 
     generated = []

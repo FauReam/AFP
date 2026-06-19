@@ -10,3 +10,5 @@ experiments/
 wandb/
 .DS_Store
 .env
+papers/
+data/

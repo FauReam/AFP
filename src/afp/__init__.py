@@ -1,10 +1,10 @@
 """
-AFP (Agentic Federated Protocol) — 去中心化的 P2P 互学习协议。
+AFP (Agentic Federated Protocol) + IVN (Iterative Virtual-Negotiation).
 
-核心组件：
-- protocol/: AFP 交互协议（agent, trust, integrator）
-- models/: 模型定义（Phase 1+）
-- data/: 数据处理（Phase 1+）
+Phase 0: Same-architecture weight-space negotiation (IVN) + cross-architecture function-space (F-IVN).
+
+Core: protocol/agent.py, protocol/integrator.py, protocol/trust.py
+Scripts: run_ivn_phase0.py, run_fivn_phase0.py
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

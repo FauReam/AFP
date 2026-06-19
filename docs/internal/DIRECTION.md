@@ -68,6 +68,26 @@
 | Task Arithmetic | 权重空间中做加/减法来组合任务能力 | AFP 的子空间操作可借鉴 |
 | Git Re-Basin | 通过 permutation symmetry 对齐权重空间 | AFP 的知识提取器可借鉴 |
 
+**多目标梯度下降 / MGDA（IVN 的数学基础 — 2026-06-19 新增）**
+
+| 论文 | 做了什么 | 与 AFP 的关系 |
+|------|---------|:---:|
+| **Désidéri (2012)** MGDA | 多目标最速下降：求 convex hull 中 min-norm 方向。证明收敛到 Pareto 平稳点 | IVN 是 MGDA 的轻量变体：importance gate 替代每轮 QP 求解 |
+| **Sener & Koltun (NeurIPS 2018)** MGDA-UB | MGDA 用于深度多任务学习。Frank-Wolfe 求解器 + 上界近似 | Per-block gate 是 Frank-Wolfe optimization 的替代 |
+| **Lian et al. (NeurIPS 2017)** D-PSGD | 去中心化 SGD 的首个收敛分析：通信 O(Deg) vs 中心化 O(n) | M=1 时 IVN 退化为此（2 节点情形），收敛性已证明 |
+| **Lee et al. (COLT 2016)** GD → Minimizers | 随机初始化 + GD 几乎必然避开严格鞍点，收敛到局部极小 | 保证 V 谈判不会卡在鞍点 |
+
+**参数重要性估计（AFP gate 的度量基础 — 2026-06-19 新增）**
+
+| 论文 | 做了什么 | 与 AFP 的关系 |
+|------|---------|:---:|
+| **EWC** (Kirkpatrick, PNAS 2017) | Fisher 对角 = 参数重要性。贝叶斯推导 | 比 magnitude 更 principled，需标签 |
+| **MAS** (Aljundi, ECCV 2018) | 输出敏感度 = 参数重要性。无标签 | **Phase 0 v5 默认**：直接度量功能重要性 |
+| **SI** (Zenke, ICML 2017) | 路径积分 = 参数重要性。训练中在线 | 需训练轨迹，Phase 1 可用 |
+| **TIES-Merging** (Yadav, NeurIPS 2023) | `\|τ\|` magnitude 做 trim-elect-sign | AFP magnitude 方法对标 TIES 的硬门控 |
+| **SNIP** (Lee, ICLR 2019) / **GraSP** (Wang, ICLR 2020) | 初始化时剪枝重要性 | ❌ 不适用（at-init，非训练后） |
+| **Frankle et al.** (ICLR 2021) | 证明 SNIP/GraSP per-weight 重要性是假的 | 教训：初始化重要性不可靠，后训练才可靠 |
+
 **数据无关知识蒸馏**
 
 | 论文 | 做了什么 | 与 AFP 的关系 |
@@ -111,7 +131,10 @@ AFP 需要的数学工具：
 - **子空间分析**：如何从权重中提取"有效知识子空间"？
 - **信任的统计理论**：trust 作为交互历史的函数，其统计性质？
 - **P2P 互学习的收敛性**：当每个 agent 的更新规则不同、学习率不同、选择对象不同时，系统收敛吗？
+  - ✅ **IVN 2-agent 收敛性已可证明**：直接应用 descent lemma (Nesterov) 到组合目标 Φ(V)。退化情形 (M=1) 收敛性来自 D-PSGD (Lian et al. 2017)。
+  - ❌ **N-agent 收敛性未解决**：需要去中心化 Gossip + 异构更新规则的联合分析。
 - **信息论视角**：权重作为通信媒介，信息传输率是多少？瓶颈在哪？
+- **MGDA 对比**：IVN 作为 MGDA 的轻量变体，在什么条件下二者的 Pareto-front 质量可比较？
 
 ---
 

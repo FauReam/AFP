@@ -162,13 +162,140 @@ AFP:       Agent A 在交互中自己评估 trust
 
 ---
 
-## 五、研究路线图
+## 五、IVN：Multiple-Gradient Descent with Mutual Gating
 
-### Phase 0：最简原型（证明可行性）
-- 2 个 agent，各自有私有数据（不同领域）
-- 固定 trust（预设双方可信）
-- 对比：AFP 选择性子空间更新 vs FedAvg 线性平均
-- **核心指标**：AFP 是否在各自私有数据上的表现优于 FedAvg？
+AFP one-shot 的核心局限：`W_A' = W_A + M_A ⊙ (W_B - W_A)` 只做了一次通信。双方没有来回，没有"谈判"。
+
+**IVN (Iterative Virtual-Negotiation Protocol)** 引入一个虚拟权重 V，A 和 B 在 V 上多轮梯度谈判，直到 V 收敛：
+
+```
+V_0 = W_init (中性起点)
+
+每轮 t:
+  d_A = -η · ∇L_A(V_t)           ← A 的提案："我想往这走"
+  d_B = -η · ∇L_B(V_t)           ← B 的提案："我想往这走"
+  V_{t+1} = V_t + M_A⊙d_B + M_B⊙d_A   ← 双方审核后更新 V
+  即: V_{t+1} = V_t - η·(M_A⊙∇L_B + M_B⊙∇L_A)
+
+收敛后:
+  W_A' = W_A + M_A ⊙ (V_T - W_init)   ← A 从谈判轨迹中学习
+  W_B' = W_B + M_B ⊙ (V_T - W_init)   ← B 从谈判轨迹中学习
+```
+
+### 数学本质：多梯度下降
+
+IVN 不是神秘的不动点迭代——它是 **multiple-gradient descent** on the combined objective：
+
+> **Φ(V) = Σⱼ mbⱼ · L_A(V) + Σⱼ maⱼ · L_B(V)**
+
+每个参数块的更新方向是两个梯度的门控加权组合。收敛点满足：
+
+> **M_A ⊙ ∇L_B(V^\*) + M_B ⊙ ∇L_A(V^\*) = 0**
+
+即 **Pareto stationarity**：两个 agent 在 V^\* 处都不再有改善空间。
+
+### 理论支撑
+
+| 理论基础 | 来源 | 与 IVN 的关系 |
+|---------|------|:---:|
+| **Descent lemma** | Nesterov (2004) | Φ L-smooth + η ≤ 1/L → 单调收敛到平稳点 |
+| **MGDA** | Désidéri (2012) | IVN 是 MGDA 的轻量变体：importance gate 替代每轮 QP 求解 |
+| **MGDA-UB** | Sener & Koltun (NeurIPS 2018) | MGDA 用于深度网络的推广；IVN 的 per-block gate 是 Frank-Wolfe 的替代 |
+| **GD → minimizers** | Lee et al. (COLT 2016) | 随机初始化 + GD 几乎必然避开严格鞍点 |
+| **D-PSGD** | Lian et al. (NeurIPS 2017) | M=1 时 IVN 退化为此（2节点去中心化 SGD），收敛性已被证明 |
+
+详见 [REFERENCES.md](REFERENCES.md)。
+
+**两种变体的对比：**
+
+| | FedAvg | AFP one-shot | **IVN** |
+|---|---|---|---|
+| **操作** | W' = avg(W_A, W_B) | W' = W + M⊙(W_other-W) | **V_{t+1} = V_t - η(M_A⊙∇L_B + M_B⊙∇L_A)** |
+| **数学结构** | 凸组合 | elementwise gated linear update | **multiple-gradient descent** |
+| **交互轮次** | 1 | 1 | **多轮直到收敛** |
+| **提案内容** | 整个W | 整个W | **梯度方向（比原始权重更少信息泄漏）** |
+
+### 门控掩码 M 的理论基础：参数重要性
+
+M 的语义是"这个 block 对我有多重要"——越重要 → 门越低 → 越保护。M 的定义直接决定 AFP 的效用。Phase 0 v5 提供两种度量：
+
+#### 1. Magnitude-based（TIES-Merging 风格，消融用）
+
+```
+imp[j] ∝ mean(|W_trained[j] - W_init[j]|)
+```
+
+- **优点**：零数据依赖，零计算开销，与 TIES-Merging (Yadav, NeurIPS 2023) 对标
+- **缺陷**：度量"训练改动了多少"，不等价于"对模型行为有多重要"
+
+#### 2. MAS-based（Memory Aware Synapses — Phase 0 v5 默认）
+
+```
+Ω[j] ∝ E_x[ mean_{p∈block_j} |∂[F(x)²]/∂θ_p| ]
+```
+
+- **来源**：Aljundi et al. (ECCV 2018)
+- **优点**：直接度量功能敏感性，无需标签，一次前向+反向即可
+- **解决反例**：embedding 层变化小但输出高度敏感 → MAS 给高重要性 → 正确保护
+
+#### 3. 门控函数（独立于 importance 度量）
+
+```
+Gate "rational" (EWC 推导, 默认):
+  M[j] = τ / (τ + imp[j])
+
+Gate "linear" (消融):
+  M[j] = clamp(1 - imp[j]/τ, 0, 1)
+```
+
+- **rational 推导**：EWC Lagrangian dual (Kirkpatrick et al., PNAS 2017) → B 的梯度被 `1/(1+λ·F)` 放缩。令 τ=1/λ, Ω=F → `M=τ/(τ+Ω)`。处处光滑，无硬截断。
+- **linear**：`--gate=linear` 消融对比。
+
+#### 为什么剪枝文献（SNIP/GraSP/SynFlow）不可用
+
+Frankle et al. (ICLR 2021) 证明：这些 at-initialization 方法的 per-weight 重要性是假的——层内打乱掩码不影响性能。它们只捕获 per-layer 比率。AFP 工作在**训练后**，需要后训练重要性（EWC/MAS/SI 家族）。
+
+详见 [REFERENCES.md](REFERENCES.md)。
+
+---
+
+## 六、F-IVN：跨架构的函数空间谈判
+
+重量空间 IVN 的前提是同架构。当 A 是 Pythia(24层)、B 是 TinyLlama(22层) 时，`W_A + W_B` 无定义。
+
+**F-IVN 把谈判从参数空间搬到预测空间：**
+
+```
+V ∈ [0,1]^{N}     — 虚拟预测（不是虚拟权重）
+d_A = -η·(V - P_A) — 提案 = "V 应该向我靠拢"
+M_A[i] = 1 - |P_A[i]-0.5|/τ — 门控 = "我确定的样本我坚持"
+
+V_{t+1} = V_t + M_A ⊙ d_B + M_B ⊙ d_A
+```
+
+V 是 N 维向量，与架构无关。Pythia 和 TinyLlama 各自用自己的方式预测、用自己的方式逼近 V_T（通过 KL 蒸馏）。
+
+| | 重量空间 IVN | **F-IVN** |
+|---|---|---|
+| **谈判空间** | 参数空间 | **预测空间** |
+| **V 维度** | 1.4B | **500** |
+| **架构要求** | 必须相同 | **任意** |
+
+---
+
+## 七、研究路线图
+
+### Phase 0：同构 IVN（重量空间）
+- Pythia-1.4B full-FT on code+medical
+- 对比：IVN vs AFP one-shot vs FedAvg
+- 入口：`python scripts/run_ivn_phase0.py --train`
+
+### Phase 1：异构 F-IVN（函数空间）
+- Pythia-1.4B vs TinyLlama-1.1B
+- 谈判在预测空间，蒸馏回到各自参数空间
+- 入口：`python scripts/run_fivn_phase0.py`
+
+### Phase 2：trust 学习 + 恶意防御
 
 ### Phase 1：trust 的学习
 - trust 不再是固定的，而是交互历史的函数

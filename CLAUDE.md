@@ -9,15 +9,16 @@
 核心文档（均在 `docs/internal/`）：
 - [VISION.md](docs/internal/VISION.md) — 协议形式化定义
 - [DIRECTION.md](docs/internal/DIRECTION.md) — 文献地图与研究空白
-- [EXPERIMENT_PLAN.md](docs/internal/EXPERIMENT_PLAN.md) — Phase 0 实验方案（v2）
+- [REFERENCES.md](docs/internal/REFERENCES.md) — 引用文献（MGDA, D-PSGD, GD收敛）
+- [EXPERIMENT_PLAN.md](docs/internal/EXPERIMENT_PLAN.md) — Phase 0 实验方案（v4）
 - [ENGINEERING.md](docs/internal/ENGINEERING.md) — 工程手册（必读）
 - [contribution-assessment.md](docs/internal/contribution-assessment.md) — 投稿级别评估
+- [REVIEW_ISSUES.md](docs/internal/REVIEW_ISSUES.md) — 审稿问题清单
 
 用户 HTML 报告（均在 `docs/reports/`）：
-- [vision.html](docs/reports/vision.html)
-- [novelty-review-2026-06-19.html](docs/reports/novelty-review-2026-06-19.html)
-- [heterogeneous-fl-review-2026-06-19.html](docs/reports/heterogeneous-fl-review-2026-06-19.html)
-- [phase0-summary-2026-06-19.html](docs/reports/phase0-summary-2026-06-19.html)
+- [vision.html](docs/reports/vision.html) — 核心愿景
+- [EXPERIMENT_PLAN.html](docs/reports/EXPERIMENT_PLAN.html) — Phase 0 实验方案
+- [phase0-summary-*.html](docs/reports/phase0-summary-2026-06-19.html) — 当前状态
 
 ## 项目结构
 
@@ -70,15 +71,21 @@ full-FT 让 backbone 产生真正的 per-block 专业化差异。
 
 code 和 medical 激活的 backbone 区间重叠更小 → importance 模式更正交 → 对 AFP 是更干净的测试。
 
-## Phase 0 关键路径（两步）
+## 实验入口
 
-**Step 1 — 诊断（~5-6h）：**
-1. `python scripts/run_experiment_a.py --skip-train` — 如果已训练，直接跑对比
-2. `python scripts/run_experiment_a.py` — 完整流程（训练 + 对比）
+```bash
+# 默认: Qwen2.5-Coder ⇄ Qwen2.5-Math (同架构，不训练)
+python scripts/run_ivn_phase0.py
 
-**Step 2 — 如果诊断有信号 → 推进实验 B/C：**
-- 实验 B：跨架构（Pythia vs TinyLlama）
-- 实验 C：鲁棒性（恶意注入）
+# 异构 F-IVN (函数空间)
+python scripts/run_fivn_phase0.py
+```
+
+## Phase 0 关键路径
+
+1. `python scripts/run_ivn_phase0.py` — IVN vs AFP vs FedAvg (~40min)
+2. 确认 importance cosine < 0.8
+3. IVN net > AFP net → 多轮谈判优于单次更新
 
 ## 工程手册
 

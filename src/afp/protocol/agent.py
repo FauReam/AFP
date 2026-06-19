@@ -1,6 +1,6 @@
 """AFP Agent — Phase 0.
 
-Wraps a Pythia-1.4B backbone + PRM head. Handles:
+Wraps any HuggingFace AutoModel + PRM head. Handles:
 - Loading/saving weights
 - Computing per-block importance
 - Integration (AFP / FedAvg)
@@ -17,18 +17,16 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel
 
-from .trust import block_importance
+from .trust import block_importance, mas_importance
 from .integrator import afp_integrate, fedavg
-
-HIDDEN = 2048
 
 
 class PRMHead(nn.Module):
-    """2048 → 256 → 1, ReLU. Handles bf16→fp32 internally."""
-    def __init__(self):
+    """hidden → 256 → 1, ReLU. Handles bf16→fp32 internally."""
+    def __init__(self, hidden: int = 2048):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(HIDDEN, 256), nn.ReLU(), nn.Linear(256, 1))
+            nn.Linear(hidden, 256), nn.ReLU(), nn.Linear(256, 1))
 
     def forward(self, h):
         # ponytail: .float() fixes Bug 4 (bf16→fp32 dtype mismatch)
@@ -38,12 +36,15 @@ class PRMHead(nn.Module):
 class AFPAgent:
     """One AFP agent: backbone + PRM head + importance profile."""
 
-    def __init__(self, domain: str, device: str = "cuda"):
+    def __init__(self, domain: str, device: str = "cuda",
+                 model_id: str = "EleutherAI/pythia-1.4b", hidden: int = 2048):
         self.domain = domain
         self.device = device
+        self.model_id = model_id
+        self.hidden = hidden
         self.backbone = AutoModel.from_pretrained(
-            "EleutherAI/pythia-1.4b").to(dtype=torch.bfloat16)
-        self.head = PRMHead()
+            model_id, trust_remote_code=True).to(dtype=torch.bfloat16)
+        self.head = PRMHead(hidden)
         self._importance: list[float] | None = None
 
     # ---- Weights I/O ----
@@ -68,9 +69,6 @@ class AFPAgent:
         """Returns GPU-resident state dict. No CPU copy — used in grid search loop."""
         return {k: v.detach() for k, v in self.backbone.state_dict().items()}
 
-    def head_state(self) -> dict[str, torch.Tensor]:
-        return {k: v.detach() for k, v in self.head.state_dict().items()}
-
     def load_backbone_state(self, state: dict):
         self.backbone.load_state_dict(state)
 
@@ -86,12 +84,36 @@ class AFPAgent:
     # ---- Importance ----
 
     def compute_importance(self, init: dict) -> list[float]:
-        """Compute per-block importance. Runs on GPU, no copies."""
+        """Magnitude-based per-block importance (TIES-Merging style).
+
+        Simple, fast, no data needed. Good default baseline.
+        Prefer compute_mas_importance() for principled functional measure.
+        """
         trained = {k: v.detach() for k, v in self.backbone.state_dict().items()}
-        # Move init to same device as trained for on-device computation
         device = next(iter(trained.values())).device
         init_on_device = {k: v.to(device) for k, v in init.items() if k in trained}
         self._importance = block_importance(trained, init_on_device)
+        return self._importance
+
+    def compute_mas_importance(self, input_ids: torch.Tensor,
+                               attention_mask: torch.Tensor,
+                               n_samples: int = 500,
+                               batch_size: int = 16) -> list[float]:
+        """MAS-based per-block importance (Aljundi et al., ECCV 2018).
+
+        Principled: measures functional sensitivity — how much does perturbing
+        block j change the model's output? Uses agent's private data (no labels).
+
+        Args:
+            input_ids, attention_mask: agent's private data tensors.
+            n_samples: number of samples for expectation estimate.
+            batch_size: samples per backward pass.
+        """
+        device = next(self.backbone.parameters()).device
+        self._importance = mas_importance(
+            self.backbone, self.head,
+            input_ids, attention_mask,
+            n_samples=n_samples, batch_size=batch_size, device=device)
         return self._importance
 
     @property
@@ -101,14 +123,15 @@ class AFPAgent:
     # ---- Integration ----
 
     def integrate_afp(self, peer_state: dict, init: dict,
-                      tau: float = 0.5) -> dict:
-        """AFP selective update. Phase 0: trust=1.0 (both agents honest)."""
+                      tau: float = 0.5, gate: str = "rational") -> dict:
+        """AFP selective update. Phase 0: trust=1.0 (both agents honest).
+
+        gate: "rational" (EWC-derived, default) or "linear" (ablation).
+        """
         if self._importance is None:
             self.compute_importance(init)
-        # ponytail: trust=1.0 in Phase 0, skip compute_trust() scan.
-        # compute_trust() used in Experiment C (robustness).
         return afp_integrate(self.backbone_state(), peer_state,
-                             self._importance, trust=1.0, tau=tau)
+                             self._importance, trust=1.0, tau=tau, gate=gate)
 
     def integrate_fedavg(self, peer_state: dict, alpha: float) -> dict:
         return fedavg(self.backbone_state(), peer_state, alpha)
