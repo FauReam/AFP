@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+experiments/
+*.pt
+*.bin
+*.safetensors
+wandb/
+.DS_Store
+.env
