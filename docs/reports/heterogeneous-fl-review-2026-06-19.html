@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><title>AMP 跨模型异构互学习 · 竞争格局审查 · 2026-06-19</title>
+<head><meta charset="UTF-8"><title>AFP 跨模型异构互学习 · 竞争格局审查 · 2026-06-19</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75; color: #1a1a1a; background: #fafafa; }
   h1 { font-size: 1.8em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
@@ -30,7 +30,7 @@
 </style></head>
 <body>
 
-<h1>AMP 跨模型异构互学习 · 竞争格局审查</h1>
+<h1>AFP 跨模型异构互学习 · 竞争格局审查</h1>
 <p><strong>审查日期：</strong>2026-06-19 · <strong>搜索量：</strong>25 组关键词 × 2 数据库 · <strong>筛选论文：</strong>~150 篇</p>
 
 <hr>
@@ -49,7 +49,7 @@
       <li>一次性的模型合并，不是持续交互协议</li>
       <li>Workshop 论文，不是主会</li>
     </ul>
-    <p><strong>AMP 的可超越点：</strong>在实用架构（Transformer）上做跨模型权重传输，且作为协议而非一次性操作。</p>
+    <p><strong>AFP 的可超越点：</strong>在实用架构（Transformer）上做跨模型权重传输，且作为协议而非一次性操作。</p>
   </div>
 
   <div class="card card-green">
@@ -62,7 +62,7 @@
       <li>零论文讨论异构 FL 中无公共数据的 Byzantine 鲁棒性</li>
       <li>零论文讨论 P2P 模型交换中的投毒检测</li>
     </ul>
-    <p><strong>这是 AMP 最强的差异化贡献。没有竞争对手。</strong></p>
+    <p><strong>这是 AFP 最强的差异化贡献。没有竞争对手。</strong></p>
   </div>
 </div>
 
@@ -73,7 +73,7 @@
 <h3>最直接的竞争者（需要严格区分）</h3>
 
 <table>
-<tr><th>方法</th><th>年份/会议</th><th>交换什么</th><th>架构要求</th><th>需要公共数据？</th><th>防恶意注入？</th><th>AMP 的差异</th></tr>
+<tr><th>方法</th><th>年份/会议</th><th>交换什么</th><th>架构要求</th><th>需要公共数据？</th><th>防恶意注入？</th><th>AFP 的差异</th></tr>
 <tr>
   <td><strong>MAL</strong></td>
   <td>2025 · ICLR Workshop</td>
@@ -99,7 +99,7 @@
   <td><strong>同架构</strong></td>
   <td>可选</td>
   <td>❌</td>
-  <td>同架构→跨架构；AMP 可以复用其理论工具</td>
+  <td>同架构→跨架构；AFP 可以复用其理论工具</td>
 </tr>
 <tr>
   <td><strong>FedProto</strong></td>
@@ -145,11 +145,11 @@
 
 <hr>
 
-<h2>三、AMP 的竞争定位</h2>
+<h2>三、AFP 的竞争定位</h2>
 
 <div class="victory">
-  <strong>AMP 在两个靶心上同时占据优势地位：</strong><br><br>
-  <strong>靶心 1（效率）：</strong>AMP 是第一个在实用架构上做跨模型权重传输的 P2P 协议。MAL 部分抢占但限于 MLP toy 实验。<br><br>
+  <strong>AFP 在两个靶心上同时占据优势地位：</strong><br><br>
+  <strong>靶心 1（效率）：</strong>AFP 是第一个在实用架构上做跨模型权重传输的 P2P 协议。MAL 部分抢占但限于 MLP toy 实验。<br><br>
   <strong>靶心 2（安全）：</strong>完全真空。跨架构权重注入的恶意攻击检测——<strong>零竞争对手</strong>。
 </div>
 
@@ -170,29 +170,29 @@
 <p>两个 agent 的审查结果汇聚成了同一个叙事结构：</p>
 
 <div class="victory">
-  <h3 style="margin-top:0;">AMP 的论文贡献陈述（三脚凳）</h3>
+  <h3 style="margin-top:0;">AFP 的论文贡献陈述（三脚凳）</h3>
   <ol>
-    <li><strong>能力：</strong>AMP 是第一个在实用深度架构上实现跨模型权重传输的 P2P 协议。现有方法要么需要公共数据（FedMD, Gossip Distillation），要么局限在 toy MLP（MAL），要么限于同架构（Git Re-Basin）。</li>
-    <li><strong>安全：</strong>AMP 是第一个在异构 FL 中提供恶意注入防御的框架。现有鲁棒 FL 方法全部假设同构架构和中心服务器。跨架构权重注入的检测——零竞争对手。</li>
-    <li><strong>范式：</strong>AMP 将联邦学习从"分布式优化"重新定义为"多 agent 互学习"——每个模型自主决定学什么、学多少、信谁。Feedback 机制在文献中零先例。</li>
+    <li><strong>能力：</strong>AFP 是第一个在实用深度架构上实现跨模型权重传输的 P2P 协议。现有方法要么需要公共数据（FedMD, Gossip Distillation），要么局限在 toy MLP（MAL），要么限于同架构（Git Re-Basin）。</li>
+    <li><strong>安全：</strong>AFP 是第一个在异构 FL 中提供恶意注入防御的框架。现有鲁棒 FL 方法全部假设同构架构和中心服务器。跨架构权重注入的检测——零竞争对手。</li>
+    <li><strong>范式：</strong>AFP 将联邦学习从"分布式优化"重新定义为"多 agent 互学习"——每个模型自主决定学什么、学多少、信谁。Feedback 机制在文献中零先例。</li>
   </ol>
 </div>
 
 <h3>审稿人最可能问的三个问题（及回答）</h3>
 
 <table>
-<tr><th>审稿人的问题</th><th>AMP 的回答</th></tr>
+<tr><th>审稿人的问题</th><th>AFP 的回答</th></tr>
 <tr>
   <td>"为什么不直接用 logit 交换？更简单。"</td>
-  <td>Logit 交换需要在公共数据上运行推理。在真正的 P2P 隐私场景下，没有公共数据。而且 logit 交换无法检测恶意注入——HYDRA-FL 证明 KD 甚至会<strong>放大</strong>攻击。AMP 的权重空间方法天然允许功能等价性验证。</td>
+  <td>Logit 交换需要在公共数据上运行推理。在真正的 P2P 隐私场景下，没有公共数据。而且 logit 交换无法检测恶意注入——HYDRA-FL 证明 KD 甚至会<strong>放大</strong>攻击。AFP 的权重空间方法天然允许功能等价性验证。</td>
 </tr>
 <tr>
   <td>"MAL 已经做了跨架构权重合并。"</td>
-  <td>MAL 只验证了 2-6 层 MLP（宽度 16-128），用的是零填充的粗暴近似。AMP 在 Transformer 规模上验证，用的是功能对齐而非维度填充，且是持续交互协议而非一次性合并。</td>
+  <td>MAL 只验证了 2-6 层 MLP（宽度 16-128），用的是零填充的粗暴近似。AFP 在 Transformer 规模上验证，用的是功能对齐而非维度填充，且是持续交互协议而非一次性合并。</td>
 </tr>
 <tr>
   <td>"实验规模不够大。"</td>
-  <td>Phase 0 在 Pythia 系列上验证（160M ↔ 1.4B 跨架构传输），证明可行性。后续扩展到大模型。关键是：在异构 + 无公共数据 + 可能存在恶意注入的场景下，<strong>AMP 是唯一可行方案</strong>。不是"比别的方法好一点"，是"别的方法根本跑不了"。</td>
+  <td>Phase 0 在 Pythia 系列上验证（160M ↔ 1.4B 跨架构传输），证明可行性。后续扩展到大模型。关键是：在异构 + 无公共数据 + 可能存在恶意注入的场景下，<strong>AFP 是唯一可行方案</strong>。不是"比别的方法好一点"，是"别的方法根本跑不了"。</td>
 </tr>
 </table>
 
@@ -207,7 +207,7 @@
   <li><strong>FedProto</strong> (Tan et al., AAAI 2022) — 异构 FL 的 prototype baseline</li>
   <li><strong>DFRD</strong> (Luo et al., NeurIPS 2023) — 数据无关异构蒸馏（中心化）</li>
   <li><strong>Deep Mutual Learning</strong> (Zhang et al., CVPR 2018) — 互学习基础</li>
-  <li><strong>HYDRA-FL</strong> (Khan et al., NeurIPS 2024) — KD 放大攻击的警告（支持 AMP 的安全论点）</li>
+  <li><strong>HYDRA-FL</strong> (Khan et al., NeurIPS 2024) — KD 放大攻击的警告（支持 AFP 的安全论点）</li>
   <li><strong>OTFusion</strong> (Singh & Jaggi, NeurIPS 2020) — 神经元对齐的最优传输方法</li>
   <li><strong>FedMD</strong> (Li & Wang, 2019) — 异构 FL via 公共数据 + KD</li>
   <li><strong>Weight Space Learning Survey</strong> (2025) — 领域分类学</li>
@@ -218,8 +218,8 @@
 <h2>六、与第一个 agent 结论的合并</h2>
 
 <table>
-<tr><th></th><th>Agent 1（AMP 整体新颖性）</th><th>Agent 2（跨模型异构 FL）</th></tr>
-<tr><td>AMP 系统级新颖性</td><td>✅ 全新</td><td>✅ 全新</td></tr>
+<tr><th></th><th>Agent 1（AFP 整体新颖性）</th><th>Agent 2（跨模型异构 FL）</th></tr>
+<tr><td>AFP 系统级新颖性</td><td>✅ 全新</td><td>✅ 全新</td></tr>
 <tr><td>Feedback 机制</td><td>🟢 零先例</td><td>🟢 零先例</td></tr>
 <tr><td>Agent 自主决策</td><td>🟡 MOSAIC 部分重叠（RL 领域）</td><td>🟢 在异构 FL 中零先例</td></tr>
 <tr><td>门控公式</td><td>🔴 被 Model Merging 抢占</td><td>🟡 在 P2P 协议中是新的</td></tr>

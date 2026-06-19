@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><title>AMP — Agentic Mutual Protocol 核心愿景</title>
+<head><meta charset="UTF-8"><title>AFP — Agentic Federated Protocol 核心愿景</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75; color: #1a1a1a; background: #fafafa; }
   h1 { font-size: 2em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
@@ -22,10 +22,10 @@
 </style></head>
 <body>
 
-<h1>AMP (Agentic Mutual Protocol)<br><small style="font-weight:normal;font-size:0.6em;color:#64748b;">Agentic Mutual Protocol — 去中心化的 P2P 互学习协议</small></h1>
+<h1>AFP (Agentic Federated Protocol)<br><small style="font-weight:normal;font-size:0.6em;color:#64748b;">Agentic Federated Protocol — 去中心化的 P2P 互学习协议</small></h1>
 
 <blockquote>
-  <strong>AMP 是一种去中心化的 P2P 互学习协议。模型不再被动接受聚合，而是像学者一样——通过"权重论文"交流知识，自主决定学什么、学多少、信谁。</strong>
+  <strong>AFP 是一种去中心化的 P2P 互学习协议。模型不再被动接受聚合，而是像学者一样——通过"权重论文"交流知识，自主决定学什么、学多少、信谁。</strong>
 </blockquote>
 
 <hr>
@@ -62,12 +62,12 @@
 
 <hr>
 
-<h2>二、AMP 的核心思想：从"优化问题"到"学习问题"</h2>
+<h2>二、AFP 的核心思想：从"优化问题"到"学习问题"</h2>
 
 <h3>范式对比</h3>
 
 <table>
-<tr><th></th><th>现行 FL (FedAvg 范式)</th><th>AMP (Agentic Mutual Protocol)</th></tr>
+<tr><th></th><th>现行 FL (FedAvg 范式)</th><th>AFP (Agentic Federated Protocol)</th></tr>
 <tr><td><strong>数学模型</strong></td><td>分布式优化（凸组合）</td><td>元学习 + 博弈 + 信息传输</td></tr>
 <tr><td><strong>Agent 角色</strong></td><td>被动执行者（服从服务器指令）</td><td><strong>主动学习者</strong>（自主决策）</td></tr>
 <tr><td><strong>聚合方式</strong></td><td>固定公式（加权平均）</td><td><strong>学出来的策略</strong>（每个 agent 有自己的学习策略）</td></tr>
@@ -91,12 +91,12 @@
   5. 如果教授的方法在自己的数据上不 work → 降低 trust，减少引用</code></pre>
 
 <div class="insight">
-  <strong>AMP 就是把学术界的知识传播机制形式化为一个数学协议。</strong>
+  <strong>AFP 就是把学术界的知识传播机制形式化为一个数学协议。</strong>
 </div>
 
 <hr>
 
-<h2>三、AMP 协议的形式化</h2>
+<h2>三、AFP 协议的形式化</h2>
 
 <h3>设定</h3>
 
@@ -168,7 +168,7 @@
 <pre><code>FedAvg:  W' = (1-α)W_A + α·W_B
          如果 W_B 包含 50% 噪声，W' 包含 α·50% 噪声
 
-AMP:    W' = W_A + M ⊙ (W_B - W_A)
+AFP:    W' = W_A + M ⊙ (W_B - W_A)
          如果 M 在噪声维度 = 0（门控关掉），噪声不入</code></pre>
 
 <h3>4.2 trust 机制 → 天然抗恶意注入</h3>
@@ -176,13 +176,13 @@ AMP:    W' = W_A + M ⊙ (W_B - W_A)
 <pre><code>FedAvg:  服务器不知道哪个客户端是恶意的
          → 恶意更新被平均进去
 
-AMP:     Agent A 在交互中自己评估 trust
+AFP:     Agent A 在交互中自己评估 trust
          → 低 trust → 低 α → 恶意更新基本不影响 A</code></pre>
 
 <h3>4.3 回应导师的五连问</h3>
 
 <table>
-<tr><th>导师的问题</th><th>FedAvg 的答案</th><th>AMP 的答案</th></tr>
+<tr><th>导师的问题</th><th>FedAvg 的答案</th><th>AFP 的答案</th></tr>
 <tr><td>"如果是噪声你怎么办？"</td><td>寄希望于平均消除</td><td><strong>门控掩码在检测阶段就拒绝噪声</strong></td></tr>
 <tr><td>"噪声的原因是什么？"</td><td>不知道</td><td><strong>trust 函数天然追溯噪声源</strong></td></tr>
 <tr><td>"为什么必然产生噪声？"</td><td>—</td><td><strong>低质量 agent 的权重结构可被检测</strong></td></tr>
@@ -198,8 +198,8 @@ AMP:     Agent A 在交互中自己评估 trust
 <ul>
   <li>2 个 agent，各自有私有数据（不同领域）</li>
   <li>固定 trust（预设双方可信）</li>
-  <li>对比：AMP 选择性子空间更新 vs FedAvg 线性平均</li>
-  <li><strong>核心指标</strong>：AMP 在各自私有数据上的表现是否优于 FedAvg？</li>
+  <li>对比：AFP 选择性子空间更新 vs FedAvg 线性平均</li>
+  <li><strong>核心指标</strong>：AFP 在各自私有数据上的表现是否优于 FedAvg？</li>
 </ul>
 
 <h3>Phase 1 — trust 的学习</h3>
@@ -217,12 +217,12 @@ AMP:     Agent A 在交互中自己评估 trust
 <h3>Phase 3 — 对抗鲁棒性</h3>
 <ul>
   <li>注入恶意 agent（随机噪声 / 定向攻击 / 后门）</li>
-  <li>AMP vs FedAvg vs Robust Aggregation</li>
+  <li>AFP vs FedAvg vs Robust Aggregation</li>
 </ul>
 
 <h3>Phase 4 — 理论分析</h3>
 <ul>
-  <li>AMP 的收敛性证明</li>
+  <li>AFP 的收敛性证明</li>
   <li>trust 函数的统计性质</li>
   <li>信息论视角：权重中的知识传输率</li>
 </ul>
@@ -234,11 +234,11 @@ AMP:     Agent A 在交互中自己评估 trust
 <ul>
   <li>FCL-PRM 的<strong>工程积累</strong>可复用：训练脚本、模型定义、联邦模拟器</li>
   <li>FCL-PRM 的<strong>科学教训</strong>已吸取：不要在没有理论支撑的情况下做"诊断工具"</li>
-  <li>FCL-PRM 的<strong>实验数据</strong>可作为 AMP 的 baseline 对比</li>
+  <li>FCL-PRM 的<strong>实验数据</strong>可作为 AFP 的 baseline 对比</li>
 </ul>
 
 <div class="vacuum">
-  <strong>AMP 不是 FCL-PRM 的延续——它是一个全新的范式。FCL-PRM 试图诊断一个已有系统中的问题，AMP 试图重新定义系统本身。</strong>
+  <strong>AFP 不是 FCL-PRM 的延续——它是一个全新的范式。FCL-PRM 试图诊断一个已有系统中的问题，AFP 试图重新定义系统本身。</strong>
 </div>
 
 </body>

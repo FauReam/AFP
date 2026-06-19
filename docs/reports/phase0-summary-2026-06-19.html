@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><title>AMP Phase 0 实验方案 · 2026-06-19</title>
+<head><meta charset="UTF-8"><title>AFP Phase 0 实验方案 · 2026-06-19</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75; color: #1a1a1a; background: #fafafa; }
   h1 { font-size: 1.8em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
@@ -26,7 +26,7 @@
 </style></head>
 <body>
 
-<h1>AMP Phase 0 实验方案</h1>
+<h1>AFP Phase 0 实验方案</h1>
 <p><strong>确定日期：</strong>2026-06-19 · <strong>设备：</strong>DGX Spark GB10 (121GB, ARM64) · <strong>总耗时：</strong>~14-20h</p>
 
 <hr>
@@ -34,10 +34,10 @@
 <h2>三个实验 · 三个主张</h2>
 
 <div class="exp-card exp-a">
-  <h2><span class="badge badge-blue">Experiment A</span> 同构：AMP vs FedAvg</h2>
+  <h2><span class="badge badge-blue">Experiment A</span> 同构：AFP vs FedAvg</h2>
   <table>
     <tr><td><strong>参与方</strong></td><td>Pythia-1.4B (math) ↔ Pythia-1.4B (code)</td></tr>
-    <tr><td><strong>对比</strong></td><td>AMP（24 自由度逐 block 门控）vs FedAvg（1 自由度标量 α）vs 不交换</td></tr>
+    <tr><td><strong>对比</strong></td><td>AFP（24 自由度逐 block 门控）vs FedAvg（1 自由度标量 α）vs 不交换</td></tr>
     <tr><td><strong>要证明</strong></td><td>24 个自由度的选择性更新 > 1 个自由度的线性平均</td></tr>
     <tr><td><strong>耗时</strong></td><td>~4-6h</td></tr>
   </table>
@@ -48,11 +48,11 @@
 </div>
 
 <div class="exp-card exp-b">
-  <h2><span class="badge badge-purple">Experiment B</span> 异构：AMP 跨架构家族</h2>
+  <h2><span class="badge badge-purple">Experiment B</span> 异构：AFP 跨架构家族</h2>
   <table>
     <tr><td><strong>参与方</strong></td><td>Pythia-1.4B (math, GPT-NeoX, 24 blocks, GELU, LayerNorm) ↔ TinyLlama-1.1B (code, LLaMA, 22 blocks, SwiGLU, RMSNorm)</td></tr>
-    <tr><td><strong>对比</strong></td><td>AMP vs 不交换（FedAvg <strong>数学上不能运行</strong>——不同架构，逐元素加法无意义）</td></tr>
-    <tr><td><strong>要证明</strong></td><td>AMP 实现 FedAvg 不可能的事——跨架构家族知识传输。不是同一家族的缩放，是 GPT-NeoX ↔ LLaMA</td></tr>
+    <tr><td><strong>对比</strong></td><td>AFP vs 不交换（FedAvg <strong>数学上不能运行</strong>——不同架构，逐元素加法无意义）</td></tr>
+    <tr><td><strong>要证明</strong></td><td>AFP 实现 FedAvg 不可能的事——跨架构家族知识传输。不是同一家族的缩放，是 GPT-NeoX ↔ LLaMA</td></tr>
     <tr><td><strong>映射策略</strong></td><td><strong>功能层面</strong>：B 的权重在 A 私有数据上展示能力 → 识别"B 比 A 强"的样本 → 仅对 A 的低重要性 block 做选择性 fine-tuning。不假设层间对应——架构根本不同</td></tr>
     <tr><td><strong>耗时</strong></td><td>~9-14h</td></tr>
   </table>
@@ -62,16 +62,16 @@
     → 不同的 normalization (LayerNorm vs RMSNorm)<br>
     → 不同的 activation (GELU vs SwiGLU)<br>
     → 不同的 position encoding (learned vs RoPE)<br>
-    如果 AMP 能在这里传输知识，它就证明了<strong>架构无关性</strong>
+    如果 AFP 能在这里传输知识，它就证明了<strong>架构无关性</strong>
   </div>
 </div>
 
 <div class="exp-card exp-c">
-  <h2><span class="badge badge-red">Experiment C</span> 鲁棒：AMP 抗恶意注入</h2>
+  <h2><span class="badge badge-red">Experiment C</span> 鲁棒：AFP 抗恶意注入</h2>
   <table>
     <tr><td><strong>参与方</strong></td><td>Pythia-1.4B (math, 诚实) + Pythia-1.4B (code, 恶意——注入噪声)</td></tr>
-    <tr><td><strong>对比</strong></td><td>AMP vs FedAvg，B 发送 W_B + ε·N(0,σ²)，ε ∈ {0.1, 0.3, 0.5, 1.0, 2.0}</td></tr>
-    <tr><td><strong>要证明</strong></td><td>AMP 的门控 + trust 机制在噪声维度上自动关闭 → 退化 ≈ 0；FedAvg 退化随 ε 增加</td></tr>
+    <tr><td><strong>对比</strong></td><td>AFP vs FedAvg，B 发送 W_B + ε·N(0,σ²)，ε ∈ {0.1, 0.3, 0.5, 1.0, 2.0}</td></tr>
+    <tr><td><strong>要证明</strong></td><td>AFP 的门控 + trust 机制在噪声维度上自动关闭 → 退化 ≈ 0；FedAvg 退化随 ε 增加</td></tr>
     <tr><td><strong>耗时</strong></td><td>~2-3h（复用 A 的模型）</td></tr>
   </table>
   <div class="key">
@@ -98,11 +98,11 @@
 <tr><th>实验</th><th>方法</th><th>自域保留</th><th>跨域泛化</th><th>净收益</th><th>抗噪声</th></tr>
 <tr><td>A</td><td>不交换</td><td>0</td><td>0</td><td>0</td><td>—</td></tr>
 <tr><td>A</td><td>FedAvg</td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
-<tr><td>A</td><td><strong>AMP</strong></td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
+<tr><td>A</td><td><strong>AFP</strong></td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
 <tr><td>B</td><td>不交换</td><td>0</td><td>0</td><td>0</td><td>—</td></tr>
-<tr><td>B</td><td><strong>AMP</strong></td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
+<tr><td>B</td><td><strong>AFP</strong></td><td>测</td><td>测</td><td>测</td><td>—</td></tr>
 <tr><td>C</td><td>FedAvg + noise</td><td>测 (退化)</td><td>—</td><td>—</td><td>❌</td></tr>
-<tr><td>C</td><td><strong>AMP + noise</strong></td><td>测 (~0)</td><td>—</td><td>—</td><td>✅</td></tr>
+<tr><td>C</td><td><strong>AFP + noise</strong></td><td>测 (~0)</td><td>—</td><td>—</td><td>✅</td></tr>
 </table>
 
 <hr>
@@ -111,8 +111,8 @@
 
 <table>
 <tr><th>如果...</th><th>则...</th></tr>
-<tr><td>A: AMP ≈ FedAvg</td><td>检查 per-block importance 是否真有差异。如果都差不多 → 说明 backbone 使用模式均匀 → 解释了旧项目 CKA=1.0 → 转向理论解释</td></tr>
-<tr><td>A: AMP < FedAvg</td><td>门控引入过度正则化。降 τ 或换 partial-FT 训练</td></tr>
+<tr><td>A: AFP ≈ FedAvg</td><td>检查 per-block importance 是否真有差异。如果都差不多 → 说明 backbone 使用模式均匀 → 解释了旧项目 CKA=1.0 → 转向理论解释</td></tr>
+<tr><td>A: AFP < FedAvg</td><td>门控引入过度正则化。降 τ 或换 partial-FT 训练</td></tr>
 <tr><td>B: 跨架构映射不 work</td><td>检查 TinyLlama 在 A 的 math 数据上是否真的优于 A。如果 TinyLlama 的 code 知识对 math 没帮助 → 换领域对（math-medical）</td></tr>
 <tr><td>C: 噪声检测失败</td><td>换 trust 统计量：权重方向一致性、梯度角度、layer-wise 异常检测</td></tr>
 </table>

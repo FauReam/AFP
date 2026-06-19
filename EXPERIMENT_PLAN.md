@@ -1,6 +1,6 @@
-# AMP Phase 0 实验方案（敲定版）
+# AFP Phase 0 实验方案（敲定版）
 
-> **目标**：用最小可行实验同时验证 AMP 的三个核心主张
+> **目标**：用最小可行实验同时验证 AFP 的三个核心主张
 > **设备**：DGX Spark GB10 · 121GB · ARM64
 > **数据**：VersaPRM（math 200k / code 296k / medical 124k / general 188k steps）
 
@@ -9,9 +9,9 @@
 ## 实验结构总览
 
 ```
-Experiment A — 同构：证明 AMP > FedAvg（验证门控机制的价值）
-Experiment B — 异构：证明 AMP 能跨架构运行（FedAvg 数学上跑不了）
-Experiment C — 鲁棒：证明 AMP 抵抗恶意权重注入（FedAvg 无防御）
+Experiment A — 同构：证明 AFP > FedAvg（验证门控机制的价值）
+Experiment B — 异构：证明 AFP 能跨架构运行（FedAvg 数学上跑不了）
+Experiment C — 鲁棒：证明 AFP 抵抗恶意权重注入（FedAvg 无防御）
 ```
 
 ---
@@ -72,7 +72,7 @@ PRM 分类头各自保留，不交换
 
 ---
 
-## Experiment A：同构对比（AMP vs FedAvg vs 不交换）
+## Experiment A：同构对比（AFP vs FedAvg vs 不交换）
 
 ### A.1 参与方
 
@@ -103,7 +103,7 @@ W_B' = (1-α)·W_B + α·W_A
 关键: 这是"1 个自由度"的方法——一个标量 α 统一施加到所有 24 个 block
 ```
 
-#### A.2.3 AMP — 逐 block 重要性门控
+#### A.2.3 AFP — 逐 block 重要性门控
 
 ```
 对 Agent A 的 24 个 transformer block:
@@ -132,7 +132,7 @@ Step 3 — 选择性更新:
 
 ```
 FedAvg: 1 个标量 α → 1 个自由度
-AMP:    1 个温度 τ 控制 24 个门控值 → 24 个有效自由度
+AFP:    1 个温度 τ 控制 24 个门控值 → 24 个有效自由度
 
 核心问题: 这额外的 23 个自由度是否带来显著的性能收益？
 ```
@@ -147,23 +147,23 @@ AMP:    1 个温度 τ 控制 24 个门控值 → 24 个有效自由度
 | **跨域泛化** | code_test | A' 在 code 上的 acc − A 在 code 上的 acc（希望 >0） |
 | **净收益** | — | 自域保留 + 跨域泛化（希望 >0） |
 
-### A.5 预期结果（如果 AMP 有效）
+### A.5 预期结果（如果 AFP 有效）
 
 ```
 Pareto 前沿图:
 
 跨域泛化 ↑
     │
-    │        ● AMP
+    │        ● AFP
     │       ╱
     │      ╱  ● FedAvg (最优 α)
     │     ╱
     │    ● 不交换
     └──────────────────→ 自域保留
 
-AMP 在 Pareto 意义上严格优于 FedAvg:
-  同等的自域保留 → AMP 提供更高的跨域泛化
-  同等的跨域泛化 → AMP 保留更多自域能力
+AFP 在 Pareto 意义上严格优于 FedAvg:
+  同等的自域保留 → AFP 提供更高的跨域泛化
+  同等的跨域泛化 → AFP 保留更多自域能力
 
 每个 block 的门控模式可解释:
   math agent: 某些 block M≈0（被保护），某些 block M≈1（开放）
@@ -174,7 +174,7 @@ AMP 在 Pareto 意义上严格优于 FedAvg:
 
 ---
 
-## Experiment B：异构跨架构（AMP vs 不交换）
+## Experiment B：异构跨架构（AFP vs 不交换）
 
 ### B.1 参与方
 
@@ -184,7 +184,7 @@ Agent B: TinyLlama-1.1B (22 blocks, LLaMA, SwiGLU, RMSNorm, RoPE)
 
 关键: 这不是同一家族的缩放，而是真正不同的架构
       → 不同的 normalization、不同的 activation、不同的 position encoding
-      → 如果 AMP 能在这里传输知识，它证明了架构无关性
+      → 如果 AFP 能在这里传输知识，它证明了架构无关性
 ```
 
 ### B.2 为什么 FedAvg 不能跑
@@ -201,7 +201,7 @@ Agent B: TinyLlama-1.1B (22 blocks, LLaMA, SwiGLU, RMSNorm, RoPE)
   - 参数的语义含义不同
 
 FedAvg 要求 W_A[i] + W_B[i] 语义对齐 → 不同架构下即使形状相同，加法也无意义
-AMP 不要求逐元素对齐 → 通过功能层面的知识映射桥接架构差异
+AFP 不要求逐元素对齐 → 通过功能层面的知识映射桥接架构差异
 ```
 
 ### B.3 跨架构知识传输策略
@@ -256,7 +256,7 @@ Phase 0 的核心目标是证明"跨架构知识传输可行且有用"。
 
 ---
 
-## Experiment C：鲁棒性（AMP vs FedAvg 面对恶意注入）
+## Experiment C：鲁棒性（AFP vs FedAvg 面对恶意注入）
 
 ### C.1 参与方
 
@@ -283,7 +283,7 @@ FedAvg:
   → α 选验证集最优值
   → 噪音被直接平均进去，无法防御
 
-AMP:
+AFP:
   Step 1: 分析 W_B_malicious 和 W_init 的距离
           noise_magnitude = ||W_B_malicious - W_init|| / ||W_A - W_init||
           如果 noise_magnitude 异常大 → 降低 trust
@@ -300,12 +300,12 @@ AMP:
 
 ```
 对每种噪声水平，对比:
-  AMP 的自域保留（应该接近 0 退化）
+  AFP 的自域保留（应该接近 0 退化）
   FedAvg 的自域保留（应该随 ε 增加而退化）
 
 关键图: 噪声水平 ε vs 自域退化
          FedAvg: 退化随 ε 单调递增
-         AMP:    退化始终接近 0（门控关掉了）
+         AFP:    退化始终接近 0（门控关掉了）
 ```
 
 ---
@@ -316,15 +316,15 @@ AMP:
 
 ```
 第一步: Experiment A（4-6 小时）
-  → 验证 AMP > FedAvg 在同构场景下成立
-  → 如果 A 的结果是 AMP ≈ FedAvg → 先理解为什么，再决定是否继续
+  → 验证 AFP > FedAvg 在同构场景下成立
+  → 如果 A 的结果是 AFP ≈ FedAvg → 先理解为什么，再决定是否继续
 
 第二步: Experiment C（2-3 小时，基于 A 的模型）
-  → 验证 AMP 抵抗噪声注入
+  → 验证 AFP 抵抗噪声注入
   → 对 A 已有的 W_A 和 W_B，注入不同水平噪声，跑对比
 
 第三步: Experiment B（8-12 小时）
-  → 验证 AMP 跨架构运行
+  → 验证 AFP 跨架构运行
   → 需要额外训练 Pythia-160M + 实现跨架构映射
 ```
 
@@ -337,7 +337,7 @@ AMP:
   Expt C: 复用 A 的模型，只做推理
 
 集成评估（每种方法）:
-  AMP 集成 ≈ 0.5h
+  AFP 集成 ≈ 0.5h
   FedAvg 集成 ≈ 0.3h
   跨架构功能映射 ≈ 1.5h（需加载两个模型 + 推理 + 选择性 fine-tuning）
 
@@ -350,8 +350,8 @@ AMP:
 
 | 如果... | 则... |
 |---------|-------|
-| **A 的结果 AMP ≈ FedAvg** | 检查 per-block importance 是否真的有差异。如果所有 block 的 importance 差不多 → 说明对于 Pythia-1.4B + VersaPRM，backbone 使用模式是均匀的 → 这本身是一个发现（解释了为什么旧项目 CKA=1.0）。转向解释"为什么均匀"并测试其他模型/数据组合 |
-| **A 的结果 AMP < FedAvg** | 门控机制引入了过度正则化。降低 τ 让更多 block 开放。如果仍然差 → 说明"选择性"在 head-only 训练下不成立（head 没怎么动 backbone）。需要更重的本地训练（partial-FT 而非 head-only） |
+| **A 的结果 AFP ≈ FedAvg** | 检查 per-block importance 是否真的有差异。如果所有 block 的 importance 差不多 → 说明对于 Pythia-1.4B + VersaPRM，backbone 使用模式是均匀的 → 这本身是一个发现（解释了为什么旧项目 CKA=1.0）。转向解释"为什么均匀"并测试其他模型/数据组合 |
+| **A 的结果 AFP < FedAvg** | 门控机制引入了过度正则化。降低 τ 让更多 block 开放。如果仍然差 → 说明"选择性"在 head-only 训练下不成立（head 没怎么动 backbone）。需要更重的本地训练（partial-FT 而非 head-only） |
 | **B 的跨架构映射不 work** | 检查 B 在 A 数据上是否真的比 A 好——如果 TinyLlama 在 A 的 math 数据上表现不如 Pythia-1.4B，说明两模型间不存在知识差 → 换领域对（math-medical）或增大本地训练量增加专业化差异 |
 | **C 的噪声检测失败** | 如果 trust 函数对噪声不敏感，尝试其他统计量：权重方向一致性、梯度角度、layer-wise 的异常检测 |
 
@@ -363,8 +363,8 @@ AMP:
 |------|------|---------|---------|--------|--------|
 | A | 不交换 | 0（基准） | 0（基准） | 0 | — |
 | A | FedAvg | 测 | 测 | 测 | — |
-| A | AMP | 测 | 测 | 测 | — |
+| A | AFP | 测 | 测 | 测 | — |
 | B | 不交换 | 0（基准） | 0（基准） | 0 | — |
-| B | AMP | 测 | 测 | 测 | — |
+| B | AFP | 测 | 测 | 测 | — |
 | C | FedAvg + noise | 测（退化） | — | — | ❌ |
-| C | AMP + noise | 测（~0） | — | — | ✅ |
+| C | AFP + noise | 测（~0） | — | — | ✅ |
