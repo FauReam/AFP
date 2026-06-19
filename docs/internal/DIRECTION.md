@@ -1,6 +1,6 @@
 # AFP — 研究方向与文献地图
 
-> **状态**：完全开放探索 → 方向已收敛至 AFP 协议
+> **状态**：Phase 0 v2 诊断进行中 — full-FT code+medical，验证 per-block importance 结构性偏移
 
 ---
 

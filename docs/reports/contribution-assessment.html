@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFP — 投稿级别评估</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75;
+         color: #1a1a1a; background: #fafafa; }
+  h1 { font-size: 2em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
+  h2 { font-size: 1.5em; margin-top: 48px; color: #1e40af; }
+  h3 { font-size: 1.15em; margin-top: 32px; color: #374151; }
+  h4 { font-size: 1.05em; margin-top: 24px; color: #4b5563; }
+  blockquote { border-left: 4px solid #2563eb; margin: 16px 0; padding: 8px 20px;
+               background: #eff6ff; font-style: italic; }
+  blockquote p { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 0.92em; }
+  th { background: #1e3a5f; color: white; padding: 10px 14px; text-align: left; }
+  td { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 18px 22px; border-radius: 8px;
+        overflow-x: auto; font-size: 0.88em; line-height: 1.6; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
+  pre code { background: none; padding: 0; }
+  .insight { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 20px;
+             margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .vacuum { background: #dcfce7; border-left: 4px solid #16a34a; padding: 12px 20px;
+            margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .v2 { background: #ede9fe; border-left: 4px solid #7c3aed; padding: 12px 20px;
+        margin: 20px 0; border-radius: 0 8px 8px 0; }
+  hr { margin: 40px 0; border: none; border-top: 1px solid #e5e7eb; }
+  li { margin: 6px 0; }
+  strong { color: #1e3a5f; }
+  em { color: #64748b; }
+  a { color: #2563eb; }
+</style>
+</head>
+<body>
+<h1>AFP 贡献评估（内部 · 2026-06-19）</h1>
+<blockquote>
+<p>对自己诚实。不乐观，不悲观，只讲事实。</p>
+</blockquote>
+<hr />
+<h2>一、贡献强度评估</h2>
+<h3>三个核心贡献的打分</h3>
+<p>| 贡献 | 新颖性 | 重要性 | 可验证性 | 总分 |
+|------|--------|--------|---------|------|
+| Agent 自主知识选择（服务器→agent） | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | 12/15 |
+| 双向 Feedback 机制 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | 12/15 |
+| 基于私有数据的 trust | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | 11/15 |</p>
+<p><strong>新颖性很高</strong>（确实没人做），<strong>可验证性中等</strong>（需要设计好的实验来证明这些机制确实有用）。</p>
+<h3>与其他方向对比</h3>
+<p>| 方向 | 竞争力 | 工作量 | 风险 |
+|------|--------|--------|------|
+| AFP（当前） | 高 | 中-高 | 中 |
+| 旧 CD-SPI 诊断框架 | 低（已被证伪） | 已完成 | 极高（已死亡） |
+| 联邦 PRM（单纯应用） | 中 | 低-中 | 低-中 |
+| Null Result 叙事 | 中-低 | 低 | 中 |</p>
+<p><strong>AFP 是当前可选方向里竞争力最强的。</strong></p>
+<hr />
+<h2>二、投稿级别分析</h2>
+<h3>顶会可行性</h3>
+<p>| 会议 | 可行性 | 需要什么 | 阻碍 |
+|------|--------|---------|------|
+| <strong>ICML</strong> | 低-中 | 收敛理论 + 强实验 | 理论要求高，纯方法论文难中 |
+| <strong>NeurIPS</strong> | 中 | 综合实验 + 消融 + 可能理论 | 竞争极其激烈 |
+| <strong>ICLR</strong> | 中 | 理论创新突出或实验规模大 | 偏重理论 |
+| <strong>AAAI</strong> | 中-高 | 扎实实验 + 清晰贡献陈述 | 投稿量大但接收量大 |
+| <strong>IJCAI</strong> | 中-高 | 同上 | 受限于两年一届 |
+| <strong>AISTATS</strong> | 中-高 | 理论+实验平衡 | 窗口期合适 |
+| <strong>KDD</strong> | 中 | FL 角度要突出 | 偏应用 |</p>
+<h3>现实判断</h3>
+<p><strong>AAAI / IJCAI 是最现实的目标。</strong> 理由：</p>
+<ol>
+<li>接收量大（AAAI ~23%，IJCAI ~15-20%）</li>
+<li>对方法创新 + 扎实实验的论文友好</li>
+<li>不一定要求 deep theory（不像 ICML/ICLR）</li>
+<li>FL 方向的论文在这两个会上有稳定的接收量</li>
+</ol>
+<p><strong>ICML / NeurIPS 是 stretch goal。</strong> 需要额外的理论贡献（收敛性证明）或更大规模的实验。</p>
+<h3>时间线</h3>
+<pre><code>2026.06 — 现在是 6 月 19 日
+         AAAI 2027 deadline: 通常在 8 月中旬
+         ICLR 2027 deadline: 通常在 9 月底
+         → Phase 0 实验 + 写论文 = 6-8 周 → 来得及投 AAAI/ICLR
+
+         ICML 2027 deadline: 通常在 1 月中旬
+         → 时间更充裕，可以加上理论工作
+</code></pre>
+<p><strong>建议先投 AAAI 2027（8月 deadline），不中再改投 ICLR 2027（9月 deadline），再不中 ICML 2027（1月 deadline）。</strong></p>
+<hr />
+<h2>三、对你（学生）的帮助</h2>
+<h3>直接收益</h3>
+<p>| 收益 | 大小 | 说明 |
+|------|------|------|
+| <strong>毕业</strong> | 🔴 关键 | 如果这是你的学位论文方向，发一篇 AAAI 级别的论文足以满足毕业要求 |
+| <strong>学术声誉</strong> | 🟡 中等 | AFP 的方向够新，如果做出来，可能打开一个子领域——&quot;agentic federated learning&quot; |
+| <strong>后续研究</strong> | 🟢 高 | 这个方向可以持续做：理论分析、扩展到多模态、真实部署、与其他 FL 方法的理论对比 |
+| <strong>工业界关注</strong> | 🟡 中等 | 异构 FL + 隐私 + 安全 是工业界的真实痛点 |</p>
+<h3>风险</h3>
+<p>| 风险 | 严重性 | 应对 |
+|------|--------|------|
+| <strong>Phase 0 实验结果负面</strong> | 🔴 高 | 准备好接受——如果 AFP 不比 FedAvg 好，需要理解为什么，这本身可能是理论贡献 |
+| <strong>导师不认可新方向</strong> | 🟡 中 | 旧方向的导师反馈已充分纳入 AFP 设计（五连问全部有答案）。但导师可能认为&quot;离题太远&quot; |
+| <strong>被 MOSAIC 作者抢先</strong> | 🟡 中 | MOSAIC 已发表（2025.06），但他们做的是 RL。AFP 的攻击点不同（权重空间 + feedback + trust） |
+| <strong>Model Merging 社区覆盖</strong> | 🟢 低 | Model Merging 关注的是 offline 合并，不是 online P2P 互学习。不太可能突然转向 |
+| <strong>计算资源不足</strong> | 🟡 中 | DGX Spark (121GB) 够跑 Pythia 系列的小模型，但大模型（7B+）跑不了全参数训练 |</p>
+<h3>真正的问题</h3>
+<p><strong>这个方向能让你在学术界立足吗？</strong></p>
+<p>能，但有一个前提：<strong>你必须把它做成一个&quot;别人不得不引&quot;的工作。</strong></p>
+<p>&quot;不得不引&quot;的意思是：</p>
+<ul>
+<li>你是第一个提出 &quot;Agentic P2P Mutual Learning&quot; 这个概念的</li>
+<li>后续任何做 P2P FL + agent autonomy 的工作都会引用你</li>
+<li>或者：你的 feedback 机制被广泛采用为标准协议的一部分</li>
+</ul>
+<p>要达到这个目标，AAAI 一篇论文不够——需要后续的理论论文、实验扩展、开源代码（被广泛使用）。</p>
+<p><strong>但 AAAI 一篇论文是起点。没有这个起点，后面都没有。</strong></p>
+<hr />
+<h2>四、竞争力结论</h2>
+<h3>这篇论文的竞争定位</h3>
+<pre><code>        理论深度
+          ↑
+          |  ICML/ICLR 区      ← AFP 目前不在这个区
+          |  (需要收敛性证明)
+          |
+          |       ● AFP       ← AAAI/IJCAI 区
+          |  (方法创新 + 实验)
+          |
+          |  应用论文区
+          |  (纯 PRM 联邦训练)
+          └──────────────────→ 实验规模
+</code></pre>
+<h3>与其他学生工作的对比</h3>
+<p>一个典型的学生论文：</p>
+<ul>
+<li>拿一个现有方法，在某个新任务上跑实验 → <strong>不引用也没人在意</strong></li>
+<li>提出一个小的改进，提升 0.5% → <strong>审稿人可能说 incremental</strong></li>
+</ul>
+<p>AFP：</p>
+<ul>
+<li>提出了一个新的范式概念（Agentic P2P Mutual Learning）</li>
+<li>合成的组件来自多个子领域，组合本身是新的</li>
+<li>有清晰的&quot;为什么比现有方法好&quot;的直觉</li>
+<li>有可操作的研究路线图（Phase 0→4）</li>
+</ul>
+<p><strong>AFP 比 90% 的学生项目更有潜力。</strong> 但潜力不等于结果——执行决定一切。</p>
+<h3>最终判断</h3>
+<pre><code>问题: 这篇论文级别高吗？
+回答: 够 AAAI。冲 ICML 需要理论。冲 NeurIPS 需要大实验。
+
+问题: 对你有帮助吗？
+回答: 有。如果你发出来，这可能是你学术生涯的第一个&quot;代表作&quot;。
+      但前提是你能把 Phase 0 跑出来，结果正面，论文写好。
+
+问题: 最大的风险是什么？
+回答: 不是被 scoop，不是审稿人不喜欢——
+      是 Phase 0 跑出来 AFP = FedAvg（没有显著差异）。
+      如果这个发生了，你需要一套备用方案：
+      → 为什么 AFP = FedAvg？这本身是理论贡献。
+      → 在什么条件下 AFP &gt; FedAvg？这引导后续研究。
+      → 把 AFP 的失败分析写成论文（审稿人喜欢诚实的负面结果）。
+</code></pre>
+
+<hr>
+<footer style="color:#94a3b8;font-size:0.85em;text-align:center;padding:20px 0;">
+  AFP Project · Generated 2026-06-19 · Phase 0 v2
+</footer>
+</body>
+</html>

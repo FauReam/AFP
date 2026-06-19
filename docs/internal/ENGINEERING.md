@@ -1,6 +1,7 @@
 # AFP 工程手册
 
-> 从 FCL-PRM 旧项目完整迁移。以下每一条都是真实踩过的坑。
+> 从 FCL-PRM 旧项目完整迁移 + AFP Phase 0 v2 新增。
+> 以下每一条都是真实踩过的坑。
 > **新 agent 必读。不要复现已知 Bug。**
 
 ---
@@ -70,11 +71,50 @@
 | Pythia-1.4B LoRA r=8-256 | 128 | ~6-8 GB |
 | Pythia-1.4B partial-FT (last 2) | 4 | ~15 GB |
 | Pythia-1.4B full-FT (BF16+Adam) | 4 | ~21 GB |
+| Pythia-1.4B full-FT (BF16+Adam) | **1024** | **~71 GB**（v2 新增） |
 | Pythia-2.8B full-FT (BF16+Adam) | 4 | ~40 GB |
+
+### AFP Phase 0 v2 内存精算（full-FT @ batch=1024）
+
+```
+模型权重 (bf16):         2.8 GB
+Master 权重 (fp32):      5.6 GB
+梯度 (fp32):             5.6 GB
+Adam m (fp32):           5.6 GB
+Adam v (fp32):           5.6 GB
+─────────────────────────────
+基础开销:               ~25 GB
+
+每 sample activation (seq_len=384, 1 checkpoint/layer):
+  384 × 2048 × 2B × 24层 ≈ 38 MB
+  1024 samples:          ~39 GB
+  attention mask 等:      ~5 GB
+─────────────────────────────
+Activations:            ~44 GB
+总计:                   ~69 GB
+
+121 GB 统一内存 → 安全
+```
+
+### 大 batch 训练速度预估
+
+```
+batch=1024, len=384, full-FT:
+  forward:            ~15s
+  backward:           ~30s
+  optimizer step:     ~3s
+  overhead:           ~5s
+  ───────────────────────
+  每 batch:           ~50-55s
+
+Agent A (medical): 85 batches × 55s ≈ 1.3h
+Agent B (code):    203 batches × 55s ≈ 3.1h
+串行总计:          4.4h
+```
 
 ### 全参数 FT 内存建议
 - BF16 加载 backbone
-- batch_size=4 起步
+- batch_size=4 起步（旧）；batch=1024 用 gradient checkpointing
 - 检查点体积: 1.4B ~2.8 GB, 2.8B ~5.6 GB
 - 4 客户端串行全参数: 2.8B 约 1-2 天/25 rounds
 
@@ -230,5 +270,20 @@ max_length 分布:
 ```
 
 - 净化数据: `data/versaprm/versa_prm.jsonl`
-- 净化方式: tokenize 后丢弃 >384 token 的 step（5.8% 丢弃），不截断
+- 净化方式: tokenize 后丢弃 >384 token 的 step（~8.7% 丢弃），不截断
 - max_length=384 覆盖 91.3%
+
+### Domain 分布
+
+| Domain | Steps | 训练 (70%) |
+|--------|-------|-----------|
+| code | 296K | 207K |
+| math | 200K | 140K |
+| general | 188K | 132K |
+| medical | 124K | 87K |
+
+### AFP Phase 0 v2 使用的 domain 对
+
+```
+code + medical: 重叠最小，测试 AFP 在最正交领域对上的表现
+```

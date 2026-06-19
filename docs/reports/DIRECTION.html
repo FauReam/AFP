@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFP — 研究方向与文献地图</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75;
+         color: #1a1a1a; background: #fafafa; }
+  h1 { font-size: 2em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
+  h2 { font-size: 1.5em; margin-top: 48px; color: #1e40af; }
+  h3 { font-size: 1.15em; margin-top: 32px; color: #374151; }
+  h4 { font-size: 1.05em; margin-top: 24px; color: #4b5563; }
+  blockquote { border-left: 4px solid #2563eb; margin: 16px 0; padding: 8px 20px;
+               background: #eff6ff; font-style: italic; }
+  blockquote p { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 0.92em; }
+  th { background: #1e3a5f; color: white; padding: 10px 14px; text-align: left; }
+  td { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 18px 22px; border-radius: 8px;
+        overflow-x: auto; font-size: 0.88em; line-height: 1.6; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
+  pre code { background: none; padding: 0; }
+  .insight { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 20px;
+             margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .vacuum { background: #dcfce7; border-left: 4px solid #16a34a; padding: 12px 20px;
+            margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .v2 { background: #ede9fe; border-left: 4px solid #7c3aed; padding: 12px 20px;
+        margin: 20px 0; border-radius: 0 8px 8px 0; }
+  hr { margin: 40px 0; border: none; border-top: 1px solid #e5e7eb; }
+  li { margin: 6px 0; }
+  strong { color: #1e3a5f; }
+  em { color: #64748b; }
+  a { color: #2563eb; }
+</style>
+</head>
+<body>
+<h1>AFP — 研究方向与文献地图</h1>
+<blockquote>
+<p><strong>状态</strong>：Phase 0 v2 诊断进行中 — full-FT code+medical，验证 per-block importance 结构性偏移</p>
+</blockquote>
+<hr />
+<h2>一、文献全景</h2>
+<h3>1.1 联邦 PRM（过程奖励模型）— 完全真空</h3>
+<p>经过 25+ 次跨数据库搜索（arXiv, Semantic Scholar, OpenAlex）：</p>
+<p>| 搜索组合 | 结果 |
+|----------|------|
+| &quot;federated process reward model&quot; | <strong>0 篇</strong> |
+| &quot;federated PRM&quot; + LLM reasoning | <strong>0 篇</strong> |
+| &quot;federated step-level reward&quot; | <strong>0 篇</strong> |
+| &quot;federated verifier&quot; + LLM | <strong>0 篇</strong> |</p>
+<h3>1.2 邻近但从未交叉的两条线</h3>
+<p><strong>A 线 — 联邦奖励建模（只有 outcome-level，标准 FedAvg 范式）</strong></p>
+<p>| 论文 | 做了什么 | 局限 |
+|------|---------|------|
+| PluralLLM (2025.03) | 联邦偏好预测器，FedAvg 聚合 | Outcome-level，标准 FedAvg |
+| MoR (2026.05) | 各客户端独立训 reward model，服务器融合 | Outcome-level，中心化融合 |
+| FedMOA (2026.01) | 联邦 GRPO 训 policy model | 训的是 actor 不是 verifier |
+| FedVPA-GP (2026.05, ICML 2026) | 联邦变分偏好对齐 | Outcome-level |
+| PWFF (2024.04) | 个性化联邦 LLM 微调，reward model 作为辅助 | Reward model 不是主要训练目标 |</p>
+<p><strong>B 线 — 领域专用 PRM（全是集中式训练）</strong></p>
+<p>| 论文 | 领域 | 关键发现 |
+|------|------|---------|
+| Fin-PRM (2025) | 金融推理 | <strong>明确声明</strong>&quot;通用 PRM 在金融推理上失败&quot; |
+| Clinical PRM (2024, EMNLP) | 临床笔记验证 | 需要域内医学数据训练 |
+| VisualPRM (2025) | 多模态推理 | 400K 样本, 8B 参数 |
+| DreamPRM (2025) | 多模态 | 用 bi-level optimization 处理领域不均衡——但仍集中式 |
+| FG-PRM (2024, EMNLP) | 幻觉检测 | 细粒度 step-level 评估 |
+| uPRM (2026) | 通用 | 无需人工标注的无监督 PRM 训练 |</p>
+<p><strong>A 和 B 从未交汇。联邦 × PRM 是真空。</strong></p>
+<h3>1.3 AFP 相关领域</h3>
+<p><strong>去中心化/P2P FL</strong></p>
+<p>| 论文 | 做了什么 | 与 AFP 的关系 |
+|------|---------|:---:|
+| Gossip Learning (经典) | P2P 拓扑，gossip averaging | AFP 的拓扑基础（但 Gossip 仍用平均） |
+| BrainTorrent (2018) | P2P FL for medical imaging | 早期 P2P FL，但使用简单平均 |
+| Swarm Learning (2021, Nature) | 去中心化 FL with blockchain | 拓扑去中心化，但聚合仍是平均 |</p>
+<p><strong>选择性/质量感知聚合</strong></p>
+<p>| 论文 | 做了什么 | 与 AFP 的关系 |
+|------|---------|:---:|
+| FedStrategist (2025.07) | 元学习自适应聚合 | 有&quot;学习如何聚合&quot;的意识，但决策在服务器端 |
+| Attention-based Aggregation | 用 attention 加权客户端 | 比等权平均好，但仍是线性组合 |
+| Robust Aggregation (Krum, Trimmed Mean, etc.) | 统计方法剔除异常值 | 被动防御，非主动选择 |</p>
+<p><strong>模型合并 / 权重空间分析</strong></p>
+<p>| 论文 | 做了什么 | 与 AFP 的关系 |
+|------|---------|:---:|
+| Model Soups / Model Merging | 多个 fine-tuned 模型的线性合并 | 关注&quot;什么时候合并有效&quot;，但仍是线性 |
+| Task Arithmetic | 权重空间中做加/减法来组合任务能力 | AFP 的子空间操作可借鉴 |
+| Git Re-Basin | 通过 permutation symmetry 对齐权重空间 | AFP 的知识提取器可借鉴 |</p>
+<p><strong>数据无关知识蒸馏</strong></p>
+<p>| 论文 | 做了什么 | 与 AFP 的关系 |
+|------|---------|:---:|
+| Data-Free KD (经典) | 不用原始数据，教师模型蒸馏到学生模型 | 单向、不可见数据 → AFP 的双向 + 选择性 |</p>
+<h3>1.4 引用验证（来自 FCL-PRM 旧项目）</h3>
+<p>以下论文从旧项目 DIRECTION.md 继承，已逐篇验证真实存在：</p>
+<p>| 论文 | 正式信息 | 相关性 |
+|------|---------|:---:|
+| FedAPM (KDD 2025) | <code>2506.04672</code> — partial model personalization 加剧 client drift | 中等 |
+| FedDecorr (TPAMI 2023) | <code>2210.00226</code> — FL 数据异构驱动维度坍缩 | 中等 |
+| FedBRICK (AAAI 2026) | <code>10.1609/aaai.v40i34.40083</code> — 冻结层越多 structural bias 越大 | 高 |
+| SCAFFOLD (ICML 2020) | <code>1910.06378</code> — 控制变量修正 client drift（注：drift 来自数据异构，非参数维度） | 中等 |
+| FedRCL (CVPR 2024) | <code>2401.04928</code> — 正式标题 &quot;Relaxed Contrastive Learning for FL&quot; | 低 |
+| Momentum Benefits Non-IID FL (ICLR 2024) | <code>2306.16504</code> — 动量消除异构性假设 | 低 |</p>
+<hr />
+<h2>二、AFP 的文献定位</h2>
+<h3>空白确认</h3>
+<p>AFP 的六大组件各自在文献中有零件，但<strong>完整系统无先例</strong>：</p>
+<p>| 组件 | 文献现状 | 空白 |
+|------|---------|------|
+| P2P 拓扑 | Gossip learning, Swarm Learning | 仍用平均聚合 |
+| 选择性聚合 | Attention-based, quality-aware | 决策在服务器端 |
+| 信任/声誉 | Trust-aware FL, blockchain FL | 用于&quot;选客户端&quot;，不是&quot;学多少&quot; |
+| 子空间操作 | Task arithmetic, model merging | 不涉及隐私约束 |
+| Data-free 蒸馏 | Data-free KD | 单向、压缩场景 |
+| Agent 自主决策 | <strong>无先例</strong> | <strong>AFP 的核心创新</strong> |</p>
+<h3>理论工具缺口</h3>
+<p>AFP 需要的数学工具：</p>
+<ul>
+<li><strong>子空间分析</strong>：如何从权重中提取&quot;有效知识子空间&quot;？</li>
+<li><strong>信任的统计理论</strong>：trust 作为交互历史的函数，其统计性质？</li>
+<li><strong>P2P 互学习的收敛性</strong>：当每个 agent 的更新规则不同、学习率不同、选择对象不同时，系统收敛吗？</li>
+<li><strong>信息论视角</strong>：权重作为通信媒介，信息传输率是多少？瓶颈在哪？</li>
+</ul>
+<hr />
+<h2>三、不再考虑的旧方向</h2>
+<p>以下方向来自 FCL-PRM 旧项目，已评估并关闭：</p>
+<p>| 方向 | 关闭原因 |
+|------|---------|
+| CD-SPI 诊断框架 | 实验证伪（全配置 sym ≈ 0.001，无区分度） |
+| 容量-发散性质因果理论 | 依赖&quot;去噪有用&quot;的前提（未验证），且问题设定不如 AFP 根本 |
+| Null Result 叙事 | 可发表但学术价值有限 |
+| 纯理论（子空间约束 → 噪声发散） | 仍在现有 FL 范式内，不触及范式本身的问题 |</p>
+
+<hr>
+<footer style="color:#94a3b8;font-size:0.85em;text-align:center;padding:20px 0;">
+  AFP Project · Generated 2026-06-19 · Phase 0 v2
+</footer>
+</body>
+</html>

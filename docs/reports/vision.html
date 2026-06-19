@@ -1,86 +1,80 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><title>AFP — Agentic Federated Protocol 核心愿景</title>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFP — 核心愿景与协议形式化</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75; color: #1a1a1a; background: #fafafa; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.75;
+         color: #1a1a1a; background: #fafafa; }
   h1 { font-size: 2em; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
   h2 { font-size: 1.5em; margin-top: 48px; color: #1e40af; }
   h3 { font-size: 1.15em; margin-top: 32px; color: #374151; }
-  blockquote { border-left: 4px solid #2563eb; margin: 16px 0; padding: 8px 20px; background: #eff6ff; font-style: italic; }
+  h4 { font-size: 1.05em; margin-top: 24px; color: #4b5563; }
+  blockquote { border-left: 4px solid #2563eb; margin: 16px 0; padding: 8px 20px;
+               background: #eff6ff; font-style: italic; }
+  blockquote p { margin: 4px 0; }
   table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 0.92em; }
   th { background: #1e3a5f; color: white; padding: 10px 14px; text-align: left; }
   td { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; }
   tr:nth-child(even) td { background: #f8fafc; }
-  pre { background: #1e293b; color: #e2e8f0; padding: 18px 22px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 18px 22px; border-radius: 8px;
+        overflow-x: auto; font-size: 0.88em; line-height: 1.6; }
   code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
   pre code { background: none; padding: 0; }
-  .insight { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
-  .vacuum { background: #dcfce7; border-left: 4px solid #16a34a; padding: 12px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .insight { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 20px;
+             margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .vacuum { background: #dcfce7; border-left: 4px solid #16a34a; padding: 12px 20px;
+            margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .v2 { background: #ede9fe; border-left: 4px solid #7c3aed; padding: 12px 20px;
+        margin: 20px 0; border-radius: 0 8px 8px 0; }
   hr { margin: 40px 0; border: none; border-top: 1px solid #e5e7eb; }
   li { margin: 6px 0; }
   strong { color: #1e3a5f; }
-</style></head>
+  em { color: #64748b; }
+  a { color: #2563eb; }
+</style>
+</head>
 <body>
-
-<h1>AFP (Agentic Federated Protocol)<br><small style="font-weight:normal;font-size:0.6em;color:#64748b;">Agentic Federated Protocol — 去中心化的 P2P 互学习协议</small></h1>
-
+<h1>AFP (Agentic Federated Protocol) — 核心愿景</h1>
 <blockquote>
-  <strong>AFP 是一种去中心化的 P2P 互学习协议。模型不再被动接受聚合，而是像学者一样——通过"权重论文"交流知识，自主决定学什么、学多少、信谁。</strong>
+<p><strong>AFP 是一种去中心化的 P2P 互学习协议。模型不再被动接受聚合，而是像学者一样——通过&quot;权重论文&quot;交流知识，自主决定学什么、学多少、信谁。</strong></p>
 </blockquote>
-
-<hr>
-
+<hr />
 <h2>一、现行联邦学习的根本局限：初等运算</h2>
-
 <p>现行 FL 的核心运算是 FedAvg：</p>
-
-<pre><code>W_global = Σ (n_i / N) · W_i</code></pre>
-
-<p>这是<strong>凸组合</strong>——两个数的加权平均。不管你跑多少轮，每一轮的"学习"就是一次线性插值。</p>
-
+<pre><code>W_global = Σ (n_i / N) · W_i
+</code></pre>
+<p>这是<strong>凸组合</strong>——两个数的加权平均。不管你跑多少轮，每一轮的&quot;学习&quot;就是一次线性插值。</p>
 <h3>FedAvg 的三个隐含假定（全都不成立）</h3>
-
-<table>
-<tr><th>假定</th><th>现实</th></tr>
-<tr><td>W<sub>A</sub> 和 W<sub>B</sub> 的每个参数位有相同的"单位"</td><td>不同数据分布训练出的权重，其参数空间结构完全不同</td></tr>
-<tr><td>噪声在平均中自然抵消</td><td>恶意客户端可以系统性注入偏差，平均不能消除</td></tr>
-<tr><td>所有客户端同等可信</td><td>客户端的数据质量、计算能力、诚实度天然不同</td></tr>
-</table>
-
+<p>| 假定 | 现实 |
+|------|------|
+| W_A 和 W_B 的每个参数位有相同的&quot;单位&quot; | 不同数据分布训练出的权重，其参数空间结构完全不同 |
+| 噪声在平均中自然抵消 | 恶意客户端可以系统性注入偏差，平均不能消除 |
+| 所有客户端同等可信 | 客户端的数据质量、计算能力、诚实度天然不同 |</p>
 <h3>为什么这些假定在真实 FL 场景下致命？</h3>
-
 <p>真实 FL 的定义性特征是<strong>服务器不知道数据长什么样</strong>。当你看不到数据的时候：</p>
 <ul>
-  <li>你无法验证哪个客户端的更新是"好的"</li>
-  <li>你无法区分"因为数据不同导致的正常差异"和"恶意注入"</li>
-  <li>你能做的只有平均——而这恰好是最容易被攻击的操作</li>
+<li>你无法验证哪个客户端的更新是&quot;好的&quot;</li>
+<li>你无法区分&quot;因为数据不同导致的正常差异&quot;和&quot;恶意注入&quot;</li>
+<li>你能做的只有平均——而这恰好是最容易被攻击的操作</li>
 </ul>
-
-<div class="insight">
-  <strong>现行 FL 假设了一个可信的全知服务器——但这恰恰是隐私场景下最不该假设的东西。</strong>
-</div>
-
-<hr>
-
-<h2>二、AFP 的核心思想：从"优化问题"到"学习问题"</h2>
-
+<p><strong>现行 FL 假设了一个可信的全知服务器——但这恰恰是隐私场景下最不该假设的东西。</strong></p>
+<hr />
+<h2>二、AFP 的核心思想：从&quot;优化问题&quot;到&quot;学习问题&quot;</h2>
 <h3>范式对比</h3>
-
-<table>
-<tr><th></th><th>现行 FL (FedAvg 范式)</th><th>AFP (Agentic Federated Protocol)</th></tr>
-<tr><td><strong>数学模型</strong></td><td>分布式优化（凸组合）</td><td>元学习 + 博弈 + 信息传输</td></tr>
-<tr><td><strong>Agent 角色</strong></td><td>被动执行者（服从服务器指令）</td><td><strong>主动学习者</strong>（自主决策）</td></tr>
-<tr><td><strong>聚合方式</strong></td><td>固定公式（加权平均）</td><td><strong>学出来的策略</strong>（每个 agent 有自己的学习策略）</td></tr>
-<tr><td><strong>信任</strong></td><td>预设（假设客户端诚实）</td><td><strong>交互中建立</strong>（trust 是学出来的）</td></tr>
-<tr><td><strong>鲁棒性</strong></td><td>依赖服务器检测</td><td><strong>每个 agent 自主防御</strong></td></tr>
-<tr><td><strong>拓扑</strong></td><td>星型（服务器在中心）</td><td><strong>P2P 网状</strong>（无中心）</td></tr>
-<tr><td><strong>知识传输</strong></td><td>线性插值</td><td><strong>选择性子空间投影 + 对比约束</strong></td></tr>
-</table>
-
+<p>| | 现行 FL (FedAvg 范式) | AFP (Agentic Federated Protocol) |
+|---|---|---|
+| <strong>数学模型</strong> | 分布式优化（凸组合） | 元学习 + 博弈 + 信息传输 |
+| <strong>Agent 角色</strong> | 被动执行者（服从服务器指令） | <strong>主动学习者</strong>（自主决策） |
+| <strong>聚合方式</strong> | 固定公式（加权平均） | <strong>学出来的策略</strong>（每个 agent 有自己的学习策略） |
+| <strong>信任</strong> | 预设（假设所有客户端诚实或服务器能识别恶意） | <strong>交互中建立</strong>（trust 是学出来的） |
+| <strong>鲁棒性</strong> | 依赖服务器检测 | <strong>每个 agent 自主防御</strong> |
+| <strong>拓扑</strong> | 星型（服务器在中心） | <strong>P2P 网状</strong>（无中心，或中心被弱化） |
+| <strong>知识传输</strong> | 线性插值 | <strong>选择性子空间投影 + 对比约束</strong> |</p>
 <h3>核心类比：学术界</h3>
-
-<p>学术界的知识传播不是"所有论文平均"：</p>
-
+<p>学术界的知识传播不是&quot;所有论文平均&quot;：</p>
 <pre><code>一个研究生（经历少的模型）读了一篇资深教授的论文（经历多的模型）
 → 不是把论文和自己已有的知识做加权平均
 → 而是：
@@ -88,59 +82,52 @@
   2. 提取论文的核心贡献（不是全部内容） → 知识提取
   3. 与自己的研究结合（选择性整合） → 门控更新
   4. 决定在自己的论文中引用多少 → 学习权重
-  5. 如果教授的方法在自己的数据上不 work → 降低 trust，减少引用</code></pre>
-
-<div class="insight">
-  <strong>AFP 就是把学术界的知识传播机制形式化为一个数学协议。</strong>
-</div>
-
-<hr>
-
+  5. 如果教授的方法在自己的数据上不 work → 降低 trust，减少引用
+</code></pre>
+<p><strong>AFP 就是把学术界的知识传播机制形式化为一个数学协议。</strong></p>
+<hr />
 <h2>三、AFP 协议的形式化</h2>
-
 <h3>设定</h3>
-
 <ul>
-  <li><strong>N 个 Agent</strong>，每个 Agent i 拥有：</li>
-  <ul>
-    <li>私有数据集 D<sub>i</sub>（不可共享）</li>
-    <li>模型权重 W<sub>i</sub></li>
-    <li>学习策略模块 L<sub>i</sub>（自主决策）</li>
-    <li>信任模型 T<sub>i</sub>（对每个 peer j 的信任度 T<sub>i</sub>(j) ∈ [0,1]）</li>
-    <li>知识提取器 E<sub>i</sub>（从对方权重中提取可用知识）</li>
-  </ul>
+<li>N 个 Agent，每个 Agent i 拥有：
+<ul>
+<li>私有数据集 D_i（不可共享）</li>
+<li>模型权重 W_i</li>
+<li>学习策略模块 L_i（自主决策）</li>
+<li>信任模型 T_i（对每个 peer j 的信任度 T_i(j) ∈ [0,1]）</li>
+<li>知识提取器 E_i（从对方权重中提取可用知识）</li>
 </ul>
-
-<h3>一次交互回合（Agent A 收到 Agent B 的权重 W<sub>B</sub>）</h3>
-
-<pre><code><strong>Step 1 — 分析（Analysis）</strong>
+</li>
+</ul>
+<h3>一次交互回合（Agent A 收到 Agent B 的权重 W_B）</h3>
+<pre><code>Step 1 — 分析（Analysis）
   Input:  W_A, W_B, history_A_B
   Output: d = subspace_analysis(W_A, W_B)
           K_B = extract_knowledge_subspace(W_B, d)
-  → "B 的知识主要体现在哪些参数子空间？"
+          → &quot;B 的知识主要体现在哪些参数子空间？&quot;
 
-<strong>Step 2 — 信任评估（Trust）</strong>
+Step 2 — 信任评估（Trust）
   Input:  history_A_B, d, reputation_B
   Output: trust_A(B) ∈ [0,1]
-  → "B 值得信任吗？"
-  → high trust: B 的历史表现好、知识互补
-  → low trust: 未知 agent、历史差、检测到异常
+          → &quot;B 值得信任吗？&quot;
+          → high trust: B 的历史表现好、知识互补、不是恶意注入
+          → low trust: B 是未知 agent、历史表现差、检测到异常
 
-<strong>Step 3 — 自主决策（Decision）</strong>
+Step 3 — 自主决策（Decision）
   Input:  trust_A(B), K_B, W_A, loss_on_D_A
   Output: learn? ∈ {yes, no}
           what?  = K_B ∩ plastic_subspace(A)
-          how_much? α = trust × complementarity × LR_multiplier
-  → 不是服务器替我决定，是我自己决定
+          how_much? α = trust_A(B) × complementarity × LR_multiplier
+          → 不是服务器替我决定，是我自己决定
 
-<strong>Step 4 — 选择性整合（Integration）</strong>
+Step 4 — 选择性整合（Integration）
   Input:  W_A, W_B, α, what
   Output: W_A' = W_A + M_A ⊙ project_what(W_B - W_A)
           其中 M_A 是 A 自主生成的门控掩码（0-1 向量）
-  → 不是 (1-α)W_A + α·W_B（线性插值）
-  → 而是选择性的、结构化的、子空间约束的更新
+          → 不是 (1-α)W_A + α·W_B（线性插值）
+          → 而是选择性的、结构化的、子空间约束的更新
 
-<strong>Step 5 — 反馈（Feedback，形成"对话"）</strong>
+Step 5 — 反馈（Feedback，形成&quot;对话&quot;）
   Input:  integration_result
   Output: feedback_to_B = {
             accepted_layers: [attention, embedding],
@@ -148,98 +135,84 @@
             trust_update: +0.03,
             anomaly_detected: false
           }
-  → B 据此调整对 A 的教学策略</code></pre>
-
+          → B 据此调整对 A 的教学策略
+</code></pre>
 <h3>关键创新点</h3>
-
 <ol>
-  <li><strong>门控掩码 M<sub>A</sub> 替代了标量 α</strong>：不是用一个数来加权，而是对每个参数维度做一个独立的接受/拒绝决策</li>
-  <li><strong>子空间投影替代了全量平均</strong>：只在对方知识的"有效子空间"内更新，避免引入噪声</li>
-  <li><strong>trust 是学出来的</strong>：不是超参数，而是交互历史的函数</li>
-  <li><strong>反馈通道</strong>：形成双向对话，而非单向的"客户端上传→服务器下发"</li>
+<li><strong>门控掩码 M_A 替代了标量 α</strong>：不是用一个数来加权，而是对每个参数维度做一个独立的接受/拒绝决策</li>
+<li><strong>子空间投影替代了全量平均</strong>：只在对方知识的&quot;有效子空间&quot;内更新，避免引入噪声</li>
+<li><strong>trust 是学出来的</strong>：不是超参数，而是交互历史的函数</li>
+<li><strong>反馈通道</strong>：形成双向对话，而非单向的&quot;客户端上传→服务器下发&quot;</li>
 </ol>
-
-<hr>
-
-<h2>四、为什么这比 FedAvg 更好</h2>
-
+<hr />
+<h2>四、为什么这比 FedAvg 更好（理论直觉）</h2>
 <h3>4.1 选择性更新 → 天然抗噪声</h3>
+<pre><code>FedAvg:    W' = (1-α)W_A + α·W_B
+           如果 W_B 包含 50% 噪声，那么 W' 包含 α·50% 的噪声
 
-<pre><code>FedAvg:  W' = (1-α)W_A + α·W_B
-         如果 W_B 包含 50% 噪声，W' 包含 α·50% 噪声
-
-AFP:    W' = W_A + M ⊙ (W_B - W_A)
-         如果 M 在噪声维度 = 0（门控关掉），噪声不入</code></pre>
-
+AFP:      W' = W_A + M ⊙ (W_B - W_A)
+           如果 M 在噪声维度上 = 0（被门控掩码关掉），噪声不入
+</code></pre>
 <h3>4.2 trust 机制 → 天然抗恶意注入</h3>
+<pre><code>FedAvg:    服务器不知道哪个客户端是恶意的
+           → 恶意更新被平均进去
 
-<pre><code>FedAvg:  服务器不知道哪个客户端是恶意的
-         → 恶意更新被平均进去
-
-AFP:     Agent A 在交互中自己评估 trust
-         → 低 trust → 低 α → 恶意更新基本不影响 A</code></pre>
-
+AFP:       Agent A 在交互中自己评估 trust
+           → 低 trust → 低 α → 恶意更新基本不影响 A
+           → 即使 B 是恶意的，A 不会被污染
+</code></pre>
 <h3>4.3 回应导师的五连问</h3>
-
-<table>
-<tr><th>导师的问题</th><th>FedAvg 的答案</th><th>AFP 的答案</th></tr>
-<tr><td>"如果是噪声你怎么办？"</td><td>寄希望于平均消除</td><td><strong>门控掩码在检测阶段就拒绝噪声</strong></td></tr>
-<tr><td>"噪声的原因是什么？"</td><td>不知道</td><td><strong>trust 函数天然追溯噪声源</strong></td></tr>
-<tr><td>"为什么必然产生噪声？"</td><td>—</td><td><strong>低质量 agent 的权重结构可被检测</strong></td></tr>
-<tr><td>"噪声在不同水平的影响？"</td><td>无法量化</td><td><strong>trust ∈ [0,1] 天然量化</strong></td></tr>
-<tr><td>"不去噪有什么影响？"</td><td>不知道</td><td><strong>消融实验：关掉 M → 性能下降</strong></td></tr>
-</table>
-
-<hr>
-
+<p>| 导师的问题 | FedAvg 的答案 | AFP 的答案 |
+|-----------|-------------|-----------|
+| &quot;如果是噪声你怎么办？&quot; | 寄希望于平均消除 | <strong>门控掩码在检测阶段就拒绝噪声</strong> |
+| &quot;噪声的原因是什么？&quot; | 不知道 | <strong>trust 函数天然追溯噪声源</strong> |
+| &quot;为什么必然产生噪声？&quot; | — | <strong>低质量 agent 的权重结构可被检测</strong> |
+| &quot;噪声在不同水平的影响？&quot; | 无法量化 | <strong>trust ∈ [0,1] 天然量化</strong> |
+| &quot;不去噪有什么影响？&quot; | 不知道 | <strong>消融实验：关掉 M → 对比性能下降</strong> |</p>
+<hr />
 <h2>五、研究路线图</h2>
-
-<h3>Phase 0 — 最简原型（证明可行性）</h3>
+<h3>Phase 0：最简原型（证明可行性）</h3>
 <ul>
-  <li>2 个 agent，各自有私有数据（不同领域）</li>
-  <li>固定 trust（预设双方可信）</li>
-  <li>对比：AFP 选择性子空间更新 vs FedAvg 线性平均</li>
-  <li><strong>核心指标</strong>：AFP 在各自私有数据上的表现是否优于 FedAvg？</li>
+<li>2 个 agent，各自有私有数据（不同领域）</li>
+<li>固定 trust（预设双方可信）</li>
+<li>对比：AFP 选择性子空间更新 vs FedAvg 线性平均</li>
+<li><strong>核心指标</strong>：AFP 是否在各自私有数据上的表现优于 FedAvg？</li>
 </ul>
-
-<h3>Phase 1 — trust 的学习</h3>
+<h3>Phase 1：trust 的学习</h3>
 <ul>
-  <li>trust 从"预设"变成"交互历史的函数"</li>
-  <li>Agent 学习"谁可信"——通过验证对方权重在自己私有数据上的表现</li>
+<li>trust 不再是固定的，而是交互历史的函数</li>
+<li>Agent 学习&quot;谁可信&quot;——通过验证对方权重在自己私有数据上的表现</li>
+<li><strong>核心指标</strong>：trust 能否收敛到真实的可靠性排序？</li>
 </ul>
-
-<h3>Phase 2 — 扩展到 N 个 agent</h3>
+<h3>Phase 2：扩展到 N 个 agent</h3>
 <ul>
-  <li>去中心化拓扑：agent 自由选择交互对象</li>
-  <li>系统是否收敛？收敛速度 vs 中心化 FL？</li>
+<li>去中心化拓扑：agent 之间可以自由选择交互对象</li>
+<li>Agent 需要同时决策：和谁交流？学什么？</li>
+<li><strong>核心指标</strong>：系统是否收敛？收敛速度与中心化 FL 对比？</li>
 </ul>
-
-<h3>Phase 3 — 对抗鲁棒性</h3>
+<h3>Phase 3：对抗鲁棒性</h3>
 <ul>
-  <li>注入恶意 agent（随机噪声 / 定向攻击 / 后门）</li>
-  <li>AFP vs FedAvg vs Robust Aggregation</li>
+<li>注入恶意 agent（随机噪声 / 定向攻击 / 后门）</li>
+<li><strong>核心指标</strong>：AFP 的鲁棒性是否显著优于 FedAvg？</li>
 </ul>
-
-<h3>Phase 4 — 理论分析</h3>
+<h3>Phase 4：理论分析</h3>
 <ul>
-  <li>AFP 的收敛性证明</li>
-  <li>trust 函数的统计性质</li>
-  <li>信息论视角：权重中的知识传输率</li>
+<li>AFP 的收敛性证明</li>
+<li>trust 函数的统计性质</li>
+<li>信息论视角：权重中的知识传输效率</li>
 </ul>
+<hr />
+<h2>六、与旧项目 (FCL-PRM) 的关系</h2>
+<ul>
+<li>FCL-PRM 的<strong>工程积累</strong>可复用：训练脚本、模型定义、联邦模拟器</li>
+<li>FCL-PRM 的<strong>科学教训</strong>已吸取：不要在没有理论支撑的情况下做&quot;诊断工具&quot;</li>
+<li>FCL-PRM 的<strong>实验数据</strong>可作为 AFP 的 baseline 对比</li>
+</ul>
+<p><strong>AFP 不是 FCL-PRM 的延续——它是一个全新的范式。FCL-PRM 试图诊断一个已有系统中的问题，AFP 试图重新定义系统本身。</strong></p>
 
 <hr>
-
-<h2>六、与旧项目 (FCL-PRM) 的关系</h2>
-
-<ul>
-  <li>FCL-PRM 的<strong>工程积累</strong>可复用：训练脚本、模型定义、联邦模拟器</li>
-  <li>FCL-PRM 的<strong>科学教训</strong>已吸取：不要在没有理论支撑的情况下做"诊断工具"</li>
-  <li>FCL-PRM 的<strong>实验数据</strong>可作为 AFP 的 baseline 对比</li>
-</ul>
-
-<div class="vacuum">
-  <strong>AFP 不是 FCL-PRM 的延续——它是一个全新的范式。FCL-PRM 试图诊断一个已有系统中的问题，AFP 试图重新定义系统本身。</strong>
-</div>
-
+<footer style="color:#94a3b8;font-size:0.85em;text-align:center;padding:20px 0;">
+  AFP Project · Generated 2026-06-19 · Phase 0 v2
+</footer>
 </body>
 </html>
