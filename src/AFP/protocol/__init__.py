@@ -14,7 +14,7 @@ import torch.nn as nn
 
 from .agent import AFPAgent, PRMHead
 from .integrator import afp_integrate, fedavg
-from .trust import block_importance, compute_trust, importance_cosine, mas_importance
+from .trust import block_importance, compute_trust, gate_linear, gate_rational, importance_cosine, mas_importance
 
 # ponytail: one lookup dict, shared across all scripts
 _HIDDEN_MAP = {"pythia": 2048, "qwen2": 1536, "qwen2.5": 1536,
