@@ -17,7 +17,7 @@ Gate: two forms —
 import torch
 import torch.nn.functional as F
 
-N_BLOCKS = 24
+N_BLOCKS = 32  # safe upper bound (Pythia=24, Qwen2.5=28)
 
 
 # ---------------------------------------------------------------------------

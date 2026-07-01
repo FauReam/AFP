@@ -8,7 +8,7 @@ Gate functions: gate_rational (EWC-derived, default), gate_linear (ablation).
 
 from .trust import gate_rational, gate_linear, _block_index
 
-N_BLOCKS = 24
+N_BLOCKS = 32  # safe upper bound (Pythia=24, Qwen2.5=28)
 
 
 def fedavg(w_self: dict, w_other: dict, alpha: float) -> dict:

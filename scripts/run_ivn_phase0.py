@@ -41,7 +41,7 @@ from AFP.protocol import (AFPAgent, block_importance, gate_linear, gate_rational
 OUT_DIR = PROJECT / "experiments" / "phase0_ivn"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 MAX_LEN = 384
-N_BLOCKS = 24
+N_BLOCKS = 32  # safe upper bound (Pythia=24, Qwen2.5=28)
 
 CATMAP = {"computer science": "code", "engineering": "code",
           "health": "medical", "biology": "medical",
@@ -275,9 +275,10 @@ def _block_index(key: str) -> int | None:
     if "layers." not in key:
         return None
     try:
-        return int(key.split("layers.")[1].split(".")[0])
+        idx = int(key.split("layers.")[1].split(".")[0])
     except (ValueError, IndexError):
         return None
+    return idx if 0 <= idx < N_BLOCKS else None
 
 
 # ===========================================================================
@@ -378,14 +379,16 @@ def main():
         noisy_b = {}
         for k in orig_a:
             blk = _block_index(k)
-            if blk is not None and k in noise_scale_b and noise_scale_b[k] > 0:
+            blk_a = blk if blk is not None and blk < len(gates_a_noise) else None
+            blk_b = blk if blk is not None and blk < len(gates_b_noise) else None
+            if blk_a is not None and k in noise_scale_b and noise_scale_b[k] > 0:
                 noise_a = torch.randn_like(orig_a[k]) * noise_scale_b[k]
-                noisy_a[k] = orig_a[k] + gates_a_noise[blk] * noise_a
+                noisy_a[k] = orig_a[k] + gates_a_noise[blk_a] * noise_a
             else:
                 noisy_a[k] = orig_a[k].clone()
-            if blk is not None and k in noise_scale_a and noise_scale_a[k] > 0:
+            if blk_b is not None and k in noise_scale_a and noise_scale_a[k] > 0:
                 noise_b = torch.randn_like(orig_b[k]) * noise_scale_a[k]
-                noisy_b[k] = orig_b[k] + gates_b_noise[blk] * noise_b
+                noisy_b[k] = orig_b[k] + gates_b_noise[blk_b] * noise_b
             else:
                 noisy_b[k] = orig_b[k].clone()
         agent_a.load_backbone_state(noisy_a)
