@@ -95,16 +95,20 @@ python scripts/run_ivn_phase0.py \
   --importance mas        # 或 magnitude (消融)
 ```
 
-## 预估
+## 预估（2026-07-01 实测更新）
 
 ```
-模型下载: ~15min (每个 3GB)
-importance 计算: ~1min
-IVN 谈判: ~5-10min (取决于收敛轮次)
-FedAvg grid search: ~10min (6 alpha × 评估)
-AFP grid search: ~12min (7 tau × 评估)
-总计: ~40min
+模型加载 (cache): ~30s
+MAS importance (500 samples): ~2min
+Baseline 评估 (4×): ~6min
+Noise control (3 seeds × 4 evals): ~10min
+FedAvg grid search (6 alpha × 4 evals): ~20min
+AFP grid search (7 tau × 4 evals): ~24min
+IVN 谈判 (≤30 rounds): ~10min
+总计: ~70-90min (DGX Spark GB10 实测)
 ```
+
+> ⚠️ 注意：Qwen2.5-1.5B 有 28 层 transformer layers，不是 Pythia 的 24 层。`N_BLOCKS` 设为 32（安全上界）。评估样本量约 11K-14K/domain，单次评估 ~50 batch × ~3s = ~2.5min。
 
 ---
 

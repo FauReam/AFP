@@ -52,6 +52,26 @@
 - **症状**: anchor steps 只在 `aggregation: anchor_prm` 时生成
 - **修复**: 条件改为 `needs_anchor_steps = anchor_prm or compute_cd_spi or compute_sym_cd_spi`
 
+### Bug 8: `AFP.protocol.__init__` 缺少 gate 函数导出 — 2026-07-01
+- **位置**: `src/AFP/protocol/__init__.py`
+- **症状**: `ImportError: cannot import name 'gate_linear' from 'AFP.protocol'`
+- **修复**: 补充 `gate_linear, gate_rational` 到 `from .trust import` 行
+- **教训**: 新增公开函数必须更新 `__init__.py` 导出
+
+### Bug 9: `AutoTokenizer.from_pretrained` 无 `local_files_only` → HF 超时 — 2026-07-01
+- **位置**: `scripts/run_ivn_phase0.py:64`, `scripts/run_fivn_phase0.py:64`
+- **症状**: 跨域评估 `evaluate(Coder, math)` 触发缓存未命中 → tokenizer 下载路径尝试连 HF → `httpx.ConnectTimeout`
+- **根因**: 数据缓存以 `(domain, model_id)` 为 key。跨域组合未预热，fallback 到下载路径中的 `AutoTokenizer.from_pretrained()` 无 `local_files_only=True`
+- **修复**: 所有 `AutoTokenizer.from_pretrained` 加 `local_files_only=True`
+- **教训**: 无 VPN 时任何 HF API 调用都可能超时。离线可用操作必须显式 local-only
+
+### Bug 10: `N_BLOCKS=24` 不支持 Qwen2.5 的 28 层 → IndexError — 2026-07-01
+- **位置**: `scripts/run_ivn_phase0.py:44`, `src/AFP/protocol/trust.py:20`, `src/AFP/protocol/integrator.py:11`
+- **症状**: Noise control 中 `gates_a_noise[blk]` — `IndexError: list index out of range`（blk=24, len=24）
+- **根因**: Qwen2.5-1.5B 有 28 层，但 `N_BLOCKS=24` 是 Pythia-1.4B 的值。本地 `_block_index()` 无越界检查
+- **修复**: `N_BLOCKS` → 32；本地 `_block_index()` 加 bounds check；noise control 加 `blk < len(gates)` 保护
+- **教训**: 架构常量必须从 model config 动态获取。两个 `_block_index` 实现不同行为是代码坏味道
+
 ---
 
 ## 三、性能权衡记录
