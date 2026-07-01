@@ -61,7 +61,8 @@ def load_data(domain: str, model_id: str) -> dict:
         return torch.load(cache, map_location="cpu", weights_only=True)
 
     from datasets import load_dataset
-    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True,
+                                        local_files_only=True)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
@@ -142,11 +143,9 @@ def evaluate(agent: AFPAgent, domain: str, batch: int = 256) -> tuple[float, flo
 def load_agent(model_id: str, domain: str, device: str = "cuda") -> AFPAgent:
     """Load any HuggingFace model as AFPAgent."""
     print(f"[load] {model_id} as {domain}")
-    # Probe hidden dim before creating agent (avoid double-load)
-    backbone = AutoModel.from_pretrained(model_id, trust_remote_code=True)
-    hidden = guess_hidden(model_id, backbone)
-    del backbone
-    torch.cuda.empty_cache()
+    # ponytail: guess hidden dim from model_id (all Qwen2.5 are 1536, Pythia 2048).
+    # Avoid double-loading — AFPAgent.__init__ loads the model.
+    hidden = guess_hidden(model_id)
     return AFPAgent(domain, device, model_id=model_id, hidden=hidden)
 
 
@@ -155,7 +154,9 @@ def load_base_weights(model_id: str, device: torch.device) -> dict:
     print(f"[base] {model_id}")
     base = AutoModel.from_pretrained(model_id, trust_remote_code=True)
     base.to(device).to(torch.bfloat16)
-    return {k: v.detach() for k, v in base.state_dict().items()}
+    sd = {k: v.detach() for k, v in base.state_dict().items()}
+    del base; torch.cuda.empty_cache()
+    return sd
 
 
 def compute_importance_from_models(agent: AFPAgent, base_sd: dict) -> list[float]:

@@ -60,7 +60,7 @@ def load_data(domain: str, model_id: str) -> dict:
         return torch.load(cache, map_location="cpu", weights_only=True)
 
     from datasets import load_dataset
-    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, local_files_only=True)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
@@ -114,7 +114,7 @@ class FAgent:
         self.hidden = guess_hidden(model_id, self.backbone)
         self.head = nn.Sequential(
             nn.Linear(self.hidden, 256), nn.ReLU(), nn.Linear(256, 1)).to(device)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, local_files_only=True)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
@@ -240,7 +240,7 @@ def build_reference_set(n: int = N_REF) -> tuple[torch.Tensor, torch.Tensor]:
 
     # ponytail: use Pythia tokenizer for reference set (it's the student)
     from transformers import AutoTokenizer
-    tok = AutoTokenizer.from_pretrained("EleutherAI/pythia-1.4b")
+    tok = AutoTokenizer.from_pretrained("EleutherAI/pythia-1.4b", local_files_only=True)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
