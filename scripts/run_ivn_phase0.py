@@ -313,6 +313,9 @@ def main():
     # ---- Load models ----
     agent_a = load_agent(args.student, dom_s, str(device))
     agent_b = load_agent(args.teacher, dom_t, str(device))
+    # ponytail: Bug 12 fix — move to GPU before MAS, otherwise backward runs on CPU
+    agent_a.to_device()
+    agent_b.to_device()
 
     # ---- Importance ----
     if args.importance == "mas":

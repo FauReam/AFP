@@ -79,6 +79,13 @@
 - **修复**: GPU 端累积 `imp_sum[blk] += param.grad.float().abs().mean()`（无 `.item()`），循环结束后一次性 CPU sync。总 sync 次数从 10,416 → 1，MAS 耗时从 5h → ~1min。
 - **教训**: 任何在 GPU tensor 上循环调用 `.item()` 的模式都是性能杀手。先用 GPU tensor 累积，最后一次性同步。对 1.5B+ 参数模型尤其致命。
 
+### Bug 12: MAS 在 CPU 上运行（`to_device()` 调用太晚）— 2026-07-01
+- **位置**: `scripts/run_ivn_phase0.py:314-318`
+- **症状**: MAS 计算时 GPU 内存 0GB，利用率 0%，CPU 1,400%+。1.5B 模型 backward 在 CPU 上跑，极慢。
+- **根因**: `agent_a.to_device()` / `agent_b.to_device()` 在 baseline 评估前才调用（line 345），但 MAS 在 line 322 就运行了。`AFPAgent.__init__` 不会自动 `.to(device)`，模型默认在 CPU。
+- **修复**: 在模型加载后、MAS 计算前调用 `to_device()`。
+- **教训**: 构造函数不应隐式移动模型到 GPU（会导致加载失败时状态不一致），但调用方必须在计算前显式 `.to(device)`。可以在 `compute_*` 方法内部做防御性 GPU 移动。
+
 ---
 
 ## 三、性能权衡记录
