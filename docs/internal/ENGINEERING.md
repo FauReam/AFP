@@ -72,6 +72,13 @@
 - **修复**: `N_BLOCKS` → 32；本地 `_block_index()` 加 bounds check；noise control 加 `blk < len(gates)` 保护
 - **教训**: 架构常量必须从 model config 动态获取。两个 `_block_index` 实现不同行为是代码坏味道
 
+### Bug 11: MAS `per-param .item()` 导致 10,416 次 GPU sync → 5+ 小时 — 2026-07-01
+- **位置**: `src/AFP/protocol/trust.py:137` `mas_importance()`
+- **症状**: MAS 计算在 DGX Spark GB10 上耗时 5+ 小时（500 samples, batch=16）。GPU 利用率 0%，CPU 1,400%+。
+- **根因**: 内层循环对每个参数的梯度调用 `.float().abs().mean().item()`——每次 `.item()` 触发 GPU→CPU 同步。Qwen2.5-1.5B 有 336 个 layer 参数 × 31 batches = 10,416 次 GPU sync。GB10 统一内存下每次 sync ~1.7s。
+- **修复**: GPU 端累积 `imp_sum[blk] += param.grad.float().abs().mean()`（无 `.item()`），循环结束后一次性 CPU sync。总 sync 次数从 10,416 → 1，MAS 耗时从 5h → ~1min。
+- **教训**: 任何在 GPU tensor 上循环调用 `.item()` 的模式都是性能杀手。先用 GPU tensor 累积，最后一次性同步。对 1.5B+ 参数模型尤其致命。
+
 ---
 
 ## 三、性能权衡记录

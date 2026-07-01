@@ -109,8 +109,12 @@ def mas_importance(backbone, head, input_ids: torch.Tensor,
     n = min(n_samples, input_ids.shape[0])
     idx = torch.randperm(input_ids.shape[0])[:n]
 
-    imp = [0.0] * N_BLOCKS
-    cnt = [0] * N_BLOCKS
+    # GPU-side accumulation: one sum + count tensor per block, sync once at end.
+    # ponytail: Bug 11 fix — per-parameter .item() caused 10,416 GPU syncs
+    # (336 params × 31 batches), each ~1.7s on GB10 → 5+ hours.
+    # Now: accumulate on GPU, 1 sync at end → ~1 minute total.
+    imp_sum = torch.zeros(N_BLOCKS, device=device, dtype=torch.float64)
+    imp_cnt = torch.zeros(N_BLOCKS, device=device, dtype=torch.int32)
 
     for i in range(0, n, batch_size):
         end = min(i + batch_size, n)
@@ -133,16 +137,18 @@ def mas_importance(backbone, head, input_ids: torch.Tensor,
                 continue
             blk = _block_index(name)
             if blk is not None:
-                # ponytail: |grad| → .item() once per param tensor
-                imp[blk] += param.grad.float().abs().mean().item()
-                cnt[blk] += 1
+                # Accumulate on GPU — no .item() sync
+                imp_sum[blk] += param.grad.float().abs().mean()
+                imp_cnt[blk] += 1
 
     if was_training:
         backbone.train()
         head.train()
 
-    # ponytail: mean per block, then normalize by max
-    imp = [imp[j] / max(cnt[j], 1) for j in range(N_BLOCKS)]
+    # Single GPU→CPU sync — O(N_BLOCKS) instead of O(params × batches)
+    imp_cpu = imp_sum.cpu()
+    cnt_cpu = imp_cnt.cpu()
+    imp = [float(imp_cpu[j]) / max(int(cnt_cpu[j]), 1) for j in range(N_BLOCKS)]
     mx = max(imp)
     return [v / mx for v in imp] if mx > 0 else imp
 
