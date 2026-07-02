@@ -86,6 +86,33 @@
 - **修复**: 在模型加载后、MAS 计算前调用 `to_device()`。
 - **教训**: 构造函数不应隐式移动模型到 GPU（会导致加载失败时状态不一致），但调用方必须在计算前显式 `.to(device)`。可以在 `compute_*` 方法内部做防御性 GPU 移动。
 
+### Bug 13: `run_ivn_phase0.py` 默认使用 Qwen2.5 而非 Pythia-1.4B — 2026-07-03
+- **位置**: `scripts/run_ivn_phase0.py:294-297`
+- **症状**: 新会话直接运行 `python scripts/run_ivn_phase0.py`，加载 Qwen2.5-Coder/Math（而非 Pythia），importance cosine=0.975（Qwen 同基座 fine-tune 变体高度相似，不互补）。
+- **根因**: `--teacher default="Qwen/Qwen2.5-Coder-1.5B-Instruct"`, `--student default="Qwen/Qwen2.5-Math-1.5B-Instruct"`。但 CLAUDE.md 和 Phase 0 方案要求使用 **Pythia-1.4B full-FT on code + medical**。`train_and_run_phase0.sh` 正确覆盖了参数，但直接调用脚本不会。
+- **修复**: 将默认值改为 `EleutherAI/pythia-1.4b`，默认 domain 改为 `code`/`medical`；或至少在脚本顶部加 comment 警告。
+- **教训**: 脚本默认值必须与项目文档（CLAUDE.md）一致。不一致的默认值会导致新 agent 在不知情的情况下跑错实验，浪费数小时 GPU 时间。
+
+### Bug 14: `train_agent.py` 超参偏离 CLAUDE.md v2 spec — 2026-07-03
+- **位置**: `scripts/train_agent.py:40-46`
+- **症状**: 训练速度慢于预期。`EPOCHS=2`（spec 要求 1），`LR_MAX=5e-4`（spec 要求 1e-4），`LR_MIN=1.5e-5`（spec 要求 3e-6）。2 epochs × 621 batches/epoch × 35s/step ≈ 12h/domain。
+- **修复**: 对齐 CLAUDE.md：`EPOCHS=1`, `LR_MAX=1e-4`, `LR_MIN=3e-6`。同时 `MAX_LEN=384→256`（保留 86% 数据，减少 33% FLOPs）。总步数从 1,242 → 433，每步从 35s → 23s，总时间 12h → 2.8h。
+- **教训**: 脚本常量必须在文件顶部引用来源文档。超参变更要同步更新文档。
+
+### Bug 15: 训练缓存文件不绑定 MAX_LEN → 静默复用旧缓存 — 2026-07-03
+- **位置**: `scripts/train_agent.py:58-59`
+- **症状**: 修改 `MAX_LEN` 后重跑训练，数据量没变（仍使用旧 `MAX_LEN=384` tokenize 的缓存）。
+- **根因**: 缓存文件名 `train_{domain}_pythia.pt` 不含配置参数。`prepare_data()` 检测到文件存在即返回，不重新 tokenize。
+- **修复**: 缓存文件名加入 MAX_LEN：`train_{domain}_pythia_L{MAX_LEN}.pt`。不同配置生成不同缓存，避免静默冲突。
+- **教训**: 任何影响数据内容的参数变化必须体现在缓存 key 中。否则"改参数重跑"是假重跑。
+
+### Bug 16: `train_agent.py` SyntaxError — `global MAX_LEN` 声明顺序 — 2026-07-03
+- **位置**: `scripts/train_agent.py:320-323`
+- **症状**: `SyntaxError: name 'MAX_LEN' is used prior to global declaration`。`p.add_argument("--max-len", default=MAX_LEN)` 在 `global MAX_LEN` 之前使用了模块级变量。
+- **根因**: Python 要求 `global` 声明在函数内首次使用该变量名之前。`default=MAX_LEN` 是对 `MAX_LEN` 的读取使用。
+- **修复**: 将 `global MAX_LEN` 移到 `main()` 函数开头（`p = argparse.ArgumentParser(...)` 之前）。
+- **教训**: 如果函数内需要 `global` 覆写模块级常量，声明必须在所有对该变量的引用之前——包括函数参数的默认值表达式。
+
 ---
 
 ## 三、性能权衡记录

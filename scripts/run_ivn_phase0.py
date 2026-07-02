@@ -140,19 +140,23 @@ def evaluate(agent: AFPAgent, domain: str, batch: int = 256) -> tuple[float, flo
 # ===========================================================================
 
 
-def load_agent(model_id: str, domain: str, device: str = "cuda") -> AFPAgent:
-    """Load any HuggingFace model as AFPAgent."""
+def load_agent(model_id: str, domain: str, device: str = "cuda",
+               weights_dir: Path | None = None) -> AFPAgent:
+    """Load any HuggingFace model as AFPAgent. Optionally load trained weights."""
     print(f"[load] {model_id} as {domain}")
-    # ponytail: guess hidden dim from model_id (all Qwen2.5 are 1536, Pythia 2048).
-    # Avoid double-loading — AFPAgent.__init__ loads the model.
     hidden = guess_hidden(model_id)
-    return AFPAgent(domain, device, model_id=model_id, hidden=hidden)
+    agent = AFPAgent(domain, device, model_id=model_id, hidden=hidden)
+    if weights_dir is not None:
+        agent.load(weights_dir)
+        print(f"[load]   + trained weights from {weights_dir}")
+    return agent
 
 
 def load_base_weights(model_id: str, device: torch.device) -> dict:
     """Load base model weights for importance computation."""
     print(f"[base] {model_id}")
-    base = AutoModel.from_pretrained(model_id, trust_remote_code=True)
+    base = AutoModel.from_pretrained(model_id, trust_remote_code=True,
+                                       local_files_only=True)
     base.to(device).to(torch.bfloat16)
     sd = {k: v.detach() for k, v in base.state_dict().items()}
     del base; torch.cuda.empty_cache()
@@ -304,15 +308,21 @@ def main():
                    help="samples for MAS importance estimate")
     p.add_argument("--gate", choices=["rational", "linear"], default="rational",
                    help="rational (EWC-derived, default) or linear (ablation)")
+    p.add_argument("--weights", type=str, default=None,
+                   help="path to trained weights dir (e.g. experiments/trained_models). "
+                        "Loads W_{domain}_final.pt on top of base model.")
     args = p.parse_args()
 
     dom_t, dom_s = args.teacher_domain, args.student_domain
+    weights_root = Path(args.weights) if args.weights else None
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"=== IVN Phase 0: {args.teacher} ⇄ {args.student} ===\n")
 
     # ---- Load models ----
-    agent_a = load_agent(args.student, dom_s, str(device))
-    agent_b = load_agent(args.teacher, dom_t, str(device))
+    agent_a = load_agent(args.student, dom_s, str(device),
+                         weights_root / dom_s if weights_root else None)
+    agent_b = load_agent(args.teacher, dom_t, str(device),
+                         weights_root / dom_t if weights_root else None)
     # ponytail: Bug 12 fix — move to GPU before MAS, otherwise backward runs on CPU
     agent_a.to_device()
     agent_b.to_device()

@@ -43,7 +43,8 @@ class AFPAgent:
         self.model_id = model_id
         self.hidden = hidden
         self.backbone = AutoModel.from_pretrained(
-            model_id, trust_remote_code=True).to(dtype=torch.bfloat16)
+            model_id, trust_remote_code=True,
+            local_files_only=True).to(dtype=torch.bfloat16)
         self.head = PRMHead(hidden)
         self._importance: list[float] | None = None
 

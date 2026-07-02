@@ -147,8 +147,52 @@ fi
 - 模型全程在 CPU，GPU 内存 0GB，backward 极慢
 - 已修：模型加载后立即 `to_device()`
 
+### Bug 13: `run_ivn_phase0.py` 默认使用 Qwen2.5 而非 Pythia-1.4B
+- 脚本 `--teacher`/`--student` 默认值是 Qwen2.5-Coder/Math，但方案要求 Pythia-1.4B full-FT on code+medical
+- 直接 `python scripts/run_ivn_phase0.py` 得到错误的实验（importance cosine=0.975，不互补）
+- 正确入口是 `bash scripts/train_and_run_phase0.sh`（会覆盖参数）
+- 已修：默认值待改为 Pythia（目前 pipeline 脚本覆盖）
+
+### Bug 14: `train_agent.py` 超参偏离 CLAUDE.md
+- EPOCHS=2（应为 1），LR=5e-4（应为 1e-4），MAX_LEN=384（优化为 256）
+- 导致训练步数 1,242（应为 433），12h/domain
+- 已修：EPOCHS=1, LR=1e-4→3e-6, MAX_LEN=256
+
+### Bug 15: 训练缓存不绑定 MAX_LEN
+- 缓存文件名 `train_{domain}_pythia.pt` 不含配置参数
+- 修改 MAX_LEN 后静默复用旧缓存 → "改参数重跑"是假重跑
+- 已修：缓存文件名改为 `train_{domain}_pythia_L{MAX_LEN}.pt`
+
+### Bug 16: `train_agent.py` SyntaxError — `global` 声明顺序
+- `p.add_argument("--max-len", default=MAX_LEN)` 在 `global MAX_LEN` 之前使用变量
+- Python 报 `SyntaxError: name 'MAX_LEN' is used prior to global declaration`
+- 已修：`global MAX_LEN` 移到 `main()` 开头
+
 ### 旧项目 Bug 1-7
 详见 `docs/internal/ENGINEERING.md` 第二节。都是真实踩过的坑，新 agent 必读。
+
+## 正确启动方式（Pythia full-FT）
+
+```bash
+cd /home/jiayu/AFP
+export HF_ENDPOINT=https://hf-mirror.com
+export HF_DATASETS_OFFLINE=1
+export PYTHONUNBUFFERED=1
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+# 唯一入口：train + IVN 全流程
+nohup bash scripts/train_and_run_phase0.sh > /dev/null 2>&1 &
+echo $! > experiments/pipeline_pid.txt
+```
+
+**不要直接跑 `run_ivn_phase0.py`**（默认值仍是 Qwen2.5）。
+
+## 训练速度参考（DGX Spark GB10, Pythia-1.4B full-FT）
+
+| 配置 | 步数/domain | 每步时间 | 总时间/domain |
+|------|------------|---------|-------------|
+| MAX_LEN=384, EPOCHS=2, batch=128 | 1,242 | ~35s | ~12h |
+| MAX_LEN=256, EPOCHS=1, batch=128 | 433 | ~23s | ~2.8h |
 
 ## 重要观察
 
