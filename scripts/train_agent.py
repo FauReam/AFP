@@ -177,6 +177,12 @@ def validate(agent: AFPAgent, val_data: dict, batch_size: int, device: torch.dev
 
 def train(args) -> int:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Free perf on fixed-shape inputs: cuDNN auto-tuner finds best kernel.
+    # TF32 tensor cores on Blackwell SM 12.1 are faster than FP32 fallback.
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cuda.matmul.allow_tf32 = True
+
     print(f"=== Train AFPAgent: {MODEL_ID} on {args.domain} ===\n")
 
     # Tokenizer (Pythia = GPT-NeoX)
@@ -205,8 +211,10 @@ def train(args) -> int:
     # DataLoaders
     train_ds = TensorDataset(
         train_data["input_ids"], train_data["attention_mask"], train_data["labels"])
+    # No pin_memory: unified memory (GB10) shares CPU/GPU phys RAM,
+    # pinning is a no-op that wastes CUDA driver overhead.
     train_dl = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                          drop_last=False, pin_memory=True)
+                          drop_last=False)
     steps_per_epoch = len(train_dl)
     total_steps = steps_per_epoch * args.epochs
     print(f"[train] {steps_per_epoch} batches/epoch × {args.epochs} epochs "
@@ -237,9 +245,11 @@ def train(args) -> int:
         t_epoch = time.time()
 
         for inp, mask, labs in train_dl:
-            inp = inp.to(device, non_blocking=True)
-            mask = mask.to(device, non_blocking=True)
-            labs = labs.to(device, non_blocking=True)
+            # No non_blocking: unified memory is zero-copy;
+            # async xfer adds stream-sync overhead with no benefit.
+            inp = inp.to(device)
+            mask = mask.to(device)
+            labs = labs.to(device)
 
             optimizer.zero_grad(set_to_none=True)
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):

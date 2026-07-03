@@ -19,7 +19,9 @@ export HF_ENDPOINT=https://hf-mirror.com
 export HF_DATASETS_OFFLINE=1
 export PYTHONUNBUFFERED=1
 export CUDA_VISIBLE_DEVICES=0
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# No expandable_segments: useful on discrete GPU with limited VRAM, but on
+# GB10 unified memory (121 GB) it causes allocator fragmentation overhead.
+# export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 VENV=/home/jiayu/FCL-PRM-cdspi/venv/bin/python3
 LOG_DIR=experiments/phase0_training

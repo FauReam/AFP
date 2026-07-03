@@ -178,7 +178,7 @@ cd /home/jiayu/AFP
 export HF_ENDPOINT=https://hf-mirror.com
 export HF_DATASETS_OFFLINE=1
 export PYTHONUNBUFFERED=1
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# No expandable_segments: GB10 unified memory doesn't benefit; adds overhead
 
 # 唯一入口：train + IVN 全流程
 nohup bash scripts/train_and_run_phase0.sh > /dev/null 2>&1 &

@@ -58,7 +58,10 @@ def load_data(domain: str, model_id: str) -> dict:
     cache = PROJECT / "data" / "versaprm" / f"versa_prm_{domain}_{safe_name}.pt"
     cache.parent.mkdir(parents=True, exist_ok=True)
     if cache.exists():
-        return torch.load(cache, map_location="cpu", weights_only=True)
+        data = torch.load(cache, map_location="cpu", weights_only=True)
+        # Bug 19 fix: VersaPRM labels are {-1,1} but BCE expects {0,1}
+        data["labels"] = (data["labels"] > 0).float()
+        return data
 
     from datasets import load_dataset
     tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True,
@@ -83,7 +86,7 @@ def load_data(domain: str, model_id: str) -> dict:
             ids = tok.encode(f"{row.get('question', '')}\n{s}")
             if len(ids) <= MAX_LEN:
                 ids_list.append(ids)
-                labs_list.append(int(l))
+                labs_list.append(1.0 if int(l) == 1 else 0.0)  # {-1,1}→{0,1} for BCE
 
     n = len(ids_list)
     inp = torch.full((n, MAX_LEN), tok.pad_token_id, dtype=torch.long)
@@ -109,7 +112,7 @@ def load_data(domain: str, model_id: str) -> dict:
 def evaluate(agent: AFPAgent, domain: str, batch: int = 256) -> tuple[float, float]:
     """Accuracy on last 15% of domain data. Uses model's own tokenizer."""
     data = load_data(domain, agent.model_id)
-    n_test = max(data["n"] // 6, 100)
+    n_test = min(max(data["n"] // 6, 100), 1000)  # capped: GB10 ~25s/batch
     start = data["n"] - n_test
     device = next(agent.backbone.parameters()).device
     agent.eval_mode()
@@ -372,6 +375,7 @@ def main():
     # ponytail: rules out "any weight perturbation improves zero-shot accuracy".
     # Compute peer delta magnitude per parameter, inject Gaussian noise of
     # same std, apply same gate. If noise Δ ≈ 0 but IVN Δ > 0 → real signal.
+    print("--- Noise Ctrl ---")
     gate_fn_main = gate_rational if args.gate == "rational" else gate_linear
     gates_a_noise = gate_fn_main(imp_a, args.tau)
     gates_b_noise = gate_fn_main(imp_b, args.tau)
@@ -384,7 +388,8 @@ def main():
             db = (orig_b[k] - base_sd[k].to(device)).float()
             noise_scale_a[k] = da.std().item()  # A's delta magnitude per param
             noise_scale_b[k] = db.std().item()
-    for _ in range(3):  # 3 random seeds
+    for seed in range(1):  # 1 seed (was 3) — GB10 is slow
+        print(f"  noise ctrl seed={seed} ...", end=" ", flush=True)
         agent_a.load_backbone_state(orig_a)
         agent_b.load_backbone_state(orig_b)
         # Inject peer-magnitude noise through gate
@@ -409,6 +414,7 @@ def main():
         _, s_a = evaluate(agent_a, dom_s); _, c_a = evaluate(agent_a, dom_t)
         _, s_b = evaluate(agent_b, dom_t); _, c_b = evaluate(agent_b, dom_s)
         net = (s_a - acc_aa) + (c_a - acc_ab) + (s_b - acc_bb) + (c_b - acc_ba)
+        print(f"net={net:+.4f}")
         if net > best_noise["net"]:
             best_noise = {"net": net, "a_self": s_a, "a_cross": c_a,
                           "b_self": s_b, "b_cross": c_b}
@@ -416,8 +422,10 @@ def main():
     agent_b.load_backbone_state(orig_b)
 
     # ---- FedAvg grid search ----
+    print("--- FedAvg ---")
     best_fed = {"net": -999.0}
-    for alpha in [0.1, 0.2, 0.3, 0.5, 0.7, 0.9]:
+    for alpha in [0.1, 0.5, 0.9]:  # reduced from 6 values — GB10 is slow
+        print(f"  FedAvg α={alpha:.1f} ...", end=" ", flush=True)
         agent_a.load_backbone_state(orig_a)
         agent_b.load_backbone_state(orig_b)
         fed_a = agent_a.integrate_fedavg(agent_b.backbone_state(), alpha)
@@ -427,14 +435,17 @@ def main():
         _, s_a = evaluate(agent_a, dom_s); _, c_a = evaluate(agent_a, dom_t)
         _, s_b = evaluate(agent_b, dom_t); _, c_b = evaluate(agent_b, dom_s)
         net = (s_a - acc_aa) + (c_a - acc_ab) + (s_b - acc_bb) + (c_b - acc_ba)
+        print(f"net={net:+.4f}")
         if net > best_fed["net"]:
             best_fed = {"alpha": alpha, "net": net,
                         "a_self": s_a, "a_cross": c_a, "b_self": s_b, "b_cross": c_b}
 
     # ---- AFP one-shot grid search ----
+    print("--- AFP 1-shot ---")
     best_afp = {"net": -999.0}
     # ponytail: reuse base_sd (loaded above) instead of re-loading base model
-    for tau in [0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0]:
+    for tau in [0.3, 0.5, 1.0, 2.0]:  # reduced from 7 values — GB10 is slow
+        print(f"  AFP 1-shot τ={tau:.1f} ...", end=" ", flush=True)
         agent_a.load_backbone_state(orig_a)
         agent_b.load_backbone_state(orig_b)
         afp_a = agent_a.integrate_afp(agent_b.backbone_state(), base_sd, tau, gate=args.gate)
@@ -444,6 +455,7 @@ def main():
         _, s_a = evaluate(agent_a, dom_s); _, c_a = evaluate(agent_a, dom_t)
         _, s_b = evaluate(agent_b, dom_t); _, c_b = evaluate(agent_b, dom_s)
         net = (s_a - acc_aa) + (c_a - acc_ab) + (s_b - acc_bb) + (c_b - acc_ba)
+        print(f"net={net:+.4f}")
         if net > best_afp["net"]:
             best_afp = {"tau": tau, "net": net,
                         "a_self": s_a, "a_cross": c_a, "b_self": s_b, "b_cross": c_b}

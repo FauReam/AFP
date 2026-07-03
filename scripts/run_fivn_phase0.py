@@ -57,7 +57,10 @@ def load_data(domain: str, model_id: str) -> dict:
     cache = PROJECT / "data" / "versaprm" / f"versa_prm_{domain}_{safe_name}.pt"
     cache.parent.mkdir(parents=True, exist_ok=True)
     if cache.exists():
-        return torch.load(cache, map_location="cpu", weights_only=True)
+        data = torch.load(cache, map_location="cpu", weights_only=True)
+        # Bug 19 fix: VersaPRM labels are {-1,1} but BCE expects {0,1}
+        data["labels"] = (data["labels"] > 0).float()
+        return data
 
     from datasets import load_dataset
     tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, local_files_only=True)
@@ -80,7 +83,7 @@ def load_data(domain: str, model_id: str) -> dict:
             ids = tok.encode(f"{row.get('question', '')}\n{s}")
             if len(ids) <= MAX_LEN:
                 ids_list.append(ids)
-                labs_list.append(int(l))
+                labs_list.append(1.0 if int(l) == 1 else 0.0)  # {-1,1}→{0,1} for BCE
 
     n = len(ids_list)
     inp = torch.full((n, MAX_LEN), tok.pad_token_id, dtype=torch.long)
@@ -128,7 +131,7 @@ class FAgent:
             msk = attention_mask[i:i+64].to(self.device)
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 h = self.backbone(input_ids=inp, attention_mask=msk).last_hidden_state
-            probs.append(torch.sigmoid(self.head(h)).cpu())
+            probs.append(torch.sigmoid(self.head(h[:, -1, :])).squeeze(-1).cpu())  # last-token
         return torch.cat(probs)
 
     def train_mode(self): self.backbone.train(); self.head.train(); return self
@@ -180,7 +183,7 @@ def train_head(agent: FAgent, domain: str, epochs: int = 1, batch: int = 128):
                 with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                     h = agent.backbone(input_ids=inp, attention_mask=msk).last_hidden_state
             # ponytail: .float() for bf16→fp32 (Bug 4 fix)
-            logits = agent.head(h.float())
+            logits = agent.head(h[:, -1, :].float()).squeeze(-1)  # last-token only
             loss = LOSS_FN(logits, labs)
             loss.backward()
             opt.step()
@@ -201,7 +204,7 @@ def train_head(agent: FAgent, domain: str, epochs: int = 1, batch: int = 128):
 def evaluate(agent: FAgent, domain: str, batch: int = 256) -> tuple[float, float]:
     """Accuracy on last 15% of domain data."""
     data = load_data(domain, agent.model_id)
-    n_test = max(data["n"] // 6, 100)
+    n_test = min(max(data["n"] // 6, 100), 1000)  # capped: GB10 ~25s/batch
     start = data["n"] - n_test
     device = agent.device
     agent.eval_mode()
@@ -216,7 +219,7 @@ def evaluate(agent: FAgent, domain: str, batch: int = 256) -> tuple[float, float
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             h = agent.backbone(input_ids=inp[i:end],
                                attention_mask=msk[i:end]).last_hidden_state
-        logits = agent.head(h)
+        logits = agent.head(h[:, -1, :]).squeeze(-1)  # last-token
         # ponytail: reduction='sum' avoids batch-size-dependent mean scaling
         total_loss += F.binary_cross_entropy_with_logits(
             logits, labs[i:end], reduction='sum').item()
@@ -348,10 +351,11 @@ def distill(agent: FAgent, V_T: torch.Tensor, X_ref: torch.Tensor,
         opt.zero_grad(set_to_none=True)
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             h_r = agent.backbone(input_ids=inp_r, attention_mask=msk_r).last_hidden_state
-            loss_ref = F.binary_cross_entropy_with_logits(agent.head(h_r), v_r.float())
+            loss_ref = F.binary_cross_entropy_with_logits(
+                agent.head(h_r[:, -1, :]).squeeze(-1), v_r.float())  # last-token
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             h_o = agent.backbone(input_ids=inp_o, attention_mask=msk_o).last_hidden_state
-            loss_own = LOSS_FN(agent.head(h_o), labs_o)
+            loss_own = LOSS_FN(agent.head(h_o[:, -1, :]).squeeze(-1), labs_o)  # last-token
 
         scaler.scale(alpha * loss_ref + (1 - alpha) * loss_own).backward()
         scaler.step(opt)
