@@ -35,7 +35,7 @@ LOSS_FN = nn.BCEWithLogitsLoss()
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT / "src"))
 
-from AFP.protocol import (AFPAgent, block_importance, gate_linear, gate_rational,
+from AFP.protocol import (AFPAgent, block_importance, block_importance_l2, gate_linear, gate_rational,
                              guess_hidden, importance_cosine, mas_importance)
 
 OUT_DIR = PROJECT / "experiments" / "phase0_ivn"
@@ -167,11 +167,19 @@ def load_base_weights(model_id: str, device: torch.device) -> dict:
 
 
 def compute_importance_from_models(agent: AFPAgent, base_sd: dict) -> list[float]:
-    """Per-block importance: compare agent weights to base weights."""
+    """Per-block importance (L1 mean): compare agent weights to base weights."""
     device = next(agent.backbone.parameters()).device
     trained = {k: v.detach() for k, v in agent.backbone.state_dict().items()}
     base_on_dev = {k: v.to(device) for k, v in base_sd.items() if k in trained}
     return block_importance(trained, base_on_dev)
+
+
+def compute_importance_l2_from_models(agent: AFPAgent, base_sd: dict) -> list[float]:
+    """Per-block relative L2 importance: ||ΔW||/||W_base||, joint-normalized."""
+    device = next(agent.backbone.parameters()).device
+    trained = {k: v.detach() for k, v in agent.backbone.state_dict().items()}
+    base_on_dev = {k: v.to(device) for k, v in base_sd.items() if k in trained}
+    return block_importance_l2(trained, base_on_dev)
 
 
 # ===========================================================================
@@ -305,8 +313,8 @@ def main():
     p.add_argument("--tau", type=float, default=0.5)
     p.add_argument("--lr", type=float, default=1e-5)
     p.add_argument("--max-rounds", type=int, default=30)
-    p.add_argument("--importance", choices=["mas", "magnitude"], default="mas",
-                   help="MAS (principled, needs data) or magnitude (fast, TIES-style)")
+    p.add_argument("--importance", choices=["mas", "magnitude", "magnitude_l2", "sta"], default="magnitude_l2",
+                   help="magnitude_l2 (||ΔW||/||W_base||, best) | sta | mas | magnitude (L1)")
     p.add_argument("--mas-samples", type=int, default=500,
                    help="samples for MAS importance estimate")
     p.add_argument("--gate", choices=["rational", "linear"], default="rational",
@@ -341,8 +349,34 @@ def main():
         imp_b = agent_b.compute_mas_importance(
             data_b["input_ids"], data_b["attention_mask"],
             n_samples=args.mas_samples)
+    elif args.importance == "sta":
+        print(f"[importance] STA (n={args.mas_samples})")
+        base_sd_imp = load_base_weights(args.base_model, device)
+        data_a = load_data(dom_s, agent_a.model_id)
+        data_b = load_data(dom_t, agent_b.model_id)
+        # STA = |∂L/∂θ · (W_trained - W_base)| — filters architectural gradient decay
+        # Bug 20: cache state_dict() — called 582x in dict comprehension otherwise
+        sd_a = agent_a.backbone.state_dict()
+        sd_b = agent_b.backbone.state_dict()
+        delta_a = {k: sd_a[k].detach() - base_sd_imp[k].to(device)
+                   for k in base_sd_imp if k in sd_a}
+        delta_b = {k: sd_b[k].detach() - base_sd_imp[k].to(device)
+                   for k in base_sd_imp if k in sd_b}
+        imp_a = agent_a.compute_sta_importance(
+            data_a["input_ids"], data_a["attention_mask"], delta_a,
+            n_samples=args.mas_samples)
+        imp_b = agent_b.compute_sta_importance(
+            data_b["input_ids"], data_b["attention_mask"], delta_b,
+            n_samples=args.mas_samples)
+        del base_sd_imp, delta_a, delta_b; torch.cuda.empty_cache()
+    elif args.importance == "magnitude_l2":
+        print("[importance] magnitude L2 (relative ||ΔW||/||W_base||)")
+        base_sd_imp = load_base_weights(args.base_model, device)
+        imp_a = compute_importance_l2_from_models(agent_a, base_sd_imp)
+        imp_b = compute_importance_l2_from_models(agent_b, base_sd_imp)
+        del base_sd_imp; torch.cuda.empty_cache()
     else:
-        print("[importance] magnitude (TIES-Merging style)")
+        print("[importance] magnitude (TIES-Merging style, L1 mean)")
         base_sd_imp = load_base_weights(args.base_model, device)
         imp_a = compute_importance_from_models(agent_a, base_sd_imp)
         imp_b = compute_importance_from_models(agent_b, base_sd_imp)

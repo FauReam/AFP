@@ -130,7 +130,7 @@ nohup $VENV -u scripts/run_ivn_phase0.py \
     --teacher-domain code \
     --student-domain medical \
     --weights experiments/trained_models \
-    --importance mas \
+    --importance magnitude_l2 \
     --gate rational \
     --tau 0.5 \
     --max-rounds 30 \

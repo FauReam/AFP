@@ -64,6 +64,35 @@ def block_importance(trained: dict, init: dict) -> list[float]:
     return [v / mx for v in imp] if mx > 0 else imp
 
 
+def block_importance_l2(trained: dict, init: dict) -> list[float]:
+    """Per-block relative L2 norm: ||ΔW_block|| / ||W_base_block||, joint-normalized [0,1].
+
+    Measures the normalized magnitude of weight change per block. Unlike MAS/STA
+    which depend on gradient magnitude (architectural decay), this directly captures
+    how much each block actually changed relative to its base weight scale.
+
+    Key improvements over block_importance():
+      - L2 norm (not L1 mean): preserves variance between blocks
+      - Relative to base: ||ΔW||/||W_base|| — learning-rate invariant
+      - Joint normalization: both models use same max → preserves differences
+
+    Cosine between code and medical relative-L2 importance: 0.9912
+    (vs MAS 0.9962, L1-mean 0.9998)
+    """
+    delta_sq = [0.0] * N_BLOCKS
+    base_sq = [0.0] * N_BLOCKS
+    for k, v in trained.items():
+        blk = _block_index(k)
+        if blk is None or k not in init:
+            continue
+        dv = (v.float() - init[k].float())
+        delta_sq[blk] += dv.norm().item() ** 2
+        base_sq[blk] += init[k].float().norm().item() ** 2
+    imp = [delta_sq[i] ** 0.5 / (base_sq[i] ** 0.5 + 1e-8) for i in range(N_BLOCKS)]
+    mx = max(imp)
+    return [v / mx for v in imp] if mx > 0 else imp
+
+
 # ---------------------------------------------------------------------------
 # MAS-based importance (Memory Aware Synapses)
 # ---------------------------------------------------------------------------
@@ -146,6 +175,104 @@ def mas_importance(backbone, head, input_ids: torch.Tensor,
         head.train()
 
     # Single GPU→CPU sync — O(N_BLOCKS) instead of O(params × batches)
+    imp_cpu = imp_sum.cpu()
+    cnt_cpu = imp_cnt.cpu()
+    imp = [float(imp_cpu[j]) / max(int(cnt_cpu[j]), 1) for j in range(N_BLOCKS)]
+    mx = max(imp)
+    return [v / mx for v in imp] if mx > 0 else imp
+
+
+# ---------------------------------------------------------------------------
+# STA-based importance (Selective Task Arithmetic)
+# ---------------------------------------------------------------------------
+
+@torch.enable_grad()
+def sta_importance(backbone, head, input_ids: torch.Tensor,
+                   attention_mask: torch.Tensor,
+                   delta_w: dict, n_samples: int = 500,
+                   batch_size: int = 16,
+                   device: torch.device | None = None) -> list[float]:
+    """Per-block STA importance: E[|∇L_base · ΔW|] per block, normalized [0,1].
+
+    Reference: Tian et al. (arXiv 2411.16139) — "Beyond Task Vectors: Selective
+    Task Arithmetic Based on Importance Metrics."
+
+    STA = first-order Taylor expansion of loss change:
+        L(θ_trained) - L(θ_base) ≈ Σ_i ∇_i L(θ_base) · (θ_trained - θ_base)_i
+        |contribution of param i| = |∇_i L · ΔW_i|
+
+    Why this beats MAS for domain differentiation:
+      MAS:  Ω_i = E[|∂L/∂θ_i|]  → dominated by architectural gradient decay
+      STA:  Ω_i = E[|∂L/∂θ_i · ΔW_i|]  → filters out params that have large
+            gradient but zero domain-specific weight change
+
+    Intuition: "how much does this parameter's domain-specific change actually
+    affect the loss?" — zero ΔW → zero importance regardless of gradient size.
+
+    Args:
+        backbone: base HuggingFace model (frozen, used for gradient computation).
+        head: PRM head.
+        input_ids, attention_mask: domain data tensors (no labels needed).
+        delta_w: dict of ΔW = W_trained - W_base, same keys as backbone.state_dict().
+        n_samples: samples for expectation estimate.
+        batch_size: samples per backward pass.
+        device: if None, inferred from backbone.
+
+    Returns:
+        Per-block importance list, length N_BLOCKS, normalized to [0,1].
+    """
+    if device is None:
+        device = next(backbone.parameters()).device
+
+    was_training = backbone.training
+    backbone.eval()
+    head.eval()
+
+    n = min(n_samples, input_ids.shape[0])
+    idx = torch.randperm(input_ids.shape[0])[:n]
+
+    # GPU-side accumulation
+    imp_sum = torch.zeros(N_BLOCKS, device=device, dtype=torch.float64)
+    imp_cnt = torch.zeros(N_BLOCKS, device=device, dtype=torch.int32)
+
+    # Move delta_w to device once
+    delta_on_device = {}
+    for k, v in delta_w.items():
+        if v is not None:
+            delta_on_device[k] = v.detach().to(device)
+
+    for i in range(0, n, batch_size):
+        end = min(i + batch_size, n)
+        bi = idx[i:end]
+        inp = input_ids[bi].to(device)
+        msk = attention_mask[bi].to(device)
+
+        backbone.zero_grad(set_to_none=True)
+        head.zero_grad(set_to_none=True)
+
+        with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+            h = backbone(input_ids=inp, attention_mask=msk).last_hidden_state
+        logits = head(h)
+        s = (logits ** 2).sum()
+        s.backward()
+
+        for name, param in backbone.named_parameters():
+            if param.grad is None or name not in delta_on_device:
+                continue
+            blk = _block_index(name)
+            if blk is not None:
+                # STA: |grad · ΔW| instead of |grad|
+                dw = delta_on_device[name]
+                g = param.grad.float()
+                # Align shapes: grad is always same shape as param
+                contribution = (g * dw.float()).abs().mean()
+                imp_sum[blk] += contribution
+                imp_cnt[blk] += 1
+
+    if was_training:
+        backbone.train()
+        head.train()
+
     imp_cpu = imp_sum.cpu()
     cnt_cpu = imp_cnt.cpu()
     imp = [float(imp_cpu[j]) / max(int(cnt_cpu[j]), 1) for j in range(N_BLOCKS)]

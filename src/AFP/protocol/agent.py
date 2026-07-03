@@ -85,15 +85,49 @@ class AFPAgent:
     # ---- Importance ----
 
     def compute_importance(self, init: dict) -> list[float]:
-        """Magnitude-based per-block importance (TIES-Merging style).
+        """Magnitude-based per-block importance (TIES-Merging style, L1 mean).
 
         Simple, fast, no data needed. Good default baseline.
-        Prefer compute_mas_importance() for principled functional measure.
+        Prefer compute_importance_l2() for better domain differentiation.
         """
         trained = {k: v.detach() for k, v in self.backbone.state_dict().items()}
         device = next(iter(trained.values())).device
         init_on_device = {k: v.to(device) for k, v in init.items() if k in trained}
         self._importance = block_importance(trained, init_on_device)
+        return self._importance
+
+    def compute_importance_l2(self, init: dict) -> list[float]:
+        """Relative L2 per-block importance: ||ΔW||/||W_base||, joint-normalized.
+
+        Best domain differentiation (cosine=0.9912). Training-free, data-free.
+        """
+        trained = {k: v.detach() for k, v in self.backbone.state_dict().items()}
+        device = next(iter(trained.values())).device
+        init_on_device = {k: v.to(device) for k, v in init.items() if k in trained}
+        self._importance = block_importance_l2(trained, init_on_device)
+        return self._importance
+
+    def compute_sta_importance(self, input_ids: torch.Tensor,
+                                attention_mask: torch.Tensor,
+                                delta_w: dict,
+                                n_samples: int = 500,
+                                batch_size: int = 16) -> list[float]:
+        """STA-based per-block importance (Tian et al., arXiv 2411.16139).
+
+        STA = |∂L/∂θ · (θ_trained - θ_base)| — first-order Taylor expansion
+        of loss change. Filters out architectural gradient artifacts by
+        multiplying by actual weight deltas. Learning rate invariant.
+
+        Args:
+            input_ids, attention_mask: agent's private data tensors.
+            delta_w: dict of W_trained - W_base per parameter.
+        """
+        from .trust import sta_importance as _sta
+        device = next(self.backbone.parameters()).device
+        self._importance = _sta(
+            self.backbone, self.head,
+            input_ids, attention_mask, delta_w,
+            n_samples=n_samples, batch_size=batch_size, device=device)
         return self._importance
 
     def compute_mas_importance(self, input_ids: torch.Tensor,
