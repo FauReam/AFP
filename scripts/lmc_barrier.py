@@ -39,14 +39,17 @@ def load_data(domain: str, model_id: str) -> dict:
     raise FileNotFoundError(f"No cached data for {domain}")
 
 
-def get_state_dict(agent_or_dir):
-    """Get state dict from AFPAgent or checkpoint directory."""
-    if isinstance(agent_or_dir, AFPAgent):
-        return {k: v.detach() for k, v in agent_or_dir.backbone.state_dict().items()}
-    # Load from directory
-    path = Path(agent_or_dir)
-    w = torch.load(path / f"W_{path.name}_final.pt", map_location="cpu", weights_only=True)
-    return w
+def load_checkpoint(dir_path, domain_hint=None):
+    """Load backbone + head from checkpoint dir. Auto-detects filename pattern."""
+    path = Path(dir_path)
+    # Train saves as W_{domain}_final.pt; epoch ckpt saves as same pattern in subdir
+    files = list(path.glob("W_*_final.pt"))
+    head_files = list(path.glob("W_*_head_final.pt"))
+    if not files:
+        raise FileNotFoundError(f"No W_*_final.pt found in {path}")
+    w = torch.load(files[0], map_location="cpu", weights_only=True)
+    h = torch.load(head_files[0], map_location="cpu", weights_only=True) if head_files else None
+    return w, h
 
 
 @torch.no_grad()
@@ -116,13 +119,8 @@ def main():
     # Load weights
     print("[1] Loading models ...")
     t0 = time.time()
-    w_a = get_state_dict(args.model_a)
-    w_b = get_state_dict(args.model_b)
-    # Also load head states
-    head_a = get_state_dict(Path(args.model_a))
-    head_b = get_state_dict(Path(args.model_b))
-    # Actually heads are separate files...
-    # Let me just use the agent approach
+    w_a, head_a = load_checkpoint(args.model_a)
+    w_b, head_b = load_checkpoint(args.model_b)
     print(f"    done ({time.time()-t0:.0f}s)")
 
     # Evaluate endpoints
