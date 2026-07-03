@@ -14,6 +14,8 @@
 - [ENGINEERING.md](docs/internal/ENGINEERING.md) — 工程手册（必读）
 - [contribution-assessment.md](docs/internal/contribution-assessment.md) — 投稿级别评估
 - [REVIEW_ISSUES.md](docs/internal/REVIEW_ISSUES.md) — 审稿问题清单
+- [IMPORTANCE_ANALYSIS.md](docs/internal/IMPORTANCE_ANALYSIS.md) — importance 指标数学推导（为什么梯度方法结构失效）
+- [ROOT_CAUSE_IMPORTANCE.md](docs/internal/ROOT_CAUSE_IMPORTANCE.md) — importance 失效根因（共同模式问题）
 
 用户 HTML 报告（均在 `docs/reports/`）：
 - [vision.html](docs/reports/vision.html) — 核心愿景
