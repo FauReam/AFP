@@ -7,6 +7,28 @@
 
 ## 核心理论支撑
 
+### Linear Mode Connectivity（AFP 失效的根本原因）
+
+- **Frankle, J., Dziugaite, G.K., Roy, D.M., & Carbin, M. (2020).** "Linear Mode Connectivity and the Lottery Ticket Hypothesis." *ICML 2020*.
+  - arXiv: [1912.05671](https://arxiv.org/abs/1912.05671)
+  - **核心发现**：从同一初始化出发、不同 SGD 噪声训练的神经网络，沿线性路径 `(1-α)θ_A + αθ_B` 的 loss 保持在低水平——即它们在**同一个损失盆地**内线性连通。
+  - **与 AFP 的关系**：AFP 的 IVN/FedAvg 本质上就是线性插值 `V_new = V_A + M⊙(V_B - V_A)`。如果两个模型在同一个线性连通的盆地内（cosine ≈ 1.0），则**任何线性插值都是等价的** → gate 无法产生区分 → AFP = FedAvg。这正是我们 Phase 0 观察到的现象。
+
+- **Entezari, R., Sedghi, H., Saukh, O., & Neyshabur, B. (2022).** "The Role of Permutation Invariance in Linear Mode Connectivity of Neural Networks." *ICLR 2022*.
+  - arXiv: [2110.06296](https://arxiv.org/abs/2110.06296)
+  - 核心贡献：独立训练的模型在**正确排列神经元**后满足 LMC。SGD 解之间存在隐式的排列对称性。
+  - 与 AFP 的关系：Pythia-1.4B 两个 domain 特化模型的权重距离仅 ~1.2%（相对于 base），几乎在同一个 basin 里。排列不变性意味着它们本质上是同一个模型——gate 无法区分。
+
+- **Ainsworth, S., Hayase, J., & Srinivasa, S. (2023).** "Git Re-Basin: Merging Models modulo Permutation Symmetries." *NeurIPS 2023*.
+  - arXiv: [2209.04836](https://arxiv.org/abs/2209.04836)
+  - 核心贡献：实际算法——通过求解线性分配问题找到神经元排列，使两个独立训练的模型进入同一个 basin。
+  - 与 AFP 的关系：Git Re-Basin 的成功暗示：**在 AFP 能发挥作用之前，我们首先需要两个模型确实在不同 basin 里**。Phase 0 失败的根本原因不是 gate 不好，而是**两个模型之间没有需要 gate 来区分的差异**。
+
+- **Juneja, J., Bansal, R., Cho, K., Sedoc, J., & Saphra, N. (2023).** "Linear Connectivity Reveals Generalization Strategies." *ICLR 2023*.
+  - arXiv: [2205.12411](https://arxiv.org/abs/2205.12411)
+  - 核心贡献：LMC 不仅关于收敛——不同数据/正则化训练的模型可能落在**不同的线性连通分量**中。LMC 的缺失指示了 qualitative 的功能差异。
+  - 与 AFP 的关系：**AFP 的价值应该出现在 LMC 不成立的模型对之间**。如果我们测量 `(1-α)θ_code + αθ_medical` 的 loss 曲线是一条平坦线（LMC 成立），那 AFP 就没用。如果 loss 在中间位置出现 barrier（LMC 不成立），则 AFP 的 gate 可以找到各自最佳的"接收区间"。**这应该是 AFP 实验的前置检验。**
+
 ### 多目标梯度下降（IVN 的数学基础）
 
 - **Désidéri, J.-A. (2012).** "Multiple-gradient descent algorithm (MGDA) for multiobjective optimization." *Comptes Rendus Mathematique*, 350(5–6), 313–318.
