@@ -297,6 +297,12 @@ def train(args) -> int:
                 print(f"  [e{epoch}] early stopping (best val_loss={best_val_loss:.4f} at e{best_epoch})")
                 break
 
+        # ---- Periodic checkpoint (for LMC barrier experiments) ----
+        if args.save_every_n_epochs > 0 and epoch % args.save_every_n_epochs == 0:
+            ckpt_dir = OUT_DIR / f"{args.domain}_e{epoch}"
+            agent.save(ckpt_dir)
+            print(f"  [e{epoch}] checkpoint saved -> {ckpt_dir}")
+
         # GPU memory report
         if torch.cuda.is_available():
             used = torch.cuda.max_memory_allocated() / 1e9
@@ -327,6 +333,8 @@ def main():
                    help="max token length (affects cache filename)")
     p.add_argument("--max-samples", type=int, default=0,
                    help="limit training samples (0 = use all)")
+    p.add_argument("--save-every-n-epochs", type=int, default=0,
+                   help="save checkpoint every N epochs (0 = only save best)")
     args = p.parse_args()
     # Propagate CLI override to module-level constants used by prepare_data
     MAX_LEN = args.max_len
