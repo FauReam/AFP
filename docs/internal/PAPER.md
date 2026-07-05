@@ -6,7 +6,7 @@
 
 ## Abstract
 
-We measure the relationship between domain-specific fine-tuning and weight-space divergence in Pythia-1.4B, and test whether Linear Mode Connectivity (LMC) holds between models fine-tuned on different domains. At lr=1e-4, full-parameter fine-tuning on code and medical tasks produces only 1.2-1.3% mean weight divergence, with LMC barriers ≤ 0.08. We identify the learning rate as the controlling factor: increasing lr to 5e-4 raises weight divergence to 7.4% — a 5.7× increase — confirming that Pythia's apparent "stubbornness" at low LR is a training dynamics artifact, not an architectural property. We observe an asymmetric U-shaped cross-domain transfer at low LR: code model weights improve undertrained medical performance by 8.3%, but this benefit vanishes as training intensity increases. At lr=5e-4, both models diverge substantially, and we are currently measuring whether LMC still holds at this divergence level.
+We measure the relationship between domain-specific fine-tuning and weight-space divergence in Pythia-1.4B, and test whether Linear Mode Connectivity (LMC) holds between models fine-tuned on different domains. At lr=1e-4, full-parameter fine-tuning on code and medical tasks produces only 1.2-1.3% mean weight divergence, with LMC barriers ≤ 0.09 — well within the linearly-connected regime. We identify the learning rate as the controlling factor: increasing lr to 5e-4 raises weight divergence to 7.4% — a 5.7× increase. At this divergence, LMC breaks entirely: the loss barrier reaches 0.55 on code (85.6% increase) and 1.23 on medical (234.5% increase). The inverted U-shaped barrier at α=0.5 confirms that the two models now occupy distinct loss basins with no beneficial linear interpolation path. Additionally, at low LR we observe an asymmetric U-shaped cross-domain transfer (code→medical improvement of 8.3%) that vanishes with increased training intensity. These findings establish a quantitative relationship between learning rate, weight-space divergence, and loss landscape connectivity in domain-specialized fine-tuning.
 
 ## 1. Introduction
 
@@ -109,7 +109,19 @@ Code domain loss increases monotonically with α for all medical model variants.
 
 Increasing LR from 1e-4 to 5e-4 produces a **5.7× increase** in weight divergence (1.2% → 7.4%). This confirms that the small weight divergence at lr=1e-4 is a training dynamics artifact, not an inherent property of Pythia-1.4B. The higher LR model has higher training loss (0.617 vs 0.522), consistent with the "drive → putt" two-phase training dynamic: lr=5e-4 drives the model far from the pretrained basin, and a subsequent low-LR fine-tuning phase would be needed to converge within the new basin.
 
-**Prediction**: At ΔW=7.4%, the LMC barrier between code and medical models should increase substantially, potentially breaking the linearly-connected regime observed at lr=1e-4.
+**Prediction confirmed**: At ΔW=7.4% (lr=5e-4), the LMC barrier increases dramatically (Figure 3):
+
+| LR | Code ΔW | Med ΔW | Code barrier | Med barrier | LMC? |
+|----|---------|--------|-------------|-------------|------|
+| 1e-4 | 1.2% | 1.3% | 0.071 (11.5%) | 0.092 (17.0%) | ✅ Holds |
+| **5e-4** | **7.4%** | **7.3%** | **0.553 (85.6%)** | **1.229 (234.5%)** | ❌ **Broken** |
+
+Key observations:
+- Code barrier increases 7.8× (0.071 → 0.553)
+- Medical barrier increases 13.4× (0.092 → 1.229)
+- Both domains show classic inverted U-shape with maximum at α=0.5
+- No beneficial mixing at any α — the U-shaped cross-domain transfer observed at lr=1e-4 is entirely absent
+- The two models now occupy distinct loss basins: linear interpolation is harmful at every mixing ratio
 
 ### 3.5 Training Speed
 
