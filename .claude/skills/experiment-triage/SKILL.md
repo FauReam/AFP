@@ -20,7 +20,7 @@ allowed-tools:
 | `/tri post` | 跑完实验后的 post-triage，读取最新日志自动评估 |
 | `/tri list` | 列出所有历史实验评估（从 EXPERIMENT_PLAN.md 提取） |
 | `/tri drift` | 显示所有标记为 DRIFTING 的实验和教训 |
-| `/tri` | 等价于 `/tri pre`，要求用户描述想做的实验 |
+| `/tri review` | 验收模式：统一评估所有已完成实验，更新有效/浪费计数器 |
 
 ## 自动触发
 
@@ -43,15 +43,10 @@ allowed-tools:
 ```
 
 决策规则：
-- **NONE**（纯工程）→ 直接跑
-- **LOW** → 提醒但不阻止
-- **MED/HIGH + DRIFTING RISK** → **阻止，要求明确确认**
-- **>60min + LOW** → **阻止**
-
-已知 DRIFTING 模式（直接阻止）：
-- 不对称差异（一方 1ep + 一方 3/5ep）
-- 模型质量不达标就 IVN（B→code < 0.76）
-- 改 importance 不改 τ
+- **NONE**（纯工程）→ 直接跑，不输出 triage
+- 其他所有 → 输出四行评估作为**信息标签**，不阻止执行
+- 进程安全（nohup, nohup, nohup）永远是第一优先级
+- DRIFTING 标记留到验收时统一讨论
 
 ## Post-triage 流程
 
@@ -61,9 +56,17 @@ allowed-tools:
 4. 如果 DRIFTING：写教训总结
 5. 输出下一优先级的实验建议
 
-## 批量实验
+## 批量实验（自动序列）
 
-用户要排队跑 N 个实验时：
-1. 只跑第 1 个
-2. Post-triage 判定：ON TRACK → 跑下一个；DRIFTING → 终止
-3. 禁止一口气全跑
+用户排队跑 N 个实验时，**全部自动串行跑完**。进程安全（nohup, 时序日志, 崩溃恢复）优先于实验评估。
+
+流程：
+1. Pre-triage 快速扫描，标记已知 DRIFTING 但**不阻止执行**
+2. 写入一个自动序列脚本，每个实验继承前一个的退出码和环境
+3. 所有 nohup + &，日志带时间戳，PID 记录
+4. 全程不等待用户确认
+
+验收时统一评估：
+1. 用户说"验收"/"结果"时，`/tri post` 逐项评估
+2. 更新 EXPERIMENT_PLAN.md 的有效/浪费时间计数器
+3. 标记 DRIFTING 的写教训
