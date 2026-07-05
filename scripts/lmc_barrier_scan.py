@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-"""LMC barrier scan: loss along linear interpolation between two models."""
-import torch, sys, json, time
+"""LMC barrier scan: loss along linear interpolation between two models.
+
+Usage:
+  python scripts/lmc_barrier_scan.py                           # code_e1 + medical_e1
+  python scripts/lmc_barrier_scan.py --med-e 3                  # code_e1 + medical_e3
+  python scripts/lmc_barrier_scan.py --code-e 1 --med-e 5       # code_e1 + medical_e5
+"""
+import torch, sys, json, time, argparse
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parent.parent
@@ -9,14 +15,24 @@ sys.path.insert(0, str(PROJECT))
 from AFP.protocol import AFPAgent
 from scripts.run_ivn_phase0 import load_data
 
+p = argparse.ArgumentParser()
+p.add_argument('--code-e', type=int, default=1, help='code model epoch')
+p.add_argument('--med-e', type=int, default=1, help='medical model epoch')
+args = p.parse_args()
+
 device = torch.device('cuda')
-print(f'Loading models...', flush=True)
 t0 = time.time()
 
+code_dir = PROJECT / f'experiments/trained_models/code_e{args.code_e}'
+med_dir = PROJECT / f'experiments/trained_models/medical_e{args.med_e}'
+
+print(f'Loading: {code_dir.name} + {med_dir.name}', flush=True)
 agent_code = AFPAgent('code', str(device), model_id='EleutherAI/pythia-1.4b')
 agent_med = AFPAgent('medical', str(device), model_id='EleutherAI/pythia-1.4b')
-agent_code.load(PROJECT / 'experiments/trained_models/code_e1')
-agent_med.load(PROJECT / 'experiments/trained_models/medical_e1')
+agent_code.load(code_dir)
+agent_med.load(med_dir)
+
+output_name = f'lmc_barrier_c{args.code_e}m{args.med_e}'
 agent_code.to_device()
 
 sd_code = {k: v.detach().cpu() for k, v in agent_code.backbone.state_dict().items()}
@@ -74,7 +90,7 @@ output = {
     'results': results,
     'duration_s': time.time() - t0
 }
-out_path = PROJECT / 'experiments/phase0_ivn/results/lmc_barrier.json'
+out_path = PROJECT / f'experiments/phase0_ivn/results/{output_name}.json'
 with open(out_path, 'w') as f:
     json.dump(output, f, indent=2)
 
