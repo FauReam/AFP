@@ -483,8 +483,8 @@ def main():
     print("--- AFP 1-shot ---")
     best_afp = {"net": -999.0}
     # ponytail: reuse base_sd (loaded above) instead of re-loading base model
-    for tau in [0.3, 0.5, 1.0, 2.0]:  # reduced from 7 values — GB10 is slow
-        print(f"  AFP 1-shot τ={tau:.1f} ...", end=" ", flush=True)
+    for tau in [0.05, 0.1, 0.2, 0.3, 0.5, 1.0]:  # v8: add low-τ to test gate protection
+        print(f"  AFP 1-shot τ={tau:.2f} ...", end=" ", flush=True)
         agent_a.load_backbone_state(orig_a)
         agent_b.load_backbone_state(orig_b)
         afp_a = agent_a.integrate_afp(agent_b.backbone_state(), base_sd, tau, gate=args.gate)
