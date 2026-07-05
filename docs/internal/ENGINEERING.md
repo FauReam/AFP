@@ -148,6 +148,17 @@
 - **修复**: 保存前验证模型权重变化 `changed = Σ||W - W_init||`，若 changed < 1e-3 则跳过保存并打印警告。同时改为每 epoch 保存 checkpoint（`--save-every-n-epochs 1`），IVN 从 checkpoint 加载而非 `code/`。
 - **教训**: 永远不要信任训练脚本的"best model"保存逻辑——加守卫条件。文件夹命名约定（`code_e{N}`）比模糊的 `code/` 更可靠。
 
+### Bug 22: code_e1 是 base 模型 — 所有实验用了未训练的 code agent — 2026-07-05
+- **位置**: `experiments/trained_models/code_e1/`
+- **症状**: code_e1 与 base 完全一致（291/291 tensors, max_diff < 1e-8, ||Δ||/||base|| = 0.000000）。E2-E7 所有实验的"code agent"实际上是未训练的 Pythia-1.4B base。
+- **影响范围**: 
+  - LMC barrier 扫描（E8）实测的是 base Pythia ⇄ medical-trained Pythia，不是 code ⇄ medical
+  - 所有 c1mX 实验结果不代表"两个 domain-specific 模型之间的连通性"
+  - E1（Jul 3）有过真正的 code 模型（B→code=0.768），已被后续 pipeline 覆盖丢失
+- **根因**: Jul 5 pipeline 的 train_agent.py 在保存时触发了 Bug 18（epoch 2+ 退化）和 Bug 21（保存前无 Δ 验证），导致训练完成的模型被 base 覆盖。code_e1 的 checkpoint 保存和 best-model 保存可能指向了同一个被污染的 state_dict。
+- **修复**: 需要从头训练 code agent。训练完成后立即备份 checkpoint。验证 Δ > 0 再标记为有效。
+- **教训**: 每次训练完成后必须验证保存的模型确实改变了（与 base 做 diff）。不能假设"日志显示训练成功 = 模型保存正确"。训练和实验之间插入验证步骤。
+
 ---
 
 ## 三、性能权衡记录

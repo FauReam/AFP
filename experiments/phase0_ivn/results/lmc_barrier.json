@@ -1,0 +1,63 @@
+{
+  "experiment": "LMC_barrier_scan",
+  "models": "code_e1 + medical_e1",
+  "method": "linear interpolation of backbone weights",
+  "results": [
+    {
+      "alpha": 0.0,
+      "loss_code": 0.6154635124206543,
+      "loss_med": 0.5399403991699219
+    },
+    {
+      "alpha": 0.1,
+      "loss_code": 0.6187324905395508,
+      "loss_med": 0.5080457153320312
+    },
+    {
+      "alpha": 0.2,
+      "loss_code": 0.6241173400878907,
+      "loss_med": 0.49496385192871095
+    },
+    {
+      "alpha": 0.3,
+      "loss_code": 0.634012092590332,
+      "loss_med": 0.5178232688903809
+    },
+    {
+      "alpha": 0.4,
+      "loss_code": 0.6524838905334472,
+      "loss_med": 0.6055812683105469
+    },
+    {
+      "alpha": 0.5,
+      "loss_code": 0.6791839637756347,
+      "loss_med": 0.6321312103271485
+    },
+    {
+      "alpha": 0.6,
+      "loss_code": 0.6829658203125,
+      "loss_med": 0.5881943359375
+    },
+    {
+      "alpha": 0.7,
+      "loss_code": 0.68609375,
+      "loss_med": 0.5725341796875
+    },
+    {
+      "alpha": 0.8,
+      "loss_code": 0.68420703125,
+      "loss_med": 0.5786162109375
+    },
+    {
+      "alpha": 0.9,
+      "loss_code": 0.68378955078125,
+      "loss_med": 0.5971181640625
+    },
+    {
+      "alpha": 1.0,
+      "loss_code": 0.68578076171875,
+      "loss_med": 0.622920654296875
+    }
+  ],
+  "duration_s": 881.5468723773956
+}
