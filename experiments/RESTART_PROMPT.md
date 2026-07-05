@@ -1,124 +1,87 @@
-# AFP Phase 0 — 新会话重启 Prompt
+# AFP Phase 0 — 新会话重启
 
-> 粘贴给新 Claude Code 会话即可继续。
+> 粘贴给新 Claude Code 会话。读完即可操作。
 
 ---
 
 ```markdown
-# AFP Phase 0 实验 — 状态恢复
+# AFP Phase 0
 
-## 你是谁
+环境、入口、决策树。读完后直接执行。
 
-`claude-code`，运行在 DGX Spark GB10 (ARM64, 121GB, CUDA 13.0)。
+---
 
-## 项目路径
-
-`/home/jiayu/AFP`
-
-## 环境（必须）
-
-```bash
-export HF_ENDPOINT=https://hf-mirror.com
-export HF_DATASETS_OFFLINE=1
-export PYTHONUNBUFFERED=1
-VENV=/home/jiayu/AFP/venv/bin/python3
-```
-
-## 检查状态
-
-```bash
-cd /home/jiayu/AFP && bash scripts/monitor.sh
-```
-
-## 有用的检查命令
-
-```bash
-# 训练/实验进程
-ps aux | grep -E "train_agent|run_ivn|train_and_run|queue" | grep -v grep
-
-# 已训练的模型
-ls -d experiments/trained_models/*/
-
-# IVN 结果
-ls experiments/phase0_ivn/results/
-
-# 最新训练日志
-tail -20 experiments/phase0_training/pipeline_*.log
-```
-
-## 如果实验在跑
-
-**不要动。** 等它完成。
-
-## 如果实验已完成
+## 设置
 
 ```bash
 cd /home/jiayu/AFP
-$VENV scripts/generate_phase0_report.py
-git add -f experiments/phase0_ivn/results/ docs/reports/
-git commit -m "feat(phase0): experiment results"
-git push origin main
+export HF_ENDPOINT=https://hf-mirror.com HF_DATASETS_OFFLINE=1 PYTHONUNBUFFERED=1
+VENV=venv/bin/python3
 ```
 
-## 重启全流程
+## ⚠️ 跑实验前必须读 docs/internal/EXPERIMENT_PLAN.md
+
+每个实验必须评估：假设 → 论文价值(高/中/低) → 方向判定(ON TRACK/DRIFTING)。偏离方向 = 浪费 GPU。
+
+## 决策树
+
+```
+bash scripts/monitor.sh
+        │
+        ├─ 有 Python 进程在跑 (train_agent / run_ivn / queue)
+        │   → 不要动。等待即可。
+        │
+        ├─ 没进程，但 experiments/trained_models/code_e1/ 存在
+        │   → 训练已完成。直接跑实验队列：
+        │     nohup bash scripts/queue_experiments.sh > experiments/queue.log 2>&1 &
+        │
+        └─ 没进程，也没 trained_models/code_e1/
+            → 从头训练：
+              nohup bash scripts/train_and_run_phase0.sh > /dev/null 2>&1 &
+              echo $! > experiments/pipeline_pid.txt
+```
+
+## 三个命令
 
 ```bash
-cd /home/jiayu/AFP
-export HF_ENDPOINT=https://hf-mirror.com
-export HF_DATASETS_OFFLINE=1
-export PYTHONUNBUFFERED=1
+# 1. 看状态
+bash scripts/monitor.sh
 
+# 2. 全流程训练 + IVN（~50 min: 40 训练 + 10 IVN）
 nohup bash scripts/train_and_run_phase0.sh > /dev/null 2>&1 &
-echo $! > experiments/pipeline_pid.txt
-```
 
-训练后自动排队多实验：
-```bash
-# pipeline 完成后自动触发，或手动：
+# 3. 批量 IVN 实验（~13 min/实验，使用已有 checkpoints）
 nohup bash scripts/queue_experiments.sh > experiments/queue.log 2>&1 &
 ```
 
-## 已知 Bug（新会话必读）
+## 环境
 
-### Bug 17: IVN 脚本 importance 未赋值给 agent
-- `run_ivn_phase0.py` 用 L2 算 importance 但只存到局部变量
-- `integrate_afp()` 检测到 `_importance is None` → 回退到 L1 mean（错）
-- 已修：`agent_a._importance = imp_a`
+| 项 | 值 |
+|----|-----|
+| Python | `/home/jiayu/AFP/venv/bin/python3` |
+| HF mirror | `https://hf-mirror.com`（无 VPN，必须） |
+| 设备 | DGX Spark GB10, 121GB, ARM64 CUDA 13.0 |
 
-### Bug 18: code 训练 epoch 2+ 退化
-- code_e2-e5 权重偏移反而减小，e3 直接保存 base 模型
-- 根因未定位
-- 当前只信任 code_e1
+## 项目路径
 
-### Bug 19: pipeline `rm -f` 删不掉目录
-- `rm -f code/` 对目录无效（需要 `-r`）
-- 导致 IVN 步骤失败
-- 已修：`rm -rf`
+```
+experiments/trained_models/    ← 训练权重（code_e1/, medical_e1-e5/）
+experiments/phase0_ivn/        ← IVN 结果（results/*.json）
+experiments/phase0_training/   ← 训练日志
+docs/internal/ENGINEERING.md   ← 完整 Bug 清单（Bug 1-21）
+```
 
-### Bug 20: VENV 路径变更
-- 旧路径 `/home/jiayu/FCL-PRM-cdspi/venv/bin/python3` 已删除
-- 新路径 `/home/jiayu/AFP/venv/bin/python3`（torch 2.12）
+## 关键 Bug（可能影响新会话）
 
-### Bug 21: code/ 目录被 base 模型覆盖
-- 未训练的 base 模型被保存到 `trained_models/code/`
-- 已修：保存前验证 Δ > 1e-3
+1. **code 训练退化** — 只信任 code_e1。e2-e5 是坏的。新训练加 `--epochs 1`。
 
-### 旧 Bug 8-12 & 1-7
-详见 `docs/internal/ENGINEERING.md`。
+## 训练配置
 
-## 训练速度（GB10 实测）
-
-| 配置 | 速度 | 总时间 |
-|------|------|--------|
-| Pythia-1.4B full-FT, L=256, batch=128, 1ep | ~5.5s/step × 433 steps | ~40 min |
-| IVN 实验 (c1m1) | — | ~10 min |
-
-## 实测结果速查
-
-| 实验 | 模型对 | FedAvg(α=0.1) | AFP(τ=0.5) | IVN |
-|------|--------|---------------|-------------|-----|
-| c1m1 | code_e1 + med_e1 | **+0.014** | -0.149 | -0.158 |
-| c1m5 | code_e1 + med_e5 | -0.016 | -0.807 | -0.156 |
-
-只有 FedAvg α=0.1 (10% 混合) 有正收益。根因：gate 范围 [0.33, 0.83] 无法做到足够保护。
+| 参数 | 值 |
+|------|-----|
+| 模型 | EleutherAI/pythia-1.4b |
+| 训练 | full-FT, bf16, batch=128, L=256 |
+| 领域 | code ⇄ medical (VersaPRM) |
+| LR | Cosine 1e-4 → 3e-6, 1 epoch |
+| 速度 | ~5.5s/step, 433 steps, ~40 min/domain |
 ```
