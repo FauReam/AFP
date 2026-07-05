@@ -23,7 +23,7 @@ export CUDA_VISIBLE_DEVICES=0
 # GB10 unified memory (121 GB) it causes allocator fragmentation overhead.
 # export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-VENV=/home/jiayu/FCL-PRM-cdspi/venv/bin/python3
+VENV=/home/jiayu/AFP/venv/bin/python3
 LOG_DIR=experiments/phase0_training
 mkdir -p "$LOG_DIR"
 
@@ -118,10 +118,28 @@ grep "best val_loss" "$MED_LOG" | tail -1 || true
 echo ""
 
 # ---------------------------------------------------------------------------
-# Step 4: Run IVN experiment
+# Step 4: Run IVN experiment using epoch checkpoints
 # ---------------------------------------------------------------------------
 echo "--- [4/5] IVN experiment ---"
 IVN_LOG="$LOG_DIR/ivn_${TS}.log"
+
+# Find latest valid checkpoint for each domain
+CODE_DIR="experiments/trained_models/code"
+MED_DIR="experiments/trained_models/medical"
+for e in 5 4 3 2 1; do
+    [ -f "experiments/trained_models/code_e${e}/W_code_final.pt" ] && CODE_DIR="experiments/trained_models/code_e${e}" && break
+done
+for e in 5 4 3 2 1; do
+    [ -f "experiments/trained_models/medical_e${e}/W_medical_final.pt" ] && MED_DIR="experiments/trained_models/medical_e${e}" && break
+done
+echo "  code weights: $CODE_DIR"
+echo "  medical weights: $MED_DIR"
+
+# Symlink so run_ivn_phase0.py's --weights lookup finds them
+mkdir -p experiments/trained_models
+rm -rf experiments/trained_models/code  experiments/trained_models/medical
+ln -sf "$(basename "$CODE_DIR")" experiments/trained_models/code
+ln -sf "$(basename "$MED_DIR")" experiments/trained_models/medical
 
 nohup $VENV -u scripts/run_ivn_phase0.py \
     --teacher EleutherAI/pythia-1.4b \

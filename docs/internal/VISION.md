@@ -285,10 +285,26 @@ V 是 N 维向量，与架构无关。Pythia 和 TinyLlama 各自用自己的方
 
 ## 七、研究路线图
 
-### Phase 0：同构 IVN（重量空间）
-- Pythia-1.4B full-FT on code+medical
-- 对比：IVN vs AFP one-shot vs FedAvg
-- 入口：`python scripts/run_ivn_phase0.py --train`
+### Phase 0：同构 IVN — LMC 边界探测（重量空间）
+
+**核心问题**：模型差异度如何影响损失景观连通性？AFP/IVN 在什么临界点上开始优于 FedAvg？
+
+**理论框架**：Linear Mode Connectivity (Frankle et al., ICML 2020)
+- 从同一预训练出发 fine-tune 的模型通常处于同一线性连通盆地
+- 盆地内：任何线性组合（FedAvg, AFP, IVN）等价 → **选择性集成无增益**
+- 盆地间：线性插值有 loss barrier → **AFP/IVN 可能找到更好的非线路径**
+
+**实验**：
+1. Pythia-1.4B full-FT on code+medical
+2. LMC pretest：测线性插值 loss barrier
+3. 差异度光谱：逐步增加训练强度，直到 LMC 破裂
+4. 在每个差异度级别对比：IVN vs AFP vs FedAvg vs No Exchange
+
+**预期**：
+- 低差异：AFP ≈ FedAvg（验证 LMC 框架正确性）
+- 高差异：IVN > AFP > FedAvg（核心 claim）
+
+**入口**：`bash scripts/train_and_run_phase0.sh`
 
 ### Phase 1：异构 F-IVN（函数空间）
 - Pythia-1.4B vs TinyLlama-1.1B

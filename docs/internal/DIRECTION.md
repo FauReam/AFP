@@ -77,6 +77,15 @@
 | **Lian et al. (NeurIPS 2017)** D-PSGD | 去中心化 SGD 的首个收敛分析：通信 O(Deg) vs 中心化 O(n) | M=1 时 IVN 退化为此（2 节点情形），收敛性已证明 |
 | **Lee et al. (COLT 2016)** GD → Minimizers | 随机初始化 + GD 几乎必然避开严格鞍点，收敛到局部极小 | 保证 V 谈判不会卡在鞍点 |
 
+**损失景观几何 / Linear Mode Connectivity（Phase 0 v5 的理论基础 — 2026-07-03 新增）**
+
+| 论文 | 做了什么 | 与 AFP 的关系 |
+|------|---------|:---:|
+| **Frankle et al. (ICML 2020)** LMC | 从同一预训练出发 fine-tune 的模型处于线性连通盆地。Barrier 测试：`max_α L((1-α)θ_A + αθ_B)` | **Phase 0 v5 前置检验**：barrier≈0 → AFP=FedAvg；barrier>0 → AFP 有发挥空间 |
+| **Entezari et al. (ICLR 2022)** | LMC 在 permutation symmetry 下几乎普遍成立。随机初始化已被对齐消除 | 解释为什么同架构模型 importance cosine 接近 1.0 |
+| **Ainsworth et al. (ICLR 2023)** Git Re-Basin | 通过 permutation matching 将独立训练的模型对齐到同一盆地 | AFP 的知识提取器可以借鉴 permutation alignment 技术 |
+| **Garipov et al. (NeurIPS 2018)** | 神经网络 loss surface 上存在低损连接曲线（Bezier curves） | 选择性集成可能在 loss surface 上找到比线性插值更优的路径 |
+
 **参数重要性估计（AFP gate 的度量基础 — 2026-06-19 新增）**
 
 | 论文 | 做了什么 | 与 AFP 的关系 |

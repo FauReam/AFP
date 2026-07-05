@@ -15,7 +15,7 @@
 | 内存 | 121 GB 统一内存 (CPU+GPU 共享) |
 | CPU | ARM64 (Cortex-X925 + A725) |
 | torch.compile | **不可用** (Triton 不兼容 ARM64) |
-| 实测速度 | Pythia-1.4B frozen backbone, head-only, batch=128, max_len=256 → **~8s/batch** |
+| 实测速度 | Pythia-1.4B full-FT, batch=128, max_len=256, torch 2.12 → **~5.5s/step** |
 
 ---
 
@@ -112,6 +112,41 @@
 - **根因**: Python 要求 `global` 声明在函数内首次使用该变量名之前。`default=MAX_LEN` 是对 `MAX_LEN` 的读取使用。
 - **修复**: 将 `global MAX_LEN` 移到 `main()` 函数开头（`p = argparse.ArgumentParser(...)` 之前）。
 - **教训**: 如果函数内需要 `global` 覆写模块级常量，声明必须在所有对该变量的引用之前——包括函数参数的默认值表达式。
+
+### Bug 17: IVN 脚本 importance 未赋值给 agent → 回退到错误指标 — 2026-07-05
+- **位置**: `scripts/run_ivn_phase0.py:375-376`
+- **症状**: 指定 `--importance magnitude_l2`，但 AFP/IVN 实际使用的是 L1 mean importance。所有 τ 值下 AFP 输出相同结果（gate 无区分度）。
+- **根因**: `imp_a = compute_importance_l2_from_models(...)` 只存到局部变量。`integrate_afp()` 检查 `self._importance is None` → 调用 `self.compute_importance(init)` 使用 L1 mean。命令行指定的 importance 指标从未生效。
+- **修复**: 在 importance 计算后添加 `agent_a._importance = imp_a; agent_b._importance = imp_b`。
+- **教训**: 独立函数计算的值如果下游要通过对象方法使用，必须显式赋值。对象方法内部的 fallback 逻辑是静默 bug 的温床。
+
+### Bug 18: code 训练 epoch 2+ 退化，e3 保存 base 模型 — 2026-07-05
+- **位置**: `scripts/train_agent.py` 训练循环
+- **症状**: code_e2 权重偏移小于 e1，code_e3 与 base 完全一致（291/291 tensors max_diff < 1e-8），code_e4-e5 偏移也极小。只有 code_e1 是有效的。
+- **根因**: 未完全定位。可能原因：(a) 训练循环中模型状态未正确恢复；(b) val_loss 从 epoch 1 后就持续上升，后续保存的都是 epoch 1 的最佳模型，但 checkpoint 逻辑有误保存了初始权重。
+- **当前方案**: 只信任 code_e1。e2+ 的 checkpoint 忽略。训练时加 Δ 验证（Bug 21），Δ < 1e-3 拒绝保存。
+- **教训**: 每个 epoch 保存 checkpoint 前应验证模型权重确实发生了变化。不能假设"跑了 N 个 epoch 就训练了 N 轮"。
+
+### Bug 19: pipeline `rm -f` 删不掉目录 → IVN 步骤失败 — 2026-07-05
+- **位置**: `scripts/train_and_run_phase0.sh` symlink 创建
+- **症状**: `rm: cannot remove 'experiments/trained_models/code': Is a directory`。IVN 步骤在训练完成后中止。
+- **根因**: training 保存到 `code/` 和 `medical/` 目录，后续想创建同名 symlink。`rm -f` 无 `-r` 不能删目录。
+- **修复**: `rm -rf experiments/trained_models/code medical`。
+- **教训**: 用 `rm -rf` 而非 `rm -f` 删除可能为目录的路径。或者先判断 `test -d && rm -rf || rm -f`。
+
+### Bug 20: VENV 路径变更 — 2026-07-05
+- **位置**: 所有脚本中的 `VENV` 变量
+- **症状**: `/home/jiayu/FCL-PRM-cdspi/venv/bin/python3` 不存在，pipeline 静默失败。
+- **根因**: FCL-PRM venv 被删除，项目有了自己的 venv。
+- **修复**: 全部改为 `/home/jiayu/AFP/venv/bin/python3`（torch 2.12.1, transformers 5.12.1）。
+- **教训**: 环境路径变更时务必全局搜索替换。RESTART_PROMPT.md 的 VENV 引用必须与实际一致。
+
+### Bug 21: `trained_models/code/` 被未训练 base 模型覆盖 — 2026-07-05
+- **位置**: `scripts/train_agent.py:290-292`
+- **症状**: IVN 实验加载的 code agent 实际是未训练的 Pythia base。importance 全为 0 → gate 全开 → AFP 灾难性遗忘（B_cross=0.125）。
+- **根因**: pipeline 重启时 `train_agent.py` 重新初始化 agent，如果训练在第一个 epoch 完成前崩溃，或 val_loss 未改善，保存到 `code/` 的可能不是最优模型。
+- **修复**: 保存前验证模型权重变化 `changed = Σ||W - W_init||`，若 changed < 1e-3 则跳过保存并打印警告。同时改为每 epoch 保存 checkpoint（`--save-every-n-epochs 1`），IVN 从 checkpoint 加载而非 `code/`。
+- **教训**: 永远不要信任训练脚本的"best model"保存逻辑——加守卫条件。文件夹命名约定（`code_e{N}`）比模糊的 `code/` 更可靠。
 
 ---
 

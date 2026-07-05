@@ -388,6 +388,11 @@ def main():
     print(f"Importance cosine: {cos:.3f} "
           f"({'COMPLEMENTARY' if cos < 0.5 else 'overlapping' if cos < 0.8 else 'too similar'})\n")
 
+    # Bug 17 fix: importance must be assigned to agents, otherwise
+    # integrate_afp() falls back to L1-mean (wrong metric) silently.
+    agent_a._importance = imp_a
+    agent_b._importance = imp_b
+
     # ---- Base weights (always needed for W_init + AFP baseline + negotiation) ----
     base_sd = load_base_weights(args.base_model, device)
 

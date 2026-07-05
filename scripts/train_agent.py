@@ -236,6 +236,10 @@ def train(args) -> int:
     global_step = 0
     t0 = time.time()
 
+    # ---- Save init weights for sanity check ----
+    init_state = {k: v.detach().cpu().clone() for k, v in agent.backbone.state_dict().items()}
+    n_params_total = sum(v.numel() for v in init_state.values())
+
     for epoch in range(1, args.epochs + 1):
         # ---- Train ----
         agent.train_mode()
@@ -286,10 +290,17 @@ def train(args) -> int:
             best_val_loss = val_loss
             best_epoch = epoch
             patience_counter = 0
-            # Save best
-            save_dir = OUT_DIR / args.domain
-            agent.save(save_dir)
-            print(f"  [e{epoch}] ✓ best model saved -> {save_dir}")
+            # Validate model actually changed before saving
+            changed = 0.0
+            for k, v in agent.backbone.state_dict().items():
+                if k in init_state:
+                    changed += (v.detach().cpu() - init_state[k]).float().norm().item()
+            if changed > 1e-3:
+                save_dir = OUT_DIR / args.domain
+                agent.save(save_dir)
+                print(f"  [e{epoch}] ✓ best model saved -> {save_dir} (Δ={changed:.1f})")
+            else:
+                print(f"  [e{epoch}] ⚠ SKIP save: model unchanged (Δ={changed:.6f})")
         else:
             patience_counter += 1
             print(f"  [e{epoch}]   no improvement (patience {patience_counter}/{PATIENCE})")
@@ -333,8 +344,8 @@ def main():
                    help="max token length (affects cache filename)")
     p.add_argument("--max-samples", type=int, default=0,
                    help="limit training samples (0 = use all)")
-    p.add_argument("--save-every-n-epochs", type=int, default=0,
-                   help="save checkpoint every N epochs (0 = only save best)")
+    p.add_argument("--save-every-n-epochs", type=int, default=1,
+                   help="save checkpoint every N epochs (0 = only save best, 1 = save each epoch)")
     args = p.parse_args()
     # Propagate CLI override to module-level constants used by prepare_data
     MAX_LEN = args.max_len

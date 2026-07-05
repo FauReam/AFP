@@ -1,122 +1,77 @@
-# AFP+IVN Phase 0 实验方案（v4 — 2026-06-19）
+# AFP Phase 0 实验方案（v6 — 2026-07-05）
 
-> **v4 核心变更**：不训练 — 直接用 Qwen2.5 系列预训练特化模型。
-> **核心问题**：IVN 多轮虚拟谈判是否优于 AFP 单次门控更新？
-
----
-
-## 实验设定
-
-```
-Teacher: Qwen/Qwen2.5-Coder-1.5B-Instruct     (代码特化)
-Student: Qwen/Qwen2.5-Math-1.5B-Instruct      (数学特化)
-
-基座:    Qwen/Qwen2.5-1.5B                    (计算 importance 的基线)
-架构:    24 层，同 hidden dim，同参数结构 → 重量空间 IVN 直接跑
-数据:    VersaPRM code + math (仅用于评估，不训练)
-设备:    DGX Spark GB10 (121GB)
-
-不训练，不准备数据，直接下载 HuggingFace 模型。
-```
-
-## 为什么是 code vs math
-
-```
-code:  语法解析、结构化生成、算法抽象 → 激活 backbone 中前层 + attention 区
-math:  逻辑链推理、符号操纵、多步验证 → 激活 backbone 中后层 + MLP 区
-
-两个领域的 backbone 使用模式大概率正交 → importance cosine 低 → 门控有信息
-Qwen 系列在同一基座上做 domain-specific continued pretraining → 干净的对比
-```
-
-## 为什么 IVN 需要多轮谈判
-
-```
-AFP one-shot:
-  W_math' = W_math + M_math ⊙ (W_code - W_math)    ← 一次通信，一次更新
-
-IVN:
-  V_0 = W_init
-  每轮: A 用 math 数据在 V_t 上算梯度 → 提案 d_A
-        B 用 code 数据在 V_t 上算梯度 → 提案 d_B
-        V_{t+1} = V_t + M_math ⊙ d_code + M_code ⊙ d_math
-        直到 V 收敛
-
-  W_math' = W_math + M_math ⊙ (V_T - W_init)
-  W_code' = W_code + M_code ⊙ (V_T - W_init)
-```
-
-核心假设: 多轮来回 → V 收敛到一个双方力量平衡的不动点 → 每个人从这个不动点中提取的知识比一次性交换更优。
+> **基于实测数据更新。只写已经验证的事实，不做无数据支撑的推演。**
 
 ---
 
-## 对比方法
+## 一、实测结果汇总
 
-| 方法 | 描述 |
-|------|------|
-| **No Exchange** | 各自独立，不交流 |
-| **Noise Control** | 注入高斯噪声（幅度 = peer delta std），经门控后更新。**控制条件**：排除"任何扰动都提升 zero-shot 精度" |
-| **FedAvg** | W' = (1-α)W_math + α·W_code, grid search α |
-| **AFP one-shot** | W' = W + M⊙(W_other - W), grid search τ |
-| **IVN** | 多轮虚拟谈判 |
+### 1.1 模型训练
 
-### 评估效度说明
+| 模型 | mean ΔW | max ΔW | 状态 |
+|------|---------|--------|------|
+| code_e1 | 0.26% | 6.2% | ✅ 唯一有效的 code 训练 |
+| code_e2-e5 | 0-0.1% | 0-1.9% | ❌ 退化/损坏（=base 或更差） |
+| medical_e1 | 1.91% | 13.5% | ✅ |
+| medical_e2 | 1.94% | 13.9% | ✅ |
+| medical_e3 | 1.95% | 14.3% | ✅ |
+| medical_e4 | 1.95% | 14.5% | ✅ |
+| medical_e5 | 1.95% | 14.5% | ✅ |
 
-VersaPRM step-level correctness 是 code/math 能力的间接代理度量——backbone 模型未在 PRM 上训练。但：
+**发现 1**：code 训练从 epoch 2 开始退化，e3 直接保存了 base 模型（Bug 18）。
 
-1. **相对比较有效**：度量噪声均等污染所有方法。`Δ_IVN - Δ_FedAvg` 中噪声抵消。
-2. **Noise control 排除扰动假说**：如果噪声交换 Δ ≈ 0 而 IVN Δ > 0，则信号来自知识迁移而非随机扰动。
-3. **无系统性偏向**：没有理由认为噪声系统性地偏向 IVN 而不偏向 FedAvg。
+**发现 2**：medical 训练正常，但 epoch 2-5 相对 epoch 1 增量极小（mean Δ 从 1.91% → 1.95%）。
 
----
+### 1.2 IVN 实验结果
 
-## 评估指标
+| 实验 | 模型对 | cosine | FedAvg(α=0.1) | AFP(τ=0.5) | IVN |
+|------|--------|--------|---------------|-------------|-----|
+| c1m1 | code_e1 + med_e1 | 0.996 | **+0.014** | -0.149 | -0.158 |
+| c1m5 | code_e1 + med_e5 | 0.948 | -0.016 | -0.807 | -0.156 |
 
-| 指标 | 数据 | 含义 |
-|------|------|------|
-| **自域精度** | math_test / code_test | 自己的专长是否保留 |
-| **跨域精度** | code_test / math_test | 是否从对方学到了知识 |
-| **净收益** | — | Δ自域 + Δ跨域 |
-| **谈判轮次** | — | V 收敛需要的轮次 |
-| **收敛曲线** | — | ΔV_t vs t |
+**发现 3**：只有 FedAvg α=0.1（10% 混合）能产生正净收益（+0.014）。其他所有方法在所有参数下都是负收益。
 
----
+**发现 4**：AFP/IVN 在所有 τ 值下给出相同结果。门控无区分度。
 
-## 运行
+**发现 5**：IVN 每次都在 1 轮收敛（ΔV < 0.001）。不存在"多轮谈判"。
 
-```bash
-# 默认: Qwen Coder ↔ Qwen Math, MAS importance, with noise control
-python scripts/run_ivn_phase0.py
+**发现 6**：AFP 对 c1m5（差异度更高）反而破坏更严重（-0.807 vs -0.149）。
 
-# 自定义模型 + 消融选项
-python scripts/run_ivn_phase0.py \
-  --teacher Qwen/Qwen2.5-Coder-1.5B-Instruct \
-  --student Qwen/Qwen2.5-Math-1.5B-Instruct \
-  --importance mas        # 或 magnitude (消融)
-```
-
-## 预估（2026-07-01 实测更新）
+### 1.3 根因：门控范围太窄
 
 ```
-模型加载 (cache): ~30s
-MAS importance (500 samples): ~2min
-Baseline 评估 (4×): ~6min
-Noise control (3 seeds × 4 evals): ~10min
-FedAvg grid search (6 alpha × 4 evals): ~20min
-AFP grid search (7 tau × 4 evals): ~24min
-IVN 谈判 (≤30 rounds): ~10min
-总计: ~70-90min (DGX Spark GB10 实测)
+gate[j] = τ / (τ + imp[j])
+
+τ=0.5, imp ∈ [0.1, 1.0] → gate ∈ [0.33, 0.83]
 ```
 
-> ⚠️ 注意：Qwen2.5-1.5B 有 28 层 transformer layers，不是 Pythia 的 24 层。`N_BLOCKS` 设为 32（安全上界）。评估样本量约 11K-14K/domain，单次评估 ~50 batch × ~3s = ~2.5min。
+gate 永远不低于 0.33——每个 block 至少接受 33% 的 peer 权重。而实测只有 ≤10% 的混合（FedAvg α=0.1）才能保持中性。**门控的上限（0.33）远高于可接受的上限（0.1）。**
 
----
+## 二、已知 Bug
 
-## 判断标准
+| # | 描述 | 状态 |
+|---|------|------|
+| 17 | IVN 脚本用 L2 算 importance 但未赋值给 agent，`integrate_afp` 回退到 L1 mean | ✅ 已修 |
+| 18 | code 训练 epoch 2+ 退化，e3 保存了 base 模型 | ⬜ 待修 |
+| 19 | pipeline `rm -f` 无法删除目录 → IVN 步骤失败 | ✅ 已修（改为 `rm -rf`） |
+| 20 | VENV 路径变更（FCL-PRM → AFP venv） | ✅ 已修 |
+| 21 | code/ 目录被未训练 base 模型覆盖 | ✅ 已修（加 Δ 验证） |
 
-```
-IVN net > AFP net  → 多轮谈判优于单次更新 ✓
-IVN net ≈ AFP net  → 多轮无增益 → 检查 V 是否收敛到平凡解
-importance cosine < 0.8 → 领域互补 ✓
-importance cosine > 0.95 → code 和 math 不够正交 → 换 domain 对
-```
+## 三、下一步
+
+1. **修 code 训练退化**（Bug 18）：排查为什么 epoch 2+ 权重反向缩小
+2. **降低 τ 到 0.1 或 0.05**：让 gate 能达到 <0.1 的保护水平
+3. **产生更大差异度的模型**：更多 epoch、更高 LR、或换领域对
+4. **LMC 障碍测试**：在模型之间做线性插值 loss scan，定量测 barrier
+
+## 四、环境
+
+| 项 | 值 |
+|----|-----|
+| 模型 | EleutherAI/pythia-1.4b (1.31B params) |
+| 训练 | full-FT, bf16 autocast + fp32 head |
+| 数据 | VersaPRM code + medical |
+| 硬件 | DGX Spark GB10, 121GB 统一内存, ARM64 CUDA 13.0 |
+| Python | `/home/jiayu/AFP/venv/bin/python3` (torch 2.12) |
+| 训练速度 | ~5.5s/step × 433 steps ≈ 40 min/domain |
+| IVN 速度 | ~10 min/experiment |

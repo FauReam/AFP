@@ -1,105 +1,77 @@
 # AFP — Claude Code 项目上下文
 
-> **新会话必读**：[docs/internal/VISION.md](docs/internal/VISION.md) — AFP 核心愿景与协议形式化
+> **新会话必读**：[docs/internal/ENGINEERING.md](docs/internal/ENGINEERING.md) — 已知 Bug 清单
+> **实验数据**：[docs/internal/EXPERIMENT_PLAN.md](docs/internal/EXPERIMENT_PLAN.md) — 实测结果
 
 ## 项目简介
 
-**AFP (Agentic Federated Protocol)** — 去中心化的 P2P 互学习协议。模型不再被动接受聚合，而是自主决定学什么、学多少、信谁。
+**AFP (Agentic Federated Protocol)** — 去中心化 P2P 互学习协议。与 FedAvg 的核心区别：不是 `(1-α)W_A + α·W_B`（盲平均），而是 `W + M⊙(W_peer - W)`（per-block 选择性门控）。
 
-核心文档（均在 `docs/internal/`）：
-- [VISION.md](docs/internal/VISION.md) — 协议形式化定义
-- [DIRECTION.md](docs/internal/DIRECTION.md) — 文献地图与研究空白
-- [REFERENCES.md](docs/internal/REFERENCES.md) — 引用文献（MGDA, D-PSGD, GD收敛）
-- [EXPERIMENT_PLAN.md](docs/internal/EXPERIMENT_PLAN.md) — Phase 0 实验方案（v4）
-- [ENGINEERING.md](docs/internal/ENGINEERING.md) — 工程手册（必读）
-- [contribution-assessment.md](docs/internal/contribution-assessment.md) — 投稿级别评估
-- [REVIEW_ISSUES.md](docs/internal/REVIEW_ISSUES.md) — 审稿问题清单
-- [IMPORTANCE_ANALYSIS.md](docs/internal/IMPORTANCE_ANALYSIS.md) — importance 指标数学推导
-- [ROOT_CAUSE_IMPORTANCE.md](docs/internal/ROOT_CAUSE_IMPORTANCE.md) — 根因：共同模式问题
+Phase 0 实验：Pythia-1.4B full-FT on code + medical，用 IVN/AFP/FedAvg 三种方式交换知识。
 
-用户 HTML 报告（均在 `docs/reports/`）：
-- [vision.html](docs/reports/vision.html) — 核心愿景
-- [EXPERIMENT_PLAN.html](docs/reports/EXPERIMENT_PLAN.html) — Phase 0 实验方案
-- [phase0-summary-*.html](docs/reports/phase0-summary-2026-06-19.html) — 当前状态
+## 设备与速度
+
+| 项 | 值 |
+|----|-----|
+| GPU | NVIDIA GB10 (121GB 统一内存, ARM64 CUDA 13.0) |
+| 训练速度 | ~5.5s/step, 433 steps/epoch, ~40 min/domain |
+| IVN 实验 | ~10 min/run |
+
+## 关键实测结论（2026-07-05）
+
+1. **只有 FedAvg α=0.1 有正收益**（c1m1: net=+0.014）。所有其他方法/参数都破坏模型。
+2. **门控范围太窄**：gate = τ/(τ+imp)，τ=0.5 时 gate ∈ [0.33, 0.83]。每个 block 至少混 33% peer 权重，远超可接受的 10%。
+3. **IVN 从不谈判**：每次都在第 1 轮收敛（ΔV < 0.001）。
+4. **importance cosine > 0.94**：所有重要性指标在两模型间高度相关。不是指标选错了，是两个模型确实太像。
+5. **code 训练有 bug**：epoch 2+ 退化，e3 甚至保存了 base 模型。
+
+## Phase 0 入口
+
+```bash
+# 训练 + IVN 全流程（唯一入口）
+bash scripts/train_and_run_phase0.sh
+
+# 排队多个实验
+bash scripts/queue_experiments.sh
+```
+
+## 常用命令
+
+```bash
+# 状态检查
+bash scripts/monitor.sh
+
+# 环境变量（必须）
+export HF_ENDPOINT=https://hf-mirror.com
+export HF_DATASETS_OFFLINE=1
+export PYTHONUNBUFFERED=1
+
+# Python
+/home/jiayu/AFP/venv/bin/python3
+```
 
 ## 项目结构
 
 ```
 AFP/
-├── README.md
-├── CLAUDE.md
-├── .gitignore
 ├── scripts/
-│   ├── run_experiment_a.py      # 实验 A：训练 + AFP vs FedAvg vs 不交换
-│   └── generate_reports.py      # MD → HTML 报告生成
-├── src/AFP/
-│   ├── protocol/                # AFP 交互协议核心
-│   ├── models/
-│   ├── data/
-│   └── experiments/
+│   ├── train_agent.py              # 训练 full-FT
+│   ├── train_and_run_phase0.sh     # 全流程 pipeline
+│   ├── queue_experiments.sh        # 批量 IVN 实验
+│   ├── run_ivn_phase0.py           # IVN 实验
+│   └── run_fivn_phase0.py          # F-IVN 函数空间
+├── src/AFP/protocol/               # 协议核心
 ├── experiments/
-│   └── phase0_diagnostic/       # Step 1 诊断输出
-├── configs/
-└── docs/
-    ├── internal/                # MD（AI agent 用）
-    └── reports/                 # HTML（用户用）
+│   ├── trained_models/             # 训练权重（_eN 后缀）
+│   └── phase0_ivn/results/         # IVN 结果 JSON
+├── docs/internal/                  # 设计文档
+└── data/versaprm/                  # 预处理数据
 ```
-
-## 设备
-
-NVIDIA DGX Spark GB10（121GB 统一内存，ARM64）
-
-## Phase 0 训练设定（v2 — 2026-06-19）
-
-| 参数 | 值 |
-|------|-----|
-| 模型 | Pythia-1.4B |
-| 训练方式 | **full-FT**（所有 backbone + PRM 分类头） |
-| 数据 | VersaPRM code + medical |
-| Batch size | **1024**（121GB 极限） |
-| LR schedule | **Cosine: 1e-4 → 3e-6**（先大步后小步） |
-| Optimizer | AdamW (β=0.9, 0.999), weight_decay=0.01 |
-| Precision | bf16 autocast + fp32 head |
-| Max length | 384 tokens |
-| Epochs | 1 |
-| PRM head | 2048 → 256 → 1 (ReLU) |
-
-### 为什么是 full-FT 而非 head-only
-
-head-only 下 backbone 不变 → importance[j] = 0 ∀j → 门控无意义 → 实验无效。
-full-FT 让 backbone 产生真正的 per-block 专业化差异。
-
-### 为什么是 code + medical 而非 math + code
-
-code 和 medical 激活的 backbone 区间重叠更小 → importance 模式更正交 → 对 AFP 是更干净的测试。
-
-## 实验入口
-
-```bash
-# 默认: Qwen2.5-Coder ⇄ Qwen2.5-Math (同架构，不训练)
-python scripts/run_ivn_phase0.py
-
-# 异构 F-IVN (函数空间)
-python scripts/run_fivn_phase0.py
-```
-
-## Phase 0 关键路径
-
-1. `python scripts/run_ivn_phase0.py` — IVN vs AFP vs FedAvg (~40min)
-2. 确认 importance cosine < 0.8
-3. IVN net > AFP net → 多轮谈判优于单次更新
-
-## 工程手册
-
-**[docs/internal/ENGINEERING.md](docs/internal/ENGINEERING.md)** — 从旧项目迁移的完整工程知识。新 agent 在写任何训练代码前必须先读。
-
-## 旧项目参考
-
-- 路径：`/Users/Apple/project/FCL-PRM-cdspi`
-- 已吸取教训：CD-SPI 诊断框架被实验证伪；head-only 下发散不可测；CKA ≡ 1.0 因为 Pythia 1.4B backbone 过于顽固
 
 ## 工作约定
 
 - 提交信息用英文，`feat(scope): description`
-- 训练 >1h 用 nohup + &
-- 日志写入 `experiments/`
+- 训练用 `nohup ... &`，日志写 `experiments/`
+- Python 加 `-u`（无缓冲）
+- 所有 HF API 调用加 `local_files_only=True`
+- 修改参数后删除旧缓存（缓存 key 包含 MAX_LEN）
