@@ -1,87 +1,70 @@
 # AFP — Claude Code 项目上下文
 
-> **新会话必读**：[docs/internal/ENGINEERING.md](docs/internal/ENGINEERING.md) — 已知 Bug 清单
-> **实验数据**：[docs/internal/EXPERIMENT_PLAN.md](docs/internal/EXPERIMENT_PLAN.md) — 实测结果
+> **新会话必读**：[docs/internal/EXPERIMENT_PLAN.md](docs/internal/EXPERIMENT_PLAN.md)
 
-## 项目简介
+## 研究问题
 
-**AFP (Agentic Federated Protocol)** — 去中心化 P2P 互学习协议。与 FedAvg 的核心区别：不是 `(1-α)W_A + α·W_B`（盲平均），而是 `W + M⊙(W_peer - W)`（per-block 选择性门控）。
+**Domain-specific fine-tuning 产生的模型权重差异有多大？这些差异是否足以突破 LMC (Linear Mode Connectivity) 的线性连通盆地？**
 
-Phase 0 实验：Pythia-1.4B full-FT on code + medical，用 IVN/AFP/FedAvg 三种方式交换知识。
+两个从 Pythia-1.4B 出发、分别在 code 和 medical 上 full-FT 的模型——它们在权重空间中有多远？线性插值路径上是否存在 loss barrier？
 
-## 设备与速度
+## 实测数据（2026-07-05）
+
+| 模型 | mean ΔW | max ΔW | 训练 |
+|------|---------|--------|------|
+| code_e1 | 0.26% | 6.2% | 1 epoch |
+| medical_e1 | 1.91% | 13.5% | 1 epoch |
+| medical_e5 | 1.95% | 14.5% | 5 epoch |
+
+### Per-block 差异模式
+
+code 和 medical 的权重偏移集中在不同的 block 区间：
+- code: 前层变化更大（embedding → early attention）
+- medical: 中层变化更大（mid-MLP blocks）
+- 两个模型的 importance cosine > 0.94（结构相似性主导）
+
+### 当前实验：LMC barrier 扫描
+
+测量 `L((1-α)W_code + αW_medical)` 在 α∈[0,1] 的 loss 曲线。
+如果 barrier ≈ 0，说明两个模型处于同一线性盆地——即使 domain 不同、训练量不同。
+
+## 环境
 
 | 项 | 值 |
 |----|-----|
-| GPU | NVIDIA GB10 (121GB 统一内存, ARM64 CUDA 13.0) |
-| 训练速度 | ~5.5s/step, 433 steps/epoch, ~40 min/domain |
-| IVN 实验 | ~10 min/run |
+| 模型 | EleutherAI/pythia-1.4b |
+| 数据 | VersaPRM code + medical |
+| 训练 | full-FT, bf16, L=256, batch=128, 1ep, LR=1e-4→3e-6 |
+| 硬件 | DGX Spark GB10, 121GB, ARM64 CUDA 13.0 |
+| Python | `/home/jiayu/AFP/venv/bin/python3` |
+| 速度 | 训练 ~40 min/domain, LMC scan ~20 min |
 
-## 关键实测结论（2026-07-05）
-
-1. **只有 FedAvg α=0.1 有正收益**（c1m1: net=+0.014）。所有其他方法/参数都破坏模型。
-2. **门控范围太窄**：gate = τ/(τ+imp)，τ=0.5 时 gate ∈ [0.33, 0.83]。每个 block 至少混 33% peer 权重，远超可接受的 10%。
-3. **IVN 从不谈判**：每次都在第 1 轮收敛（ΔV < 0.001）。
-4. **importance cosine > 0.94**：所有重要性指标在两模型间高度相关。不是指标选错了，是两个模型确实太像。
-5. **code 训练有 bug**：epoch 2+ 退化，e3 甚至保存了 base 模型。
-
-## Phase 0 入口
+## 入口
 
 ```bash
-# 训练 + IVN 全流程（唯一入口）
+# 训练
 bash scripts/train_and_run_phase0.sh
 
-# 排队多个实验
-bash scripts/queue_experiments.sh
-```
+# LMC 扫描
+python -u scripts/lmc_barrier_scan.py
 
-## 常用命令
-
-```bash
-# 状态检查
+# 看状态
 bash scripts/monitor.sh
-
-# 环境变量（必须）
-export HF_ENDPOINT=https://hf-mirror.com
-export HF_DATASETS_OFFLINE=1
-export PYTHONUNBUFFERED=1
-
-# Python
-/home/jiayu/AFP/venv/bin/python3
 ```
 
-## 项目结构
+## 关键文档
 
-```
-AFP/
-├── scripts/
-│   ├── train_agent.py              # 训练 full-FT
-│   ├── train_and_run_phase0.sh     # 全流程 pipeline
-│   ├── queue_experiments.sh        # 批量 IVN 实验
-│   ├── run_ivn_phase0.py           # IVN 实验
-│   └── run_fivn_phase0.py          # F-IVN 函数空间
-├── src/AFP/protocol/               # 协议核心
-├── experiments/
-│   ├── trained_models/             # 训练权重（_eN 后缀）
-│   └── phase0_ivn/results/         # IVN 结果 JSON
-├── docs/internal/                  # 设计文档
-└── data/versaprm/                  # 预处理数据
-```
+| 文件 | 内容 |
+|------|------|
+| `docs/internal/EXPERIMENT_PLAN.md` | 实验方案 + 全部数据 + 结论 |
+| `docs/internal/ENGINEERING.md` | 21 条已知 Bug |
+| `docs/internal/ROOT_CAUSE_IMPORTANCE.md` | 权重差异分析 |
+| `experiments/RESTART_PROMPT.md` | 新会话重启指南 |
 
 ## 工作约定
 
 - 提交信息用英文，`feat(scope): description`
 - 训练用 `nohup ... &`，日志写 `experiments/`
 - Python 加 `-u`（无缓冲）
-- 所有 HF API 调用加 `local_files_only=True`
-
-## 实验纪律
-
-**跑任何实验前必须调用 `/experiment-triage`。** 跑完立即 post-triage。
-
-已在 EXPERIMENT_PLAN.md 评估过的 DRIFTING 模式直接阻止：
-- 不对称差异（一方 1ep + 一方 3/5ep）
-- 改 importance 不改 τ
-- 模型质量不达标就 IVN
-
-**当前论文主线**：τ 降低能否恢复选择性？对称高差异下 AFP 是否 > FedAvg？
+- HF 调用加 `local_files_only=True`
+- 跑任何实验前先读 `EXPERIMENT_PLAN.md` 的当前状态
