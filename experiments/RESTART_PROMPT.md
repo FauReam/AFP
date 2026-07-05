@@ -1,6 +1,6 @@
 # AFP Phase 0 — 新会话重启
 
-> 粘贴给新 Claude Code 会话。读完即可操作。
+> 粘贴给新 Claude 会话。读完即可操作。
 
 ---
 
@@ -9,7 +9,7 @@
 
 ## 研究问题
 
-Domain fine-tuning 产生的模型权重差异有多大？LMC 线性连通性是否成立？
+Domain fine-tuning 产生的权重差异有多大？LMC 是否成立？**假设：低 LR 是 Pythia 顽固性的根因。**
 
 ## 设置
 
@@ -23,54 +23,62 @@ VENV=venv/bin/python3
 
 ```
 bash scripts/monitor.sh
-    ├─ 有进程在跑 → 不要动
-    ├─ 没进程，有 trained_models/code_e1/ → 跑 LMC 扫描：
-    │     nohup $VENV -u scripts/lmc_barrier_scan.py > experiments/phase0_ivn/logs/lmc_scan_$(date +%Y%m%d_%H%M%S).log 2>&1 &
-    └─ 没进程，没模型 → 训练：
-          nohup bash scripts/train_and_run_phase0.sh > /dev/null 2>&1 &
+    ├─ 有进程 → 别动
+    ├─ 没进程，有 trained_models/code_e1/ → 验证模型 + LMC 扫描：
+    │     python -c "验证 ΔW > 0.1%"
+    │     python -u scripts/lmc_barrier_scan.py
+    └─ 没模型 → 训练（用 --lr 5e-4）：
+          nohup $VENV -u scripts/train_agent.py --domain code --lr 5e-4 >> ...log 2>&1 &
 ```
 
-## 三个命令
+## 当前结论
 
-```bash
-bash scripts/monitor.sh                                          # 状态
-nohup bash scripts/train_and_run_phase0.sh > /dev/null 2>&1 &   # 训练 (~40min)
-nohup $VENV -u scripts/lmc_barrier_scan.py > ...log 2>&1 &      # LMC 扫描 (~20min)
-```
+| 模型对 | LMC barrier | 关键发现 |
+|--------|------------|---------|
+| code_e1 + med_e1 | 0.071 | U形：code 改善 medical 8.3% |
+| code_e1 + med_e3 | 0.076 | U形减弱：6.8% |
+| code_e1 + med_e5 | 0.076 | U形消失：自域最优 |
+| **假说** | | **lr=5e-4 会产生 >5% ΔW，可能打破 LMC** |
+
+## 当前训练
+
+lr=5e-4 验证进行中。如果 ΔW > 5%，立即训 medical lr=5e-4 → LMC scan。
 
 ## 环境
 
 | 项 | 值 |
 |----|-----|
 | Python | `/home/jiayu/AFP/venv/bin/python3` |
-| HF mirror | `https://hf-mirror.com`（无 VPN 必须） |
+| HF mirror | `https://hf-mirror.com`（无 VPN，必须） |
 | 设备 | DGX Spark GB10, 121GB, ARM64 CUDA 13.0 |
+| 训练 | ~42min/epoch, lr=5e-4 (测试中) |
+| LMC scan | ~15min |
 
-## 关键状态检查
+## ⚠️ 训练后必做验证
 
 ```bash
-ls -d experiments/trained_models/*/                              # 训练权重
-ls experiments/phase0_ivn/results/                                # LMC 结果
-tail -20 experiments/phase0_ivn/logs/lmc_scan_*.log              # 最新 LMC 日志
+python -c "
+import torch
+c = torch.load('experiments/trained_models/code_e1/W_code_final.pt', map_location='cpu', weights_only=True)
+b = torch.load('experiments/trained_models/code/W_code_final.pt', map_location='cpu', weights_only=True)
+d = sum((c[k]-b[k]).float().norm().item()**2 for k in c if k in b)**0.5
+n = sum(b[k].float().norm().item()**2 for k in b if k in c)**0.5
+print(f'ΔW={(d/(n+1e-8))*100:.2f}%' if d/n > 0.001 else 'BUG: model is base!')
+"
 ```
-
-## 已测数据
-
-| 模型 | mean ΔW | 训练 |
-|------|---------|------|
-| code_e1 | 0.26% | 1 epoch |
-| medical_e1 | 1.91% | 1 epoch |
-| medical_e5 | 1.95% | 5 epoch |
-
-Pythia-1.4B 极度顽固——1 epoch full-FT 只改变 <2% 权重。
-LMC 扫描验证中：线性插值路径上是否存在 loss barrier？
 
 ## 已知 Bug
 
 | # | 描述 |
 |---|------|
-| 18 | code epoch 2+ 退化，只用 e1 |
-| 17,19-21 | 已修 |
+| 22 | code_e1 曾是 base 模型（所有 E2-E7 无效） |
+| 18 | code epoch 2+ 退化 |
+| 21 | 训练后模型可能是 base（做验证！） |
 
-详见 `docs/internal/ENGINEERING.md`。
+## 已废弃（不要碰）
+
+- `scripts/run_ivn_phase0.py` — IVN 实验
+- `scripts/queue_experiments.sh` — 批量 IVN
+- `docs/internal/VISION.md` — AFP/gate/IVN 协议（历史）
+- `docs/internal/IMPORTANCE_ANALYSIS.md` — importance 分析（历史）
 ```

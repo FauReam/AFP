@@ -222,7 +222,7 @@ def train(args) -> int:
 
     # Optimizer & scheduler
     params = list(agent.parameters())
-    optimizer = AdamW(params, lr=LR_MAX, weight_decay=WEIGHT_DECAY,
+    optimizer = AdamW(params, lr=args.lr, weight_decay=WEIGHT_DECAY,
                       betas=(0.9, 0.999))
     scheduler = CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=LR_MIN)
 

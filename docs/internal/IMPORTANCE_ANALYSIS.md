@@ -1,5 +1,9 @@
 # Importance 指标深度分析
 
+> **⚠️ 2026-07-05: 历史存档。Importance 指标不是当前研究方向。
+> 实验已证明所有 importance 指标在低差异度下 cosine > 0.94，无区分力。
+> 当前方向见 [PAPER.md](PAPER.md)。**
+>
 > 2026-07-03 | AFP Phase 0 | 与 Bug 17-20 并行记录
 
 ## 原始结论（MAS 基线）

@@ -1,6 +1,9 @@
 # AFP (Agentic Federated Protocol) — 核心愿景
 
-> **AFP 是一种去中心化的 P2P 互学习协议。模型不再被动接受聚合，而是像学者一样——通过"权重论文"交流知识，自主决定学什么、学多少、信谁。**
+> **⚠️ 2026-07-05: 实验方向已转向。AFP/IVN/gate 协议暂不推进。
+> 当前研究问题是 domain fine-tuning 的权重差异与 LMC 连通性。
+> 论文见 [PAPER.md](PAPER.md)，实验见 [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md)。
+> 以下内容为历史存档，不代表当前方向。**
 
 ---
 

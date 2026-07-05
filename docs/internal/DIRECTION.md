@@ -1,6 +1,18 @@
 # AFP — 研究方向与文献地图
 
-> **状态**：Phase 0 v2 诊断进行中 — full-FT code+medical，验证 per-block importance 结构性偏移
+> **⚠️ 2026-07-05: 方向已更新。当前聚焦 LMC + 权重差异度。
+> 以下文献地图部分仍有用（LMC/Frankle/MGDA），但 AFP 协议部分为历史存档。**
+
+## 当前方向文献
+
+| 论文 | 相关性 |
+|------|--------|
+| **Frankle et al. (ICML 2020)** LMC | 核心框架 |
+| **Entezari et al. (ICLR 2022)** LMC + permutation | 解释 cosine > 0.94 |
+| **Ainsworth et al. (ICLR 2023)** Git Re-Basin | 权重对齐参考 |
+| **Wortsman et al. (ICML 2022)** Model Soups | 插值正则化 |
+| **Yadav et al. (NeurIPS 2023)** TIES-Merging | 选择性合并 |
+| **Biderman et al. (NeurIPS 2023)** Pythia | 模型分析 |
 
 ---
 
