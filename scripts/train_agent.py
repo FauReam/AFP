@@ -224,7 +224,24 @@ def train(args) -> int:
     params = list(agent.parameters())
     optimizer = AdamW(params, lr=args.lr, weight_decay=WEIGHT_DECAY,
                       betas=(0.9, 0.999))
-    scheduler = CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=LR_MIN)
+
+    # Drive-putt schedule: flat high LR for first 70% steps (drive phase),
+    # then cosine decay to LR_MIN for final 30% (putt/convergence phase).
+    # This replaces the default CosineAnnealingLR which decays too early,
+    # preventing the model from moving far from the pretrained basin.
+    drive_frac = 0.70
+    drive_steps = int(total_steps * drive_frac)
+    putt_steps = total_steps - drive_steps
+
+    def drive_putt_lr(step):
+        if step < drive_steps:
+            return 1.0  # flat at lr_max
+        # Cosine decay in putt phase
+        progress = (step - drive_steps) / max(putt_steps, 1)
+        return (LR_MIN / args.lr) + 0.5 * (1 - LR_MIN / args.lr) * (1 + np.cos(np.pi * progress))
+
+    import numpy as np
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, drive_putt_lr)
 
     # State
     loss_fn = nn.BCEWithLogitsLoss()
