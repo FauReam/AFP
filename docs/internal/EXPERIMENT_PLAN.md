@@ -1,49 +1,48 @@
 # Phase 0 实验执行文件
 
-> **论文**: [PAPER.md](PAPER.md) | **Bug 清单**: [ENGINEERING.md](ENGINEERING.md)
+> 2026-07-06 | 当前阶段: 离线 12h 训练队列
 
-## 研究问题
+## 全部实测数据
 
-Domain fine-tuning 产生多大权重差异？LMC 何时破裂？LR 是否是主控因素？
+### LMC Barrier
 
-## 已完成实验
+| 实验 | 模型对 | ΔW | code_bar(abs) | code_bar(Frankle) | med_bar(abs) | med_bar(Frankle) |
+|------|--------|-----|---------------|--------------------|---------------|--------------------|
+| lr1e4 | code_lr1e4 × med_e3 | 7.3/9.0% | 0.135 | 0.068 | 0.282 | 0.141 |
+| lr5e4 | code_lr5e4 × lr5e4 | 7.4/7.3% | 0.290 | 0.162 | 0.630 | 0.315 |
+| driveputt | code_dp × med_dp | 7.3/9.0% | 0.339 | 0.192 | 0.919 | 0.488 |
 
-| ID | 内容 | 核心结果 |
-|----|------|---------|
-| LMC-c1m1 | code_e1(1.8%Δ) vs med_e1(1.8%Δ) | barrier=0.071, U形(α=0.2, 8.3%) |
-| LMC-c1m3 | code_e1 vs med_e3(1.8%Δ) | barrier=0.076, U形减弱(6.8%) |
-| LMC-c1m5 | code_e1 vs med_e5(1.8%Δ) | barrier=0.076, U形消失(0%) |
+### 发现
 
-## 当前结论
+1. barrier 随 ΔW 单调上升，但不成比例（ΔW 差 1.2×，barrier 差 2.5×）
+2. Frankle 正确定义的 barrier 只有绝对定义的一半
+3. 驱动-推杆 vs 纯余弦：ΔW 无显著差异（7.3% vs 7.4%），推杆阶段把分歧拉回去了
+4. 纯高 LR（5e-4 cosine）模型未收敛（med loss=1.15）——barrier 不可信
 
-1. lr=1e-4 下 Pythia-1.4B 权重偏移 <2%，LMC 成立
-2. Code→medical 有不对称正迁移，随 medical 训练增强而衰减
-3. Medical→code 始终单调损害
-4. **假设**: 低 LR 是顽固性的根因
+## 12h 离线队列
 
-## 下一步：验证 LR 假设
+`bash scripts/offline_12h.sh`
 
-| 优先级 | 实验 | 预测 | 时间 |
-|--------|------|------|------|
-| 🔴1 | code, lr=5e-4, 1ep | ΔW > 5% | 42min |
-| 🔴2 | medical, lr=5e-4, 1ep | ΔW > 5% | 42min |
-| 🔴3 | LMC scan lr=5e-4 pair | barrier > 0.15 | 15min |
-| 🟡4 | code, lr=1e-3, 1ep | ΔW > 10%? | 42min |
-| 🟡5 | 3-seed 重复 lr=1e-4 | CI estimation | 4h |
+| Phase | 内容 | 时间 |
+|-------|------|------|
+| 1 | 4 LR × 3 seeds × 2 domains = 24 次训练 | ~10h |
+| 2 | ΔW 验证 | ~10min |
+| 3 | 12 LMC 扫描 | ~2h |
+
+输出：`experiments/trained_models/{domain}_lr{lr}_s{seed}/` + `results/lmc_lr{lr}_s{seed}.json`
+
+## 下一步
+
+1. 运行 12h 队列
+2. 基于结果更新论文（修复 barrier 定义 + Table 3.1 数据）
+3. 3-seed error bars + LR 谱图
 
 ## 环境
 
 | 项 | 值 |
 |----|-----|
 | 模型 | EleutherAI/pythia-1.4b |
-| 训练 | full-FT, bf16, L=256, batch=128 |
-| 硬件 | DGX Spark GB10, 121GB, ARM64 CUDA 13.0 |
-| 速度 | ~5.5s/step, ~42min/epoch |
-
-## Bug 状态
-
-| # | 描述 | 状态 |
-|---|------|------|
-| 22 | code_e1 曾是 base 模型（7/5 发现） | ✅ 已修复重训 |
-| 18 | code epoch 2+ 退化 | ⬜ |
-| 17,19-21 | importance, rm, venv, base覆盖 | ✅ |
+| 训练 | full-FT, bf16, L=256, batch=128, 1ep |
+| 调度 | 驱动-推杆 (70% flat + 30% cosine) |
+| 硬件 | DGX Spark GB10, 121GB |
+| 速度 | ~42min/训练, ~15min/LMC |
