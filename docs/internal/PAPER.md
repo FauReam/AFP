@@ -6,7 +6,7 @@
 
 ## Abstract
 
-When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.2-1.8% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. By increasing the optimization step size, we produce models with 7.3-9.0% weight divergence and find the barrier rises to 0.12-0.23 — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Across 3 random seeds, barrier magnitudes are consistent (std ≤ 0.03), and the relationship between divergence and barrier height is monotonic but sublinear. We release the training recipe, measurement code, and all model checkpoints.
+When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4-1.5% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0-8.5% weight displacement, 11.6% cross-model), the barrier rises to 0.12 ± 0.03 (code) and 0.23 ± 0.10 (medical) — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Across 3 random seeds, barrier magnitudes are consistent within each condition. Per-block divergence patterns are nearly identical across domains (r = 0.995). We release the training recipe, measurement code, and all model checkpoints.
 
 ## 1. Introduction
 
@@ -52,29 +52,29 @@ barrier = max_α L(θ(α)) − (L(θ(0)) + L(θ(1))) / 2
 
 ### 3.1 Weight Divergence
 
-| Divergence level | Code ΔW | Medical ΔW | 
-|-----------------|---------|------------|
-| Standard | 1.2-1.8% | 1.3-1.9% |
-| High | 7.3-7.4% | 7.3-9.0% |
+| Condition | Code ΔW | Medical ΔW | Code↔Med Cross |
+|-----------|---------|------------|-----------------|
+| Standard | 1.4 ± 0.0% | 1.5 ± 0.1% | 2.0 ± 0.1% |
+| High | 8.0 ± 0.3% | 8.5 ± 0.2% | 11.6 ± 0.3% |
 
-Per-block divergence patterns are highly correlated across domains (r=0.995). Both models change the same blocks, differing primarily in magnitude, not pattern.
+Per-block divergence patterns are nearly identical across domains (r=0.995). Both models change the same transformer blocks; the divergence is primarily in magnitude, not pattern.
 
 ### 3.2 LMC Barriers (Frankle definition, 3 seeds)
 
-| Divergence | Code barrier | Medical barrier |
+| Condition | Code barrier | Medical barrier |
 |-----------|-------------|----------------|
 | Standard | 0.053 ± 0.011 | 0.051 ± 0.013 |
 | High | 0.118 ± 0.031 | 0.228 ± 0.102 |
 
 Key observations:
 - At standard divergence, LMC holds cleanly: barriers are ~0.05, well within the connected regime.
-- At high divergence, barriers increase 2-5× but remain modest (max 0.23).
-- Even at 7-9% weight divergence, domain-specialized models remain in broadly the same basin.
-- The barrier increase is sublinear in weight divergence (2-5× barrier for 5-7× more divergence).
+- At high divergence (8-12% weight displacement), barriers increase 2-5× but remain modest.
+- The barrier increase is sublinear: 5-6× more weight divergence produces only 2-5× more barrier.
+- Even at 8% divergence, domain-specialized Pythia-1.4B models remain in broadly the same loss basin.
 
 ### 3.3 Cross-Domain Asymmetry
 
-At standard divergence, the code model's loss on medical data (0.53) is lower than base Pythia's (0.56) — code fine-tuning produces a positive externality for medical reasoning. Medical fine-tuning provides no reciprocal benefit for code. This asymmetry suggests that general reasoning capabilities acquired during pretraining transfer more readily to specialized medical tasks than specialized medical knowledge transfers to code.
+At standard divergence, the code model's loss on medical data is lower than base Pythia's — code fine-tuning produces a small positive externality for medical reasoning. Medical fine-tuning provides no reciprocal benefit for code. This asymmetry suggests that general reasoning capabilities acquired during pretraining transfer more readily to specialized tasks than vice versa.
 
 ## 4. Discussion
 
