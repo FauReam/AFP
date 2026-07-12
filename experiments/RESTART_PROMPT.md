@@ -30,6 +30,21 @@
 - **不要用 symlink 管理模型** — 模型保存到独立目录 `{domain}_lr{lr}_s{seed}/`。
 - **训练完必须验证 ΔW > 0.1%** — 曾多次发生 base 模型被当作训练结果。
 
+## 🛡️ 批量实验强制规则（启动任何 >1h 任务前逐条确认）
+
+| # | 规则 |
+|---|------|
+| R1 | 必须 `nohup ... &`，只返回 PID |
+| R2 | stdout/stderr → `experiments/` 下时间戳日志 |
+| R3 | 零 stdin 读取 |
+| R4 | `HF_DATASETS_OFFLINE=1` 全程零网络 |
+| R5 | **禁止 `set -e`** — 单步失败不杀 batch |
+| R6 | 失败用 `return 1`，不得 `exit 1` |
+| R7 | 每步 `[ -f "$out" ] && continue` 幂等 skip |
+| R8 | 训练后验证 ΔW > 0.1% |
+| R9 | `sleep 3 && ps -p $PID` 验证存活 |
+| R10 | 失败日志写入 `crashes/` |
+
 ## 设置
 
 ```bash

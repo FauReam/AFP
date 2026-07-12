@@ -29,6 +29,25 @@ Pythia-1.4B 分别在 code 和 medical 上 full-FT。测量权重偏移量级 + 
 - **不要用 symlink 管理模型目录** — 每个模型独立保存到 `{domain}_lr{lr}_s{seed}/`。
 - **训练后必须验证 ΔW > 0.1%** — Bug 22 曾导致 base 模型被当作训练结果。
 
+## 🛡️ 批量实验强制规则
+
+**任何 >1h 的批量实验启动前必须逐条确认。违反即 Bug。**
+
+| # | 规则 | 来源 |
+|---|------|------|
+| R1 | 必须 `nohup ... &` 启动，只返回 PID | ENGINEERING §5.3 |
+| R2 | stdout/stderr 重定向到 `experiments/` 下时间戳日志 | ENGINEERING §5.3 |
+| R3 | 脚本零 stdin 读取（无 `input()`, `sys.stdin.read()`） | ENGINEERING §5.1 |
+| R4 | `HF_DATASETS_OFFLINE=1` — 全程零网络 | ENGINEERING §5.1 |
+| R5 | **禁止 `set -e`** — 单个实验崩溃不得杀死整个 batch | Bug 23 教训 |
+| R6 | 单步失败处理：`|| { log "ERROR"; return 1; }` — 不得 `exit 1` | Bug 23 教训 |
+| R7 | 每步输出文件存在即 skip（`[ -f "$out" ] && continue`） | 幂等重跑 |
+| R8 | 训练完成后验证 ΔW > 0.1%，失败则返回 1（不 exit） | Bug 21/22/23 |
+| R9 | 启动后 `sleep 3 && ps -p $PID` 验证进程存活 | ENGINEERING §5.3 |
+| R10 | 写结构化的失败日志到 `crashes/` 目录 | ENGINEERING §5.6 |
+
+> **详见 `docs/internal/ENGINEERING.md` §5（训练代码规范）**
+
 ## 环境
 
 | 项 | 值 |
