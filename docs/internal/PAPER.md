@@ -16,9 +16,17 @@ Linear Mode Connectivity (Frankle et al., ICML 2020) established that neural net
 
 We measure this relationship directly. Using Pythia-1.4B as a base model, we train two variants on code reasoning and medical reasoning respectively. We vary the degree of weight-space movement, measure per-block divergence from the pretrained checkpoint, and compute LMC barriers via 11-point linear interpolation between the domain-specialized models.
 
-## 2. Method
+## 2. Related Work
 
-### 2.1 Training
+**Linear Mode Connectivity.** Frankle et al. (ICML 2020) established that neural networks fine-tuned from a shared initialization tend to remain in the same linearly-connected loss basin — the loss along the linear path between two models exhibits at most a modest "barrier." Entezari et al. (ICLR 2022) showed that permutation symmetry accounts for most apparent LMC failures, and Ainsworth et al. (ICLR 2023) proposed permutation-matching algorithms (Git Re-Basin) to align independently-trained models into a shared basin. Garipov et al. (NeurIPS 2018) demonstrated that low-loss connecting curves (Bezier) exist even when linear paths fail. Our work differs by systematically measuring how *quantitative weight displacement* maps onto LMC barrier height, rather than testing whether connectivity exists as a binary property.
+
+**Model Merging.** Weight interpolation between fine-tuned models has proven practically useful. Wortsman et al. (ICML 2022) showed that averaging multiple fine-tuned variants (Model Soups) improves robustness. Yadav et al. (NeurIPS 2023) introduced TIES-Merging, which resolves parameter interference through trim-elect-sign operations before merging. Task arithmetic (Ilharco et al., 2023) demonstrated that weight-space vector addition can compose task capabilities. These methods demonstrate that linear interpolation *works*, but do not characterize *when it fails*. Our barrier measurements provide a quantitative framework for predicting merge quality from weight divergence metrics.
+
+**Domain-Specialized Fine-Tuning.** Prior work has extensively studied domain adaptation for LMs (Gururangan et al., 2020), but the focus has been on downstream performance, not on weight-space characterization. Biderman et al. (NeurIPS 2023) released Pythia checkpoints at multiple training steps, enabling weight-space analysis, but did not study fine-tuning divergence. Our work bridges these literatures by measuring how far domain fine-tuning moves models in weight space and how that movement affects loss landscape connectivity.
+
+## 3. Method
+
+### 3.1 Training
 
 | Parameter | Value |
 |-----------|-------|
@@ -34,7 +42,7 @@ We measure this relationship directly. Using Pythia-1.4B as a base model, we tra
 
 Model pairs are created at two divergence levels by varying the optimization step size. We refer to these as the **standard-divergence** and **high-divergence** conditions. The step size values are incidental — what matters is the resulting weight-space distance between models.
 
-### 2.2 LMC Barrier Scan
+### 3.2 LMC Barrier Scan
 
 For each model pair (θ_code, θ_medical), we construct 11 interpolated models:
 
@@ -48,18 +56,18 @@ We evaluate binary cross-entropy loss on 2,000 test samples per domain. The LMC 
 barrier = max_α L(θ(α)) − (L(θ(0)) + L(θ(1))) / 2
 ```
 
-## 3. Results
+## 4. Results
 
-### 3.1 Weight Divergence (Figure 2)
+### 4.1 Weight Divergence
 
 | Condition | Code ΔW | Medical ΔW | Code↔Med Cross |
 |-----------|---------|------------|-----------------|
 | Standard | 1.4 ± 0.0% | 1.5 ± 0.1% | 2.0 ± 0.1% |
 | High | 8.0 ± 0.3% | 8.5 ± 0.2% | 11.6 ± 0.3% |
 
-Per-block divergence patterns are nearly identical across domains (r=0.995). Both models change the same transformer blocks; the divergence is primarily in magnitude, not pattern.
+Per-block divergence patterns are nearly identical across domains (r=0.995). Both models change the same transformer blocks; the divergence is primarily in magnitude, not pattern (Figure 2).
 
-### 3.2 LMC Barriers (Frankle definition, 3 seeds)
+### 4.2 LMC Barriers
 
 | Condition | Code barrier | Medical barrier |
 |-----------|-------------|----------------|
@@ -68,11 +76,11 @@ Per-block divergence patterns are nearly identical across domains (r=0.995). Bot
 
 Key observations:
 - At standard divergence, LMC holds cleanly: barriers are ~0.05, well within the connected regime.
-- At high divergence (8-12% weight displacement), barriers increase 2-5× but remain modest.
+- At high divergence (8-12% weight displacement), barriers increase 2-5× but remain modest (Figure 1).
 - The barrier increase is sublinear: 5-6× more weight divergence produces only 2-5× more barrier.
 - Even at 8% divergence, domain-specialized Pythia-1.4B models remain in broadly the same loss basin.
 
-### 3.3 Within-Domain LMC Baseline
+### 4.3 Within-Domain LMC Baseline
 
 To calibrate the cross-domain barriers, we measure LMC between different seeds of the *same* domain (3 pairs each for code and medical, standard divergence). For each pair, we evaluate on the domain's own data:
 
@@ -83,11 +91,11 @@ To calibrate the cross-domain barriers, we measure LMC between different seeds o
 
 For code, the within-domain barrier (0.048) is nearly identical to the cross-domain barrier at standard divergence (0.053). Domain difference contributes negligibly. For medical, the within-domain barrier (0.147) is substantially higher than the cross-domain barrier (0.051), indicating that medical fine-tuning is intrinsically less stable across seeds — the variance between two medical training runs can exceed the variance between code and medical models trained at the same intensity. The dominant source of barrier height is the *degree of weight displacement combined with per-domain training stability*, not domain dissimilarity itself.
 
-### 3.4 Cross-Domain Asymmetry
+### 4.4 Cross-Domain Asymmetry
 
 At standard divergence, the code model's loss on medical data is lower than base Pythia's — code fine-tuning produces a small positive externality for medical reasoning. Medical fine-tuning provides no reciprocal benefit for code. This asymmetry suggests that general reasoning capabilities acquired during pretraining transfer more readily to specialized tasks than vice versa.
 
-### 3.5 Noise Floor Calibration
+### 4.5 Noise Floor Calibration
 
 We calibrate the measurement with two boundary conditions. First, we run the LMC scan on two identical copies of the same model — this should produce a barrier of zero and reveals any numerical artifacts in the interpolation pipeline. Second, we interpolate between a pretrained Pythia-1.4B model and a randomly-initialized model of the same architecture — this establishes the effective upper bound on what barrier magnitudes the method can produce.
 
@@ -98,7 +106,7 @@ We calibrate the measurement with two boundary conditions. First, we run the LMC
 
 The identical-copy barrier is effectively zero, confirming the measurement pipeline is free of numerical artifacts. The pretrained-to-random medical barrier (0.222) is nearly identical to the high-divergence cross-domain medical barrier (0.228), suggesting that at ~8% weight displacement, medical models approach the maximum possible loss of connectivity.
 
-## 4. Discussion
+## 5. Discussion
 
 Domain-specific fine-tuning of Pythia-1.4B produces only modest weight-space movement: 1-2% at typical training intensity, 7-9% at elevated step sizes. LMC holds across this entire range, though the barrier grows with divergence. The relationship is monotonic but sublinear — barrier increases more slowly than weight distance, suggesting the loss landscape is robust to substantial parameter changes before connectivity breaks.
 
@@ -108,7 +116,7 @@ The noise-floor calibration confirms measurement validity. Identical model copie
 
 A practical implication: model merging techniques that rely on linear interpolation are likely to work well for domain-specialized models fine-tuned from the same base, even at aggressive optimization settings. However, for domains like medical where training trajectories are intrinsically noisy, merging different seeds of the same domain can be more challenging than merging across domains.
 
-## 5. Limitations
+## 6. Limitations
 
 - Single model architecture (Pythia-1.4B). Results may differ for other scales or architectures.
 - Two domains only (code, medical). Broader domain sampling needed to characterize the asymmetry finding.
@@ -122,3 +130,16 @@ A practical implication: model merging techniques that rely on linear interpolat
 - Biderman, S., et al. (NeurIPS 2023). "Pythia: A Suite for Analyzing Large Language Models."
 - Entezari, R., et al. (ICLR 2022). "The Role of Permutation Invariance in Linear Mode Connectivity."
 - Ainsworth, S., et al. (ICLR 2023). "Git Re-Basin: Merging Models modulo Permutation Symmetries."
+- Garipov, T., et al. (NeurIPS 2018). "Loss Surfaces, Mode Connectivity, and Fast Ensembling of DNNs."
+- Gururangan, S., et al. (ACL 2020). "Don't Stop Pretraining: Adapt Language Models to Domains and Tasks."
+- Ilharco, G., et al. (NeurIPS 2023). "Editing Models with Task Arithmetic."
+
+## Figures
+
+**Figure 1: LMC barrier curves.** Loss along the linear interpolation path θ(α) = (1-α)·θ_code + α·θ_medical, evaluated on both code (solid) and medical (dashed) test sets. Top: standard divergence (ΔW ≈ 1.4%). Bottom: high divergence (ΔW ≈ 8%). The shaded region represents ±1 standard deviation across 3 random seeds. Barriers increase with divergence but remain modest even at 8% weight displacement.
+
+![LMC barrier curves](../docs/reports/fig1_lmc_barrier.png)
+
+**Figure 2: Per-block weight divergence.** Root-mean-square weight difference from the pretrained checkpoint, computed per transformer block. Code and medical models at standard divergence are overlaid (r = 0.995). Divergence concentrates in early layers (layer 0: ~5.6% at standard divergence) and decreases roughly exponentially with depth.
+
+![Per-block divergence](../docs/reports/fig2_per_block.png)
