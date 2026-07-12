@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synthesis Report — AFP Phase 0 LMC Paper (Expert Panel)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #f5f6fa;
+    color: #2d3436;
+    line-height: 1.65;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+
+  /* Verdict Banner */
+  .verdict-banner {
+    margin-top: 32px;
+    padding: 28px 36px;
+    border-radius: 8px;
+    text-align: center;
+    color: #fff;
+  }
+  .verdict-banner.reject     { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+  .verdict-banner.weak-reject { background: linear-gradient(135deg, #e67e22, #f39c12); }
+  .verdict-banner.weak-accept { background: linear-gradient(135deg, #2e86de, #54a0ff); }
+  .verdict-banner.accept      { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .verdict-banner h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+  .verdict-banner .verdict-label { font-size: 18px; font-weight: 600; opacity: 0.9; }
+  .verdict-banner .venue-rec   { font-size: 15px; margin-top: 8px; opacity: 0.85; }
+
+  /* Section Headers */
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 40px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #3498db;
+  }
+  h3 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #34495e;
+    margin: 24px 0 12px;
+    padding-left: 10px;
+    border-left: 4px solid #3498db;
+  }
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #555;
+    margin: 16px 0 8px;
+  }
+
+  /* Executive Summary */
+  .exec-summary {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-top: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 20px;
+    font-size: 13.5px;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  th {
+    background: #2c3e50;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Score cell colors */
+  .score-green  { background: #27ae60 !important; color: #fff; font-weight: 700; text-align: center; }
+  .score-yellow { background: #f39c12 !important; color: #fff; font-weight: 700; text-align: center; }
+  .score-orange { background: #e67e22 !important; color: #fff; font-weight: 700; text-align: center; }
+  .score-red    { background: #e74c3c !important; color: #fff; font-weight: 700; text-align: center; }
+  .score-na     { background: #bdc3c7 !important; color: #fff; font-weight: 700; text-align: center; }
+
+  /* Severity badges */
+  .severity-critical { background: #e74c3c; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  .severity-major    { background: #f39c12; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  .severity-moderate { background: #3498db; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+
+  /* Callout boxes */
+  .callout {
+    background: #fff;
+    border-left: 4px solid #3498db;
+    border-radius: 0 6px 6px 0;
+    padding: 16px 20px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .callout.warning { border-left-color: #e74c3c; background: #fdf2f2; }
+  .callout.info    { border-left-color: #3498db; background: #eef5fb; }
+  .callout.success { border-left-color: #27ae60; background: #eafaf1; }
+
+  /* Paragraphs and lists */
+  p  { margin: 10px 0; }
+  ul, ol { margin: 8px 0 8px 24px; }
+  li { margin: 4px 0; }
+
+  /* Tier cards */
+  .tier-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 12px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    border-top: 4px solid #bdc3c7;
+  }
+  .tier-card.tier1  { border-top-color: #e74c3c; }
+  .tier-card.tier15 { border-top-color: #f39c12; }
+  .tier-card.tier2  { border-top-color: #27ae60; }
+
+  /* Abstract block */
+  .revised-abstract {
+    background: #fffef5;
+    border: 1px solid #e0dcc0;
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin: 16px 0;
+    font-style: italic;
+    line-height: 1.75;
+  }
+
+  /* Bottom line */
+  .bottom-line {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: #ecf0f1;
+    border-radius: 8px;
+    padding: 28px 32px;
+    margin: 24px 0 40px;
+    font-size: 15px;
+    line-height: 1.75;
+  }
+  .bottom-line h2 { color: #ecf0f1; border-bottom-color: #3498db; }
+
+  .expert-tag {
+    display: inline-block;
+    background: #ecf0f1;
+    color: #2c3e50;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 3px;
+    margin-right: 4px;
+  }
+
+  .small { font-size: 12px; color: #7f8c8d; }
+  .mono { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- ====== VERDICT BANNER ====== -->
+<div class="verdict-banner weak-reject">
+  <div class="verdict-label">SENIOR AREA CHAIR VERDICT</div>
+  <h1>WEAK REJECT for NeurIPS/ICML</h1>
+  <div class="venue-rec">
+    Current form: TMLR (65–75% acceptance). With 2–3 GPU-days of work: ICLR 2028 (40–50%).
+    <br><strong>Do not submit to NeurIPS 2027 or ACL/EMNLP.</strong>
+  </div>
+</div>
+
+<!-- ====== 1. EXECUTIVE SUMMARY ====== -->
+<h2>1. Executive Summary</h2>
+<div class="exec-summary">
+<p>
+This paper measures the quantitative relationship between weight-space divergence and Linear Mode Connectivity (LMC) barrier height when Pythia-1.4B is fine-tuned on code and medical reasoning data. All six expert reviewers independently verified the core numerical claims: the weight divergence measurements, barrier computations, and noise-floor calibrations are accurate. The experimental design — 3 seeds, bootstrap CIs, within-domain baselines, and noise-floor calibration — demonstrates genuine methodological care. However, the paper has four fatal weaknesses that prevent acceptance at NeurIPS/ICML in its current form: (1) the core "sublinear" claim rests on only two valid divergence levels, making it unsubstantiated; (2) the high-divergence medical barrier (0.228) exceeds the claimed "upper bound" (0.222), an internal contradiction; (3) n=3 seeds with 45% coefficient of variation renders the high-divergence medical result statistically unreliable; and (4) the "domain specialization" framing is weakened by the fact that the training data is PRM verification data, not genuine domain-adaptation corpora. The paper's strongest contribution — that medical within-domain training instability drives larger barriers than cross-domain difference — is genuinely novel but underdeveloped. The minimum viable paper at TMLR requires adding one model family, two domains, and resolving the upper-bound contradiction (~12 GPU-hours). The path to ICLR requires a systematic divergence sweep, permutation-alignment checks, and connection to downstream merge quality (~2–3 GPU-days).
+</p>
+</div>
+
+<!-- ====== 2. SCORECARD TABLE ====== -->
+<h2>2. Expert Scorecard</h2>
+
+<h3>2.1 Dimension Scores</h3>
+<table>
+<thead>
+<tr>
+  <th>Expert</th>
+  <th>Role</th>
+  <th>Novelty</th>
+  <th>Technical Depth</th>
+  <th>Exp. Rigor</th>
+  <th>Clarity</th>
+  <th>Importance</th>
+  <th>Overall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>LMC Theorist</td>
+  <td><span class="expert-tag">Theory</span></td>
+  <td class="score-yellow">5</td>
+  <td class="score-red">4</td>
+  <td class="score-yellow">6</td>
+  <td class="score-green">7</td>
+  <td class="score-yellow">5</td>
+  <td class="score-yellow">5.4</td>
+</tr>
+<tr>
+  <td>Experimentalist</td>
+  <td><span class="expert-tag">Methods</span></td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-yellow">5.6 <span class="small">(56%)</span></td>
+</tr>
+<tr>
+  <td>Domain Specialist</td>
+  <td><span class="expert-tag">NLP/Domain</span></td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-red">4.5</td>
+</tr>
+<tr>
+  <td>Adversarial Reviewer</td>
+  <td><span class="expert-tag">Adversarial</span></td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-red">3.0</td>
+</tr>
+<tr>
+  <td>Meta Reviewer (SAC)</td>
+  <td><span class="expert-tag">Meta</span></td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-orange">~5 <span class="small">(35th %ile)</span></td>
+</tr>
+<tr>
+  <td>Merging Practitioner</td>
+  <td><span class="expert-tag">Applied</span></td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-red">~4.2 <span class="small">(avg sub-scores)</span></td>
+</tr>
+<tr style="font-weight: 700; background: #eef5fb;">
+  <td>PANEL MEAN</td>
+  <td></td>
+  <td class="score-yellow">5.0</td>
+  <td class="score-red">4.0</td>
+  <td class="score-yellow">6.0</td>
+  <td class="score-green">7.0</td>
+  <td class="score-yellow">5.0</td>
+  <td class="score-yellow">4.8</td>
+</tr>
+<tr style="font-weight: 700; background: #eef5fb;">
+  <td>PANEL VARIANCE</td>
+  <td></td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-na">—</td>
+  <td class="score-yellow">σ² ≈ 0.8</td>
+</tr>
+</tbody>
+</table>
+
+<p class="small">The Experimentalist uses a 5-dimension rubric (Statistical Rigor, Data Integrity, Measurement Validity, Reproducibility, Baseline Coverage) scored out of 10 each (28/50 = 56%). The Domain Specialist uses domain-specific criteria (Domain Framing Validity, NLP Relevance, Asymmetry Novelty, Interpretation Soundness) averaging 4.5. The Meta Reviewer gives a percentile ranking (~35th) rather than a numeric score. The Merging Practitioner uses a 4-dimension rubric (Practical Utility 3/10, Actionability 2/10, Connection to Literature 5/10, Missing Experiments 7/10). For the panel mean, only the Theorist's dimension scores are used for per-dimension averaging.</p>
+
+<h3>2.2 Sub-Dimension Scores (where available)</h3>
+<table>
+<thead>
+<tr><th>Expert</th><th>Statistical Rigor</th><th>Data Integrity</th><th>Measurement Validity</th><th>Reproducibility</th><th>Baseline Coverage</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>Experimentalist</td>
+  <td class="score-red">4</td>
+  <td class="score-green">7</td>
+  <td class="score-yellow">6</td>
+  <td class="score-yellow">6</td>
+  <td class="score-yellow">5</td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<thead>
+<tr><th>Expert</th><th>Domain Framing</th><th>NLP Relevance</th><th>Asymmetry Novelty</th><th>Interpretation</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>Domain Specialist</td>
+  <td class="score-red">4</td>
+  <td class="score-red">3</td>
+  <td class="score-yellow">5</td>
+  <td class="score-yellow">6</td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<thead>
+<tr><th>Expert</th><th>Practical Utility</th><th>Actionability</th><th>Literature Connection</th><th>Missing Experiments</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>Merging Practitioner</td>
+  <td class="score-red">3</td>
+  <td class="score-red">2</td>
+  <td class="score-yellow">5</td>
+  <td class="score-red">7 <span class="small">(severity, not quality)</span></td>
+</tr>
+</tbody>
+</table>
+
+<!-- ====== 3. CONVERGENCE ANALYSIS ====== -->
+<h2>3. Convergence Analysis</h2>
+
+<h3>3.1 What ALL Experts Agree On</h3>
+<ul>
+  <li><strong>The numbers are correct.</strong> All three experts who independently recomputed barriers (Theorist, Experimentalist, Adversarial) confirm the paper's reported values match the raw data using the correct Frankle formula. Weight divergence measurements are verified against HuggingFace base checkpoint.</li>
+  <li><strong>The within-domain medical finding is the paper's strongest contribution.</strong> All six experts independently identify the medical within-domain barrier (0.147) exceeding the cross-domain barrier (0.051) as the most novel, interesting, and defensible result in the paper.</li>
+  <li><strong>n=3 seeds is insufficient for the high-divergence medical condition.</strong> With coefficient of variation = 45%, the 95% CI spans [0.094, 0.340], making the point estimate unreliable. All experts flag this.</li>
+  <li><strong>The "sublinear" claim is unsubstantiated.</strong> Only two valid divergence levels exist (standard, high). The intermediate lr=2e-4/lr=3e-4 results are byte-identical file copies. A functional-form claim requires at least 3–4 distinct divergence levels. The Theorist, Adversarial Reviewer, and Meta Reviewer all flag this explicitly.</li>
+  <li><strong>The high-divergence convergence confound is serious.</strong> High-divergence models have worse self-domain loss than standard-divergence models. The barrier increase cannot be cleanly attributed to weight displacement vs. under-convergence. Five experts raise this.</li>
+  <li><strong>The noise-floor calibration is methodologically strong.</strong> The identical-copy (barrier ~0) and pretrained-to-random-init baselines are exemplary rigor checks. All experts praise this.</li>
+  <li><strong>The barrier formula bug exists in the scan script.</strong> Both <span class="mono">lmc_barrier_scan.py</span> and <span class="mono">lmc_barrier.py</span> compute <span class="mono">max(L) - L[0]</span> instead of <span class="mono">max(L) - (L[0]+L[-1])/2</span>. The Theorist and Experimentalist independently discovered this. The paper's numbers use the correct formula (verified), but the code-paper inconsistency is a reproducibility hazard. Five experts note this.</li>
+  <li><strong>The paper does not belong at ACL/EMNLP.</strong> The Domain Specialist, Meta Reviewer, and Adversarial Reviewer all conclude that the NLP contribution is near-zero and the venue mismatch guarantees negative reviews.</li>
+  <li><strong>The lr=2e-4/lr=3e-4 data is corrupted.</strong> Six JSON files share identical md5 hashes. These are copy-pasted, not measured. The Theorist, Experimentalist, and Adversarial Reviewer all verified this independently.</li>
+</ul>
+
+<h3>3.2 What Experts Disagree On</h3>
+<ul>
+  <li><strong>Severity of the upper-bound contradiction.</strong> The Adversarial Reviewer considers the 0.228 > 0.222 bound violation a fatal analytical error (severity 9/10). The Theorist notes it in passing but focuses on the convergence confound. The Meta Reviewer considers the entire high-divergence condition contaminated by under-convergence, making the comparison moot regardless. There is genuine disagreement about whether this is a mathematical error or a consequence of the convergence confound.</li>
+  <li><strong>Acceptability at NeurIPS/ICML.</strong> The Adversarial Reviewer says flat reject (3/10). The Meta Reviewer gives NeurIPS 15–20% probability. The Theorist says "not competitive as-is" but implies workshop acceptance is possible. The Experimentalist says "revise and resubmit" without specifying venue. This range reflects different prior beliefs about reviewer tolerance for small-scale empirical studies.</li>
+  <li><strong>Novelty of the ΔW→barrier mapping.</strong> The Theorist considers the quantitative mapping partially novel ("not directly present in the literature"). The Adversarial Reviewer considers it entirely expected ("any reviewer will say this is obvious"). The Meta Reviewer places it at the 35th percentile. The Merging Practitioner says the relationship is "scientifically interesting but not actionable." This is fundamentally a disagreement about standards: is systematic measurement of an expected relationship sufficient contribution?</li>
+  <li><strong>Importance of permutation alignment.</strong> The Adversarial Reviewer and Theorist both flag the missing permutation check as a significant gap. The Experimentalist does not mention it. The Domain Specialist considers it irrelevant to the domain framing. The Meta Reviewer lists it as one of ten missing elements. The Theorist argues it is "probably not" relevant for fine-tuned-from-same-checkpoint models but should be discussed explicitly. There is consensus that a brief justification paragraph is needed, but disagreement about whether running Git Re-Basin is required.</li>
+  <li><strong>Interpretation of the medical within-domain result.</strong> The Theorist and Domain Specialist treat this as a finding about domain properties (medical training is genuinely less stable). The Adversarial Reviewer treats it as a refutation of the paper's central claim. The Domain Specialist offers five alternative explanations (data heterogeneity, label noise, landscape topography, low seeds, undertraining) and argues the paper underspecifies the cause. The Merging Practitioner calls it the most valuable contribution but notes it needs replication.</li>
+</ul>
+
+<h3>3.3 Evidence vs. Interpretation Boundary</h3>
+<div class="callout info">
+<p><strong>Where the data ends and the story begins:</strong> The following claims are interpretive, not directly measured:</p>
+<ol>
+  <li><strong>"Barrier is driven by weight displacement, not domain difference."</strong> The evidence shows this is true for code (within=0.048, cross=0.053) but contradicted for medical (within=0.147, cross=0.051). The interpretation that this reflects "training stability" rather than domain difference is plausible but unproven — no experiment disentangles stability from domain properties.</li>
+  <li><strong>"The relationship is sublinear."</strong> Two data points (standard and high divergence) cannot distinguish linear from sublinear. The interpretation uses the language of functional form without the data to support it. Both the Theorist and Adversarial Reviewer independently flag this as a category error.</li>
+  <li><strong>"Model merging is likely to work well."</strong> The paper measures interpolation loss, not merge quality. No downstream accuracy, no TIES/Task Arithmetic comparison, no merged model evaluation. The Merging Practitioner gives Actionability a 2/10 specifically because this interpretive leap is unsupported.</li>
+  <li><strong>"Code fine-tuning produces a small positive externality for medical reasoning."</strong> This claim may originate from the Bug 22 era when the "code" model was actually the untrained base model. The v4 paper uses correctly trained models, but whether the asymmetry finding survives this correction is not independently verified across all seeds.</li>
+  <li><strong>"The pretrained-to-random barrier of 0.22 is an upper bound."</strong> The high-divergence medical barrier (0.228) exceeds it. Whether 0.222 is a true upper bound, an estimate with uncharacterized variance, or simply a different measurement entirely is not resolved. The Adversarial Reviewer considers this a logical contradiction; the Theorist considers it a consequence of the convergence confound.</li>
+</ol>
+</div>
+
+<!-- ====== 4. CRITICAL WEAKNESSES ====== -->
+<h2>4. Critical Weaknesses (Ranked by Severity)</h2>
+
+<table>
+<thead>
+<tr>
+  <th style="width:4%">#</th>
+  <th style="width:26%">Weakness</th>
+  <th style="width:10%">Severity</th>
+  <th style="width:18%">Flagged By</th>
+  <th style="width:18%">Evidence</th>
+  <th style="width:14%">Proposed Fix</th>
+  <th style="width:10%">Est. Cost</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+  <td><strong>W1</strong></td>
+  <td><strong>Only 2 valid divergence levels — sublinearity claim unsubstantiated</strong></td>
+  <td><span class="severity-critical">Critical</span></td>
+  <td>
+    <span class="expert-tag">Theorist</span>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Meta</span>
+  </td>
+  <td>Two divergence levels (standard ≈1.4%, high ≈8%). Intermediate lr=2e-4 and lr=3e-4 LMC results are 6 byte-identical file copies (md5: 2c1ded...). The lr=2e-4/3e-4 models DO exist and ARE genuinely different (verified ΔW = 3.0–5.2%), but LMC scans were never run — output files were duplicated.</td>
+  <td>Run LMC scans at lr=2e-4 and lr=3e-4 (models already trained). Add at least one more divergence level. Soften claim from "sublinear" to "barrier grows less than proportionally to divergence."</td>
+  <td>~1.5 GPU-hours (scans only, models exist)</td>
+</tr>
+
+<tr>
+  <td><strong>W2</strong></td>
+  <td><strong>Upper bound (0.222) exceeded by measurement (0.228) — internal contradiction</strong></td>
+  <td><span class="severity-critical">Critical</span></td>
+  <td>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Theorist</span>
+    <span class="expert-tag">Meta</span>
+  </td>
+  <td>Pretrained-to-random-init medical barrier = 0.222 is characterized as "upper bound." High-divergence cross-domain medical barrier = 0.228 ± 0.102. Individual seed s0 yields 0.340, exceeding the "bound" by 53%. The paper papers over this with "nearly saturates."</td>
+  <td>Either: (a) remeasure the pretrained-to-random barrier with 5 seeds to establish a CI that contains 0.228, (b) drop the "upper bound" language and reframe as "reference calibration," or (c) acknowledge the bound violation and attribute it to the convergence confound. Then frame high-divergence results as exploratory.</td>
+  <td>~30 min GPU (recalibration scans) + text revision</td>
+</tr>
+
+<tr>
+  <td><strong>W3</strong></td>
+  <td><strong>High-divergence medical barrier statistically unreliable (n=3, CV=45%)</strong></td>
+  <td><span class="severity-critical">Critical</span></td>
+  <td>
+    <span class="expert-tag">Experimentalist</span>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Theorist</span>
+    <span class="expert-tag">Meta</span>
+  </td>
+  <td>Per-seed barriers: 0.340, 0.094, 0.252 (span: 3.6x). Bootstrap "CI" with n=3 is degenerate — it merely enumerates the 3 observations. t-based 95% CI: [−0.025, 0.481] includes zero. The mean (0.228) is dominated by one outlier seed.</td>
+  <td>Increase to n ≥ 5 seeds for the high-divergence medical condition. If the large variance is real (not an outlier artifact), report full per-seed results transparently and adjust claims (e.g., "barriers range from 0.09 to 0.34 across seeds, with mean 0.23").</td>
+  <td>~7 GPU-hours (2 additional high-div medical trainings + LMC scans)</td>
+</tr>
+
+<tr>
+  <td><strong>W4</strong></td>
+  <td><strong>High-divergence convergence confound — cannot attribute barrier to ΔW vs. under-convergence</strong></td>
+  <td><span class="severity-critical">Critical</span></td>
+  <td>
+    <span class="expert-tag">Theorist</span>
+    <span class="expert-tag">Meta</span>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Merging</span>
+  </td>
+  <td>Paper acknowledges (Section 6): high-divergence models have higher self-domain loss (L0_code rises from 0.592 → 0.607–0.622). The barrier increase from 0.05 to 0.12–0.23 conflates two mechanisms: (a) genuine LMC degradation at larger ΔW, and (b) both endpoints being worse models, making any convex combination worse.</td>
+  <td>Either: (a) re-run high-divergence with a schedule that achieves comparable convergence (e.g., train longer at the same high LR, or use LR warmup+decay), or (b) restructure the paper so high-divergence is framed as exploratory analysis with the confound prominently discussed, while the primary claim rests on standard-divergence results.</td>
+  <td>Option (a): ~14 GPU-hours (retrain 6 models). Option (b): text revision only.</td>
+</tr>
+
+<tr>
+  <td><strong>W5</strong></td>
+  <td><strong>Core claim contradicted by 50% of evidence — medical domain disproves the thesis</strong></td>
+  <td><span class="severity-critical">Critical</span></td>
+  <td>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Domain Spec</span>
+    <span class="expert-tag">Theorist</span>
+  </td>
+  <td>The claim "barrier is driven by weight displacement, not domain difference" holds for code (within=0.048 ≈ cross=0.053) but is directly contradicted for medical (within=0.147 >> cross=0.051). The paper's reframe ("training instability") changes the claim rather than rescuing it. A claim supported by 50% of the evidence cannot be the central thesis.</td>
+  <td>Restructure the narrative: make the <em>domain-specific stability asymmetry</em> the central finding, not the "ΔW drives barrier" claim. The correct thesis is: "Training stability, not domain difference, is the dominant source of LMC barrier height — and stability varies dramatically across domains, with medical training producing 3x higher within-domain barriers than cross-domain barriers."</td>
+  <td>Text revision only (major restructuring)</td>
+</tr>
+
+<tr>
+  <td><strong>W6</strong></td>
+  <td><strong>Single model family (Pythia-1.4B) — generalizability unproven</strong></td>
+  <td><span class="severity-major">Major</span></td>
+  <td>
+    <span class="expert-tag">Meta</span>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Theorist</span>
+  </td>
+  <td>All primary results on Pythia-1.4B only. The 160M "scaling check" is trivial — both models barely moved (ΔW ≈ 0.3%), making it a different experimental regime. No other architecture (Llama, OPT, Qwen) tested.</td>
+  <td>Add at least one additional model family (Llama-3.2-1B or OLMo-1B) at standard divergence on both domains. Train 2 domains × 2 div levels × 3 seeds = 12 models, plus LMC scans.</td>
+  <td>~12 GPU-hours (train + scan)</td>
+</tr>
+
+<tr>
+  <td><strong>W7</strong></td>
+  <td><strong>Missing permutation invariance check (Git Re-Basin)</strong></td>
+  <td><span class="severity-major">Major</span></td>
+  <td>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Theorist</span>
+    <span class="expert-tag">Meta</span>
+  </td>
+  <td>Paper cites Entezari (ICLR 2022) and Ainsworth (ICLR 2023) but never applies permutation matching. The high within-domain medical barrier (0.147) could partially reflect permutation drift during aggressive fine-tuning rather than genuine loss landscape barriers. Without a Git Re-Basin check, we cannot distinguish.</td>
+  <td>Minimum: add a 2–3 sentence justification in Methods/Limitations explaining why permutation matching is unnecessary for same-checkpoint fine-tuning. Recommended: run one Git Re-Basin alignment on the highest-barrier pair (high-divergence medical s0/s1) and report barrier with and without alignment.</td>
+  <td>Text: 30 min. Git Re-Basin: ~2 GPU-hours + implementation</td>
+</tr>
+
+<tr>
+  <td><strong>W8</strong></td>
+  <td><strong>"Domain specialization" framing is weak — data is PRM verification, not domain adaptation</strong></td>
+  <td><span class="severity-major">Major</span></td>
+  <td>
+    <span class="expert-tag">Domain Spec</span>
+    <span class="expert-tag">Meta</span>
+  </td>
+  <td>VersaPRM is a process reward model dataset. The task is binary classification of reasoning step correctness — meta-reasoning, not domain-specific generation. The domain label is a surface tag on the question. Both models learn fundamentally similar verification skills on different text distributions. This partially explains why cross-domain barriers are so low.</td>
+  <td>Reframe as "task-specialized fine-tuning" or "fine-tuning divergence analysis" rather than "domain-specialized." Alternatively, keep domain framing but add a paragraph in Limitations explicitly acknowledging that PRM verification data differs from standard domain adaptation corpora and discussing how this affects interpretation.</td>
+  <td>Text revision only</td>
+</tr>
+
+<tr>
+  <td><strong>W9</strong></td>
+  <td><strong>No connection to downstream merge quality — barrier measurement not operationalized</strong></td>
+  <td><span class="severity-major">Major</span></td>
+  <td>
+    <span class="expert-tag">Merging</span>
+    <span class="expert-tag">Meta</span>
+  </td>
+  <td>Paper claims practical implications for model merging (Section 5) but never runs a merge experiment. The barrier is measured on BCE training loss — it tells us nothing about whether the merged model works on downstream tasks. No TIES-Merging, Task Arithmetic, or Model Soups evaluation. Practitioners cannot use the paper's numbers to make merge decisions.</td>
+  <td>Run one merge experiment: standard-divergence code+medical merged via (a) pure averaging and (b) TIES-Merging, evaluate on downstream code and medical benchmarks. Plot merge quality vs. barrier height. This converts a geometric measurement into a decision tool.</td>
+  <td>~12 GPU-hours (merge + evaluate)</td>
+</tr>
+
+<tr>
+  <td><strong>W10</strong></td>
+  <td><strong>Barrier formula bug in scan scripts — reproducibility hazard</strong></td>
+  <td><span class="severity-moderate">Moderate</span></td>
+  <td>
+    <span class="expert-tag">Theorist</span>
+    <span class="expert-tag">Experimentalist</span>
+    <span class="expert-tag">Adversarial</span>
+  </td>
+  <td><span class="mono">lmc_barrier_scan.py</span> line 101-102 computes <span class="mono">max(L) - L[0]</span> instead of <span class="mono">max(L) - (L[0]+L[-1])/2</span>. Same bug in <span class="mono">lmc_barrier.py</span> line 159. Paper numbers use correct formula (manually corrected in analysis), but any reviewer who runs the script gets different values. The hardcoded <span class="mono">"code_e1 + medical_e1"</span> metadata field in the scan script is misleading.</td>
+  <td>Fix both scripts to use the Frankle formula. Fix the hardcoded metadata string to use actual model paths. Add assertion that printed barrier matches the JSON-saved barrier.</td>
+  <td>~30 min (code fix)</td>
+</tr>
+
+<tr>
+  <td><strong>W11</strong></td>
+  <td><strong>Missing baselines: Gaussian perturbation, base model evaluation, high-div within-domain</strong></td>
+  <td><span class="severity-moderate">Moderate</span></td>
+  <td>
+    <span class="expert-tag">Experimentalist</span>
+    <span class="expert-tag">Adversarial</span>
+    <span class="expert-tag">Merging</span>
+  </td>
+  <td>No Gaussian perturbation calibration to separate structured (training) from unstructured (noise) weight displacement effects. No base model evaluation on both domains (asymmetry claim unverifiable). No high-divergence within-domain baselines (cannot disambiguate domain difference vs. displacement effects at high ΔW).</td>
+  <td>Add Gaussian perturbation at ΔW ≈ 1.5% and 8% (~1 GPU-hour). Evaluate base model on both test sets (~15 min). Add high-div within-domain scans for code and medical (~1 GPU-hour).</td>
+  <td>~2.5 GPU-hours</td>
+</tr>
+
+</tbody>
+</table>
+
+<!-- ====== 5. STRENGTHS ====== -->
+<h2>5. Strengths (What to Keep and Emphasize)</h2>
+
+<ol>
+  <li>
+    <strong>The within-domain baseline finding is genuinely novel.</strong>
+    The discovery that two medical models trained on the same data exhibit larger loss-landscape dissimilarity (barrier = 0.147) than a code model and a medical model trained at the same intensity (barrier = 0.051) is counterintuitive and has real implications for model merging practice. All six experts independently identify this as the paper's strongest contribution. <em>Action: elevate this to the central narrative.</em>
+  </li>
+  <li>
+    <strong>The noise-floor calibration is exemplary.</strong>
+    The identical-copy baseline (barrier ≈ 0.000) confirms the measurement pipeline is artifact-free. The pretrained-to-random-init baseline provides a reference point for interpreting barrier magnitudes. Both the Theorist and Meta Reviewer praise this as the kind of rigor check that distinguishes careful work from sloppy work.
+  </li>
+  <li>
+    <strong>All numerical claims are independently verified.</strong>
+    Three experts (Theorist, Experimentalist, Adversarial) independently recomputed weight divergence against the HuggingFace base checkpoint and recomputed barriers using the correct Frankle formula from raw JSON data. Every reported number matches to within rounding tolerance. The 24 trained models are all clean (no base-model contamination). This level of verifiability is rare and should be prominently noted.
+  </li>
+  <li>
+    <strong>The per-block divergence pattern (r = 0.995) is crisp and replicable.</strong>
+    The finding that code and medical fine-tuning change the same transformer blocks, differing only in magnitude, is a clean empirical result. It has implications for parameter-efficient fine-tuning: if architecture determines which blocks change, then domain-agnostic PEFT methods (LoRA on all layers) may be well-justified.
+  </li>
+  <li>
+    <strong>Methodological transparency.</strong>
+    The 22-bug engineering log, the preservation of raw JSON loss data enabling independent barrier recomputation, and the shell scripts documenting exact experimental commands represent a level of transparency that is above the field's norm. This should be framed as a strength, not hidden.
+  </li>
+  <li>
+    <strong>The experimental design is clean.</strong>
+    The design — vary only optimization intensity (LR) to produce different weight displacement levels, measure LMC barriers at each level, calibrate with noise floor — is conceptually clean and easy to follow. The ablation logic (within-domain baselines as controls for domain difference) is sound.
+  </li>
+  <li>
+    <strong>The writing is clear and well-structured.</strong>
+    All six reviewers note that the paper is readable and well-organized. The Methods section is precise, the Limitations section is honest, and the Discussion appropriately hedges most claims. The Theorist gives Clarity a 7/10, the highest dimension score across all reviewers.
+  </li>
+</ol>
+
+<!-- ====== 6. VENUE STRATEGY ====== -->
+<h2>6. Venue Strategy</h2>
+
+<div class="tier-card tier1">
+  <h3>Tier 1: NeurIPS 2027 / ICML 2027</h3>
+  <table>
+    <tr><td style="width:160px"><strong>Current readiness</strong></td><td>Not competitive. The adversarial reviewer gives 3/10. The Meta Reviewer estimates 15–20% (NeurIPS) / 20–25% (ICML) acceptance probability. A single hostile reviewer saying "single model family, 2 domains, expected results" would tank the paper.</td></tr>
+    <tr><td><strong>What additional work</strong></td><td>Second model family (full sweep), 2+ additional domains, 4–5 divergence levels with systematic sweep, Git Re-Basin alignment, downstream merge quality evaluation, convergence confound resolution, n ≥ 5 seeds for high-divergence medical, Gaussian perturbation baseline, and a mechanistic hypothesis (either a theoretical model predicting barrier from ΔW, or a practical demonstration that ΔW→barrier predicts TIES merge quality across model families).</td></tr>
+    <tr><td><strong>Estimated timeline</strong></td><td>4–6 weeks of experiments + 2 weeks of writing. Approximately 3–5 GPU-days on DGX Spark.</td></tr>
+    <tr><td><strong>Estimated probability</strong></td><td>35–45% after full strengthening. The paper would need to be recast with the medical stability finding as the central contribution and a predictive framework connecting barrier to merge quality. Without a mechanistic contribution (theory or predictive model), the ceiling is ~35% even with perfect experiments.</td></tr>
+  </table>
+</div>
+
+<div class="tier-card tier15">
+  <h3>Tier 1.5: ICLR 2028</h3>
+  <table>
+    <tr><td style="width:160px"><strong>Current readiness</strong></td><td>Not ready. The Meta Reviewer estimates 30–35% in current form — the best top-tier venue fit, but still a reach.</td></tr>
+    <tr><td><strong>Gaps to fill</strong></td><td>One additional model family (Llama-3.2-1B or OLMo-1B), two additional domains (math, general from VersaPRM), resolution of the upper-bound contradiction, n ≥ 5 seeds for high-divergence medical, Git Re-Basin alignment check, and a systematic divergence sweep (at least 4 levels). A functional fit (barrier ∝ ΔW^α with estimated α) would strengthen the conceptual contribution.</td></tr>
+    <tr><td><strong>Estimated timeline</strong></td><td>2–3 weeks of experiments + 1 week of writing. Approximately 2–3 GPU-days.</td></tr>
+    <tr><td><strong>Estimated probability</strong></td><td>40–50% after strengthening. ICLR has a strong loss-landscape community (Frankle, Entezari, Ainsworth, Garipov) and is more receptive to careful empirical work than NeurIPS. A sympathetic AC assignment is plausible. The medical instability finding would resonate with the mode-connectivity audience.</td></tr>
+  </table>
+</div>
+
+<div class="tier-card tier2">
+  <h3>Tier 2: TMLR (Rolling Submission)</h3>
+  <table>
+    <tr><td style="width:160px"><strong>Current readiness</strong></td><td>Nearly ready with minimal additions. The Meta Reviewer estimates 65–75% in current form. TMLR explicitly values methodological rigor and careful measurement over conceptual novelty — precisely the paper's strengths.</td></tr>
+    <tr><td><strong>Minimal additions to lock in acceptance (~85%)</strong></td><td>(1) One additional model family (Llama-3.2-1B, ~6 GPU-hours). (2) Two additional domains (math, general from VersaPRM, ~6 GPU-hours). (3) Resolve the upper-bound contradiction (text revision + optional recalibration). (4) Add Git Re-Basin comparison on one high-barrier pair (~2 GPU-hours). (5) Fix the barrier formula in scan scripts.</td></tr>
+    <tr><td><strong>Estimated timeline</strong></td><td>1–2 weeks. Rolling submission means no deadline pressure.</td></tr>
+    <tr><td><strong>Estimated probability</strong></td><td>85% after minimal additions. 65–75% as-is. TMLR reviewers would appreciate the noise-floor calibration, within-domain baselines, and data transparency.</td></tr>
+  </table>
+</div>
+
+<div class="tier-card">
+  <h3>Venues to Avoid</h3>
+  <table>
+    <tr><td style="width:160px"><strong>ACL / EMNLP / NAACL</strong></td><td>The paper makes zero NLP contribution — no linguistic analysis, no NLP benchmarks, no domain adaptation insights. The Domain Specialist gives NLP Relevance 3/10. The Meta Reviewer says "do not submit." NLP reviewers will ask "what's the NLP contribution?" and the paper has no answer. Estimated acceptance probability: 10–15%.</td></tr>
+  </table>
+</div>
+
+<div class="callout success">
+  <h3 style="margin-top:0;">Recommended Path</h3>
+  <p><strong>Primary target: ICLR 2028</strong> with 2–3 GPU-days of strengthening. This is the best top-tier venue fit — the loss-landscape community at ICLR speaks the paper's language, and the within-domain instability finding is novel enough to generate discussion. The additional experiments (second model family, more domains, divergence sweep, Git Re-Basin check) would transform the paper from "interesting on one model" to "general phenomenon across architectures and domains."</p>
+  <p><strong>Fallback: TMLR</strong> if ICLR rejects. The paper is already TMLR-ready with minimal additions (~12 GPU-hours). Rolling submission means no lost cycle.</p>
+  <p><strong>Do not submit to NeurIPS 2027.</strong> The acceptance probability is too low to justify the effort. One hostile reviewer saying "this is expected" will tank the paper, and there will always be at least one such reviewer at NeurIPS.</p>
+  <p><strong>Do not submit to ACL/EMNLP.</strong> Venue mismatch guarantees negative reviews regardless of paper quality.</p>
+</div>
+
+<!-- ====== 7. REQUIRED ADDITIONAL EXPERIMENTS ====== -->
+<h2>7. Required Additional Experiments (Prioritized)</h2>
+
+<h3>7.1 MUST Add (for Any Venue)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Experiment</th><th>Why</th><th>GPU-hours</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>E1</td>
+  <td><strong>Run LMC scans at lr=2e-4 and lr=3e-4</strong> (models already trained, verified clean). Delete the 6 byte-identical placeholder files.</td>
+  <td>Currently only 2 divergence levels. Adding the intermediate levels (ΔW ≈ 3–5%) provides 4 total levels, enabling genuine sublinearity testing and functional-form fitting. The trained models exist — this is purely a measurement gap.</td>
+  <td>~1.5</td>
+</tr>
+<tr>
+  <td>E2</td>
+  <td><strong>Fix the barrier formula bug</strong> in <span class="mono">lmc_barrier_scan.py</span> (lines 101–102) and <span class="mono">lmc_barrier.py</span> (lines 159–160) to use the Frankle definition. Fix hardcoded metadata.</td>
+  <td>Reproducibility: any reviewer running the scripts gets wrong barriers. The code-paper inconsistency is a red flag. Trivial fix.</td>
+  <td>0 (code change)</td>
+</tr>
+<tr>
+  <td>E3</td>
+  <td><strong>Add 2+ seeds for high-divergence medical</strong> (total n ≥ 5).</td>
+  <td>Current n=3 with CV=45% makes the point estimate unreliable. The bootstrap CI is degenerate. Additional seeds would establish whether the large variance is real (domain property) or an outlier artifact.</td>
+  <td>~7</td>
+</tr>
+<tr>
+  <td>E4</td>
+  <td><strong>Resolve the upper-bound contradiction.</strong> Either remeasure pretrained-to-random barriers with multiple seeds and report a CI, or reframe as "reference calibration" (not "upper bound").</td>
+  <td>A measurement exceeding its claimed upper bound is logically impossible. This must be resolved before any submission.</td>
+  <td>~0.5</td>
+</tr>
+</tbody>
+</table>
+
+<h3>7.2 SHOULD Add (for Top-Tier: ICLR/NeurIPS)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Experiment</th><th>Why</th><th>GPU-hours</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>E5</td>
+  <td><strong>Second model family</strong>: Train Llama-3.2-1B or OLMo-1B on code+medical at standard divergence (2 domains × 1 div level × 3 seeds = 6 trainings). Run LMC scans + within-domain baselines.</td>
+  <td>Addresses the "single model family" criticism. Shows generalizability beyond Pythia. The Meta Reviewer, Adversarial, and Theorist all flag this as the highest-impact addition.</td>
+  <td>~8</td>
+</tr>
+<tr>
+  <td>E6</td>
+  <td><strong>Two additional domains</strong> from VersaPRM (math, general). Standard divergence only (2 domains × 1 div level × 3 seeds = 6 trainings). Run LMC scans.</td>
+  <td>Data is already tokenized and cached — near-zero setup cost. Quadruples domain coverage. Tests whether the medical instability finding is domain-specific or common to certain domain types.</td>
+  <td>~8</td>
+</tr>
+<tr>
+  <td>E7</td>
+  <td><strong>Git Re-Basin permutation alignment</strong> on the highest-barrier pair (high-divergence medical, seed pair with largest barrier). Report barrier with and without alignment.</td>
+  <td>Addresses the most visible methodological gap in the LMC measurement. Either confirms permutation is irrelevant (strengthening the paper) or reveals a correction (interesting finding). Either outcome is publishable.</td>
+  <td>~2</td>
+</tr>
+<tr>
+  <td>E8</td>
+  <td><strong>Gaussian perturbation baseline</strong>: Add independent Gaussian noise to base model to achieve ΔW ≈ 1.5% and ≈ 8%. Measure LMC barrier.</td>
+  <td>Disentangles structured (training-induced) from unstructured (noise) weight displacement effects. If noise at ΔW=8% produces a barrier of 0.01 while training at ΔW=8% produces 0.12, that is a strong finding about the structure of domain-specific weight changes.</td>
+  <td>~1</td>
+</tr>
+<tr>
+  <td>E9</td>
+  <td><strong>Downstream merge quality evaluation</strong>: Merge standard-divergence code+medical using (a) pure averaging and (b) TIES-Merging. Evaluate on downstream code and medical benchmarks.</td>
+  <td>The Merging Practitioner's core request. Converts the barrier from a geometric curiosity to a decision tool. Correlating barrier height with merge quality would be the paper's strongest practical contribution.</td>
+  <td>~12</td>
+</tr>
+<tr>
+  <td>E10</td>
+  <td><strong>High-divergence within-domain baselines</strong> for both code and medical (lr=5e-4, 3 seeds per domain).</td>
+  <td>Currently, the within-domain analysis uses only standard divergence. High-div within-domain would show whether the medical instability persists or amplifies at larger weight displacement — directly testing whether the instability is a domain property or a low-ΔW artifact.</td>
+  <td>~6</td>
+</tr>
+</tbody>
+</table>
+
+<h3>7.3 COULD Add (for Completeness)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Experiment</th><th>Why</th><th>GPU-hours</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>E11</td>
+  <td><strong>Training-duration sweep instead of LR sweep.</strong> Hold LR constant (1e-4), vary epochs (0.25, 0.5, 1.0, 2.0) to produce different divergence levels while controlling the optimization trajectory's stability.</td>
+  <td>Addresses the convergence confound. LR sweep changes both ΔW and convergence quality; epoch sweep changes primarily ΔW. Comparing the two sweeps would reveal whether the barrier increase at high LR is a ΔW effect or a convergence-quality effect.</td>
+  <td>~18</td>
+</tr>
+<tr>
+  <td>E12</td>
+  <td><strong>Layer-selective interpolation.</strong> Merge only layers 8+ (keeping each model's own early layers), measure barrier reduction.</td>
+  <td>The per-block data shows early layers diverge 5.6x more than late layers. If selectively merging late layers dramatically reduces the barrier, this is directly actionable for practitioners.</td>
+  <td>~2</td>
+</tr>
+<tr>
+  <td>E13</td>
+  <td><strong>Systematic divergence sweep</strong> at 5–6 distinct levels (lr = 5e-5, 1e-4, 2e-4, 3e-4, 5e-4, 7e-4). Fit barrier = c × ΔW^k and report k with confidence interval.</td>
+  <td>Would transform the paper from "we measured two points" to "we characterized the functional form." Requires training at least 12 additional models (2 domains × 3 new LRs × 2 seeds). The k parameter becomes a quantitative descriptor of loss-landscape robustness for a given model/domain pair.</td>
+  <td>~28</td>
+</tr>
+<tr>
+  <td>E14</td>
+  <td><strong>Third model family</strong> (e.g., Qwen-2.5-1.5B or Gemma-2-2B) for three-family comparison.</td>
+  <td>Generalizability across diverse architectures. Makes the "these findings generalize" claim substantially stronger.</td>
+  <td>~8</td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout info">
+  <p><strong>Total estimated GPU-hours by tier:</strong></p>
+  <ul>
+    <li><strong>MUST add (any venue):</strong> ~9 GPU-hours (E1–E4)</li>
+    <li><strong>SHOULD add (ICLR target):</strong> ~37 GPU-hours (E5–E10), cumulative ~46 GPU-hours</li>
+    <li><strong>COULD add (NeurIPS target):</strong> ~56 GPU-hours (E11–E14), cumulative ~102 GPU-hours (~4.3 GPU-days on DGX Spark)</li>
+  </ul>
+</div>
+
+<!-- ====== 8. REVISED ABSTRACT ====== -->
+<h2>8. Revised Abstract</h2>
+
+<div class="callout warning">
+  <p><strong>What changed and why:</strong> The two biggest weaknesses identified by the panel are (1) the unsupported "sublinear" claim from only two divergence levels, and (2) the core claim being contradicted by 50% of the evidence. The revised abstract addresses both: it drops the sublinearity language entirely (replacing with a measured ratio), and it restructures the narrative around the domain-specific stability asymmetry as the central finding rather than the "ΔW drives barrier" claim.</p>
+</div>
+
+<div class="revised-abstract">
+<p>
+When a pretrained language model is fine-tuned on different tasks, do the resulting models diverge far enough in weight space to break linear mode connectivity? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At typical training intensity (1.4% weight displacement), the LMC barrier is 0.05, confirming that domain-specialized models remain in the same linearly-connected loss basin. At 5-6x greater weight displacement (8%), barriers rise to 0.12 (code) and 0.23 (medical) but connectivity is preserved.
+</p>
+<p>
+Our central finding emerges from within-domain baselines: two medical models trained on the <em>same</em> data exhibit a 3x larger barrier (0.147) than a code and medical model trained at the same intensity (0.051). Conversely, code models show near-identical within- and cross-domain barriers (0.048 vs. 0.053). This domain-specific stability asymmetry reveals that training stochasticity, not task difference, is the dominant source of LMC barrier height — a finding with direct implications for model merging, where ensembling different seeds of unstable domains may be <em>more</em> challenging than merging across domains. Noise-floor calibration (identical-copy barrier ~0.000; pretrained-to-random-init barrier 0.22) and per-block divergence analysis (r = 0.995 across domains) contextualize these measurements. We discuss how these results inform when linear interpolation-based merging is likely to succeed and when alternative strategies are needed.
+</p>
+</div>
+
+<!-- ====== 9. BOTTOM LINE ====== -->
+<div class="bottom-line">
+<h2>9. Bottom Line</h2>
+<p>
+This paper has a genuinely interesting finding — medical training instability drives larger LMC barriers than domain difference — buried inside a measurement study that overclaims its quantitative analysis. The numbers are right, the experimental design is clean, and the noise-floor calibration is exemplary. But the paper in its current form makes claims (sublinearity, upper bounds, domain-driven barriers) that the data cannot support. The path forward is clear: spend the next 2 months strengthening the paper for ICLR 2028 rather than rushing a NeurIPS 2027 submission that will almost certainly be rejected. The additional experiments (second model family, two more domains, divergence sweep, Git Re-Basin check, merge quality correlation) require approximately 2-3 GPU-days — entirely feasible on the DGX Spark. The conceptual reframing (elevating the medical stability finding to the central narrative, downgrading the sublinearity claim, acknowledging the convergence confound) requires no GPU time at all. The fallback of TMLR with minimal additions (~12 GPU-hours) provides a safe floor: the paper <em>will</em> be published, and the medical instability finding <em>will</em> be cited. <strong>Do not pivot. Improve and target ICLR.</strong>
+</p>
+</div>
+
+</body>
+</html>

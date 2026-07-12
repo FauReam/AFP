@@ -58,8 +58,10 @@ bash scripts/monitor.sh
 
 | 文件 | 内容 |
 |------|------|
-| `docs/internal/PAPER.md` | 论文草稿 |
+| `docs/internal/PAPER.md` | 论文草稿 v4 |
 | `docs/internal/EXPERIMENT_PLAN.md` | 实验数据 + 待做 |
+| `docs/internal/EXPERT_PANEL_FINDINGS.md` | **6-Expert 评审报告** — 11 条弱点 + 7 大优势 + venue strategy |
+| `docs/internal/ICLR_SPRINT_PLAN.md` | **ICLR 2028 冲刺计划** — 3-phase 实验清单 + timeline + GPU budget |
 | `docs/internal/ENGINEERING.md` | 22 条已知 Bug |
 | `experiments/RESTART_PROMPT.md` | 新会话重启指南 |
 

@@ -32,6 +32,14 @@
 | ✅ | Bootstrap CI on barriers | 已完成 |
 | ✅ | Related Work 章节 | 已完成 |
 | ✅ | 论文润色最终 pass | 已完成 |
+| ✅ | 6-Expert Adversarial Panel | 已完成 |
+| ⬜ | Phase 0: 立即修复 (code fixes) | 30min |
+| ⬜ | Phase 1: MUST 实验 (E1-E4) | ~9 GPU-h |
+| ⬜ | Phase 2: ICLR 实验 (E5-E10) | ~37 GPU-h |
+| ⬜ | 论文叙事重构 (elevate medical finding) | 1h |
+| ⬜ | Phase 3: NeurIPS 实验 (E11-E14) | ~56 GPU-h |
+
+> **详见 `ICLR_SPRINT_PLAN.md`** 完整冲刺计划；**详见 `EXPERT_PANEL_FINDINGS.md`** 专家组结论
 
 ## 环境
 
