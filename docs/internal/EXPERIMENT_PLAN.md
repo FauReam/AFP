@@ -28,10 +28,10 @@
 | 优先级 | 任务 | 时间 |
 |--------|------|------|
 | ✅ | 噪声地板校准 | 已完成 |
-| 🔄 | Pythia-160M 复制 | 运行中 |
-| ⬜ | Related Work 章节 | 30min |
-| ⬜ | Bootstrap CI on barriers | 15min |
-| ⬜ | 论文润色最终 pass | 30min |
+| ✅ | 噪声地板 + 160M 数据写入论文 | 已完成 |
+| ✅ | Bootstrap CI on barriers | 已完成 |
+| ✅ | Related Work 章节 | 已完成 |
+| ✅ | 论文润色最终 pass | 已完成 |
 
 ## 环境
 

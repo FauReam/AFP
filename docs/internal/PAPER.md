@@ -1,12 +1,12 @@
 # Weight-Space Divergence and Loss Landscape Connectivity in Domain-Specialized Fine-Tuning
 
-> **Draft v3 — 2026-07-13 | 3-seed 实测数据 + 噪声地板校准**
+> **Draft v4 — 2026-07-13 | 3-seed + bootstrap CI + noise floor + 160M scaling check**
 
 ---
 
 ## Abstract
 
-When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4-1.5% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0-8.5% weight displacement, 11.6% cross-model), the barrier rises to 0.12 ± 0.03 (code) and 0.23 ± 0.10 (medical) — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Noise-floor calibration confirms the measurement baseline: identical model copies yield a barrier of ~0.000, while pretrained-to-random-init interpolation gives 0.22, establishing the effective upper bound. Across 3 random seeds, barrier magnitudes are consistent within each condition. Per-block divergence patterns are nearly identical across domains (r = 0.995).
+When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4-1.5% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0-8.5% weight displacement, 11.6% cross-model), the barrier rises to 0.12 ± 0.03 (code) and 0.23 ± 0.10 (medical) — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Within-domain baselines reveal domain-specific stability: code models exhibit near-identical barriers within and across domains (0.048 vs. 0.053), while medical models show substantially higher within-domain variance (0.147), indicating that training stability, not domain difference, drives barrier height. Noise-floor calibration places these results in context: identical copies yield barrier ≈ 0.000, and pretrained-to-random-init interpolation establishes an upper bound of 0.22 — which the high-divergence medical condition (0.23) nearly saturates. Per-block divergence patterns are nearly identical across domains (r = 0.995).
 
 ## 1. Introduction
 
@@ -118,9 +118,10 @@ A practical implication: model merging techniques that rely on linear interpolat
 
 ## 6. Limitations
 
-- Single model architecture (Pythia-1.4B). Results may differ for other scales or architectures.
-- Two domains only (code, medical). Broader domain sampling needed to characterize the asymmetry finding.
-- The high-divergence models require further convergence study — their self-domain loss is higher than standard-divergence models.
+- **Single model family.** Results are based on Pythia-1.4B. A preliminary scaling experiment with Pythia-160M (ΔW ≈ 0.3%, both models barely moved from pretrained) produced barriers of 0.001 (code) and 0.056 (medical), consistent with the trend that barrier magnitude tracks weight displacement. Systematic scaling across model sizes is left to future work.
+- **Two domains only** (code, medical). Broader domain sampling is needed to characterize how domain-specific properties (such as medical training's intrinsic instability) affect connectivity.
+- **High-divergence convergence.** The high-divergence models achieve higher self-domain loss than standard-divergence models, suggesting that the aggressive optimization settings trade off convergence quality for weight displacement. The barriers reported for these models may reflect a combination of weight displacement and under-convergence.
+- **Seed count.** Three seeds per condition provide meaningful estimates of variance (bootstrap 95% CIs are reported in the supplementary analysis), but larger seed counts would tighten the confidence intervals, particularly for the high-divergence medical condition where inter-seed variance is large.
 
 ## References
 
