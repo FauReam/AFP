@@ -1,12 +1,12 @@
 # Weight-Space Divergence and Loss Landscape Connectivity in Domain-Specialized Fine-Tuning
 
-> **Draft v4 — 2026-07-13 | 3-seed + bootstrap CI + noise floor + 160M scaling check**
+> **Draft v5 — 2026-07-13 | Phase 0 fixes applied — expert panel feedback incorporated**
 
 ---
 
 ## Abstract
 
-When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4-1.5% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0-8.5% weight displacement, 11.6% cross-model), the barrier rises to 0.12 ± 0.03 (code) and 0.23 ± 0.10 (medical) — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Within-domain baselines reveal domain-specific stability: code models exhibit near-identical barriers within and across domains (0.048 vs. 0.053), while medical models show substantially higher within-domain variance (0.147), indicating that training stability, not domain difference, drives barrier height. Noise-floor calibration places these results in context: identical copies yield barrier ≈ 0.000, and pretrained-to-random-init interpolation establishes an upper bound of 0.22 — which the high-divergence medical condition (0.23) nearly saturates. Per-block divergence patterns are nearly identical across domains (r = 0.995).
+When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4-1.5% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0-8.5% weight displacement, 11.6% cross-model), the barrier rises to 0.12 ± 0.03 (code) and 0.23 ± 0.10 (medical) — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Within-domain baselines reveal a striking asymmetry: code models exhibit near-identical barriers within and across domains (0.048 vs. 0.053), while medical models show 3× larger within-domain than cross-domain barriers (0.147 vs. 0.051). This indicates that training stability, not domain difference, is the dominant source of LMC barrier height — and that stability varies dramatically across domains. Noise-floor calibration places these results in context: identical copies yield barrier ≈ 0.000, and pretrained-to-random-init interpolation provides a reference point of 0.22. Per-block divergence patterns are nearly identical across domains (r = 0.995).
 
 ## 1. Introduction
 
@@ -77,7 +77,7 @@ Per-block divergence patterns are nearly identical across domains (r=0.995). Bot
 Key observations:
 - At standard divergence, LMC holds cleanly: barriers are ~0.05, well within the connected regime.
 - At high divergence (8-12% weight displacement), barriers increase 2-5× but remain modest (Figure 1).
-- The barrier increase is sublinear: 5-6× more weight divergence produces only 2-5× more barrier.
+- The barrier grows less than proportionally to divergence: 5-6× more weight displacement yields only 2-5× more barrier.
 - Even at 8% divergence, domain-specialized Pythia-1.4B models remain in broadly the same loss basin.
 
 ### 4.3 Within-Domain LMC Baseline
@@ -97,22 +97,22 @@ At standard divergence, the code model's loss on medical data is lower than base
 
 ### 4.5 Noise Floor Calibration
 
-We calibrate the measurement with two boundary conditions. First, we run the LMC scan on two identical copies of the same model — this should produce a barrier of zero and reveals any numerical artifacts in the interpolation pipeline. Second, we interpolate between a pretrained Pythia-1.4B model and a randomly-initialized model of the same architecture — this establishes the effective upper bound on what barrier magnitudes the method can produce.
+We calibrate the measurement with two boundary conditions. First, we run the LMC scan on two identical copies of the same model — this should produce a barrier of zero and reveals any numerical artifacts in the interpolation pipeline. Second, we interpolate between a pretrained Pythia-1.4B model and a randomly-initialized model of the same architecture — this provides a reference point for interpreting barrier magnitudes in an extreme divergence scenario.
 
 | Condition | Code barrier | Medical barrier |
 |-----------|-------------|----------------|
 | Identical copy | ~0.000 | ~0.000 |
 | Pretrained ↔ Random init | 0.033 | 0.222 |
 
-The identical-copy barrier is effectively zero, confirming the measurement pipeline is free of numerical artifacts. The pretrained-to-random medical barrier (0.222) is nearly identical to the high-divergence cross-domain medical barrier (0.228), suggesting that at ~8% weight displacement, medical models approach the maximum possible loss of connectivity.
+The identical-copy barrier is effectively zero, confirming the measurement pipeline is free of numerical artifacts. The pretrained-to-random reference barrier (0.222) serves as a calibration point — models approaching this magnitude are undergoing extreme weight-space displacement. We note that this reference is a single measurement and its variance is uncharacterized; it should be interpreted as indicative rather than a precise bound.
 
 ## 5. Discussion
 
-Domain-specific fine-tuning of Pythia-1.4B produces only modest weight-space movement: 1-2% at typical training intensity, 7-9% at elevated step sizes. LMC holds across this entire range, though the barrier grows with divergence. The relationship is monotonic but sublinear — barrier increases more slowly than weight distance, suggesting the loss landscape is robust to substantial parameter changes before connectivity breaks.
+Domain-specific fine-tuning of Pythia-1.4B produces only modest weight-space movement: 1-2% at typical training intensity, 7-9% at elevated step sizes. LMC holds across this entire range, though the barrier grows with divergence. The barrier increases more slowly than weight displacement, suggesting the loss landscape is robust to substantial parameter changes before connectivity breaks. However, with only two divergence levels, we cannot characterize the functional form — additional intermediate levels are needed to distinguish linear from sublinear scaling.
 
 The within-domain baselines reveal domain-specific stability differences. For code, within-domain (0.048) and cross-domain (0.053) barriers are equivalent — domain difference contributes nothing. For medical, the within-domain barrier (0.147) exceeds the cross-domain barrier (0.051), indicating that medical training trajectories are intrinsically higher-variance. Two medical models trained on the same data can differ more in the loss landscape than a code and medical model trained at the same intensity.
 
-The noise-floor calibration confirms measurement validity. Identical model copies produce a barrier of ~0.000, ruling out numerical artifacts. Pretrained-to-random-init interpolation yields a medical-domain barrier of 0.22, establishing the effective upper bound. The high-divergence cross-domain medical barrier (0.23) nearly saturates this bound, suggesting that at ~8% weight displacement, medical models approach the connectivity limit.
+The noise-floor calibration confirms measurement validity. Identical model copies produce a barrier of ~0.000, ruling out numerical artifacts. Pretrained-to-random-init interpolation yields a medical-domain barrier of 0.22, providing a reference calibration point. The high-divergence cross-domain medical barrier (0.23) is comparable to this reference, though we note that the high-divergence condition has a convergence confound (higher self-domain loss), and the reference value itself has uncharacterized variance from a single measurement. Both numbers should be interpreted as indicative rather than precise bounds.
 
 A practical implication: model merging techniques that rely on linear interpolation are likely to work well for domain-specialized models fine-tuned from the same base, even at aggressive optimization settings. However, for domains like medical where training trajectories are intrinsically noisy, merging different seeds of the same domain can be more challenging than merging across domains.
 

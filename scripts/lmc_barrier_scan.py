@@ -86,7 +86,7 @@ for alpha in alphas:
 # Save
 output = {
     'experiment': 'LMC_barrier_scan',
-    'models': 'code_e1 + medical_e1',
+    'models': f'{code_dir.name} + {med_dir.name}',
     'method': 'linear interpolation of backbone weights',
     'results': results,
     'duration_s': time.time() - t0
@@ -98,9 +98,14 @@ with open(out_path, 'w') as f:
 # Summary
 losses_code = [r['loss_code'] for r in results]
 losses_med = [r['loss_med'] for r in results]
-barrier_code = max(losses_code) - losses_code[0]
-barrier_med = max(losses_med) - losses_med[0]
+barrier_code = max(losses_code) - (losses_code[0] + losses_code[-1]) / 2
+barrier_med = max(losses_med) - (losses_med[0] + losses_med[-1]) / 2
 print(f'\n--- LMC Barrier ---', flush=True)
 print(f'  Code domain:  L(0)={losses_code[0]:.4f}  max L={max(losses_code):.4f}  barrier={barrier_code:.4f}', flush=True)
 print(f'  Med  domain:  L(0)={losses_med[0]:.4f}  max L={max(losses_med):.4f}  barrier={barrier_med:.4f}', flush=True)
+# Verify: printed barrier must match Frankle definition in JSON
+barrier_from_json_code = max(x['loss_code'] for x in results) - (results[0]['loss_code'] + results[-1]['loss_code']) / 2
+barrier_from_json_med = max(x['loss_med'] for x in results) - (results[0]['loss_med'] + results[-1]['loss_med']) / 2
+assert abs(barrier_code - barrier_from_json_code) < 1e-6, f'barrier_code mismatch: {barrier_code} vs {barrier_from_json_code}'
+assert abs(barrier_med - barrier_from_json_med) < 1e-6, f'barrier_med mismatch: {barrier_med} vs {barrier_from_json_med}'
 print(f'  Saved to {out_path} ({time.time()-t0:.0f}s total)', flush=True)

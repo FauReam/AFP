@@ -153,15 +153,17 @@ def main():
         print(f"    λ={lam:.3f}  loss_A={loss_a:.4f}  loss_B={loss_b:.4f}  "
               f"acc_A={acc_a:.4f}  acc_B={acc_b:.4f}")
 
-    # Compute barrier
+    # Compute barrier (Frankle definition)
+    loss_a0 = results[0]["loss_A"];  loss_a1 = results[-1]["loss_A"]
+    loss_b0 = results[0]["loss_B"];  loss_b1 = results[-1]["loss_B"]
     max_loss_a = max(r["loss_A"] for r in results)
     max_loss_b = max(r["loss_B"] for r in results)
-    barrier_a = max_loss_a - loss_a_on_a
-    barrier_b = max_loss_b - loss_b_on_b
+    barrier_a = max_loss_a - (loss_a0 + loss_a1) / 2
+    barrier_b = max_loss_b - (loss_b0 + loss_b1) / 2
 
     print(f"\n=== RESULTS ({time.time()-t0:.0f}s) ===")
-    print(f"  Barrier (domain {args.domain_a}): {barrier_a:.6f}  (max={max_loss_a:.4f}, endpoint={loss_a_on_a:.4f})")
-    print(f"  Barrier (domain {args.domain_b}): {barrier_b:.6f}  (max={max_loss_b:.4f}, endpoint={loss_b_on_b:.4f})")
+    print(f"  Barrier (domain {args.domain_a}): {barrier_a:.6f}  (max={max_loss_a:.4f}, L(0)={loss_a0:.4f}, L(1)={loss_a1:.4f})")
+    print(f"  Barrier (domain {args.domain_b}): {barrier_b:.6f}  (max={max_loss_b:.4f}, L(0)={loss_b0:.4f}, L(1)={loss_b1:.4f})")
 
     # Functional divergence
     gap_a = abs(acc_a_on_a - acc_b_on_a)
