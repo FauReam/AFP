@@ -19,7 +19,7 @@
 
 ---
 
-## 二、关键 Bug 及修复（7 条，全部真实）
+## 二、关键 Bug 及修复（23 条，全部真实）
 
 ### Bug 1: `torch.cuda.synchronize()` 每 batch 调用
 - **位置**: `client.py:168`（旧项目）
@@ -147,6 +147,13 @@
 - **根因**: pipeline 重启时 `train_agent.py` 重新初始化 agent，如果训练在第一个 epoch 完成前崩溃，或 val_loss 未改善，保存到 `code/` 的可能不是最优模型。
 - **修复**: 保存前验证模型权重变化 `changed = Σ||W - W_init||`，若 changed < 1e-3 则跳过保存并打印警告。同时改为每 epoch 保存 checkpoint（`--save-every-n-epochs 1`），IVN 从 checkpoint 加载而非 `code/`。
 - **教训**: 永远不要信任训练脚本的"best model"保存逻辑——加守卫条件。文件夹命名约定（`code_e{N}`）比模糊的 `code/` 更可靠。
+
+### Bug 23: `train_agent.py` 输出路径无 seed/lr 区分 → 多轮训练互相覆盖 — 2026-07-13
+- **位置**: `scripts/train_agent.py:316`, `save_dir = OUT_DIR / args.domain`
+- **症状**: 批量训练 `math_lr1e-4_s0, math_lr1e-4_s1, math_lr1e-4_s2` 全部保存到同一个目录 `experiments/trained_models/math/`。第二、第三个训练会静默覆盖第一个训练的模型。最终只有一个模型存活，丢失 n-1 个 seed 的全部训练结果。**比 Bug 22 更隐蔽——不会报错，不会崩溃，但所有 seed 数据都是假的。**
+- **根因**: `train()` 函数只有 `save_dir = OUT_DIR / args.domain`，没有 `lr` 和 `seed` 参数。现有模型目录 `{domain}_lr{lr}_s{seed}/` 是训练后手动 `mv` 改名的——新训练的模型必须先保存再改名，容易遗漏。
+- **修复**: (a) 新增 `--output-dir` CLI 参数，覆盖默认保存路径；(b) 批量脚本 `phase1_batch.sh` 传入 `--output-dir experiments/trained_models/{domain}_lr{lr}_s{seed}/`，不再依赖手动改名。
+- **教训**: 训练脚本的输出路径必须在启动时确定且唯一。不要依赖"跑完再改名"的后处理步骤——批量训练时必然会忘记或交错。如果将来要做 grid search，应在 `train()` 内部自动生成 `{domain}_lr{lr}_s{seed}/` 路径。
 
 ### Bug 22: code_e1 是 base 模型 — 所有实验用了未训练的 code agent — 2026-07-05
 - **位置**: `experiments/trained_models/code_e1/`
