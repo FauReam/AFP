@@ -352,7 +352,7 @@ def main():
 
     p = argparse.ArgumentParser(
         description="Train AFPAgent full-FT on a domain (Phase 0 prep)")
-    p.add_argument("--domain", required=True, choices=["code", "medical"],
+    p.add_argument("--domain", required=True, choices=["code", "medical", "math", "general"],
                    help="domain to train on")
     p.add_argument("--model-id", type=str, default=MODEL_ID_DEFAULT,
                    help="HF model ID")
