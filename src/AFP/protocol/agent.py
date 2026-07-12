@@ -37,14 +37,17 @@ class AFPAgent:
     """One AFP agent: backbone + PRM head + importance profile."""
 
     def __init__(self, domain: str, device: str = "cuda",
-                 model_id: str = "EleutherAI/pythia-1.4b", hidden: int = 2048):
+                 model_id: str = "EleutherAI/pythia-1.4b", hidden: int = 0):
         self.domain = domain
         self.device = device
         self.model_id = model_id
-        self.hidden = hidden
         self.backbone = AutoModel.from_pretrained(
             model_id, trust_remote_code=True,
             local_files_only=True).to(dtype=torch.bfloat16)
+        # Auto-detect hidden size from model config if not specified
+        if hidden <= 0:
+            hidden = self.backbone.config.hidden_size
+        self.hidden = hidden
         self.head = PRMHead(hidden)
         self._importance: list[float] | None = None
 

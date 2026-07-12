@@ -18,6 +18,7 @@ from scripts.run_ivn_phase0 import load_data
 p = argparse.ArgumentParser()
 p.add_argument('--code-e', type=int, default=1, help='code model epoch')
 p.add_argument('--med-e', type=int, default=1, help='medical model epoch')
+p.add_argument('--model-id', type=str, default='EleutherAI/pythia-1.4b', help='HF model ID')
 args = p.parse_args()
 
 device = torch.device('cuda')
@@ -27,8 +28,8 @@ code_dir = PROJECT / f'experiments/trained_models/code_e{args.code_e}'
 med_dir = PROJECT / f'experiments/trained_models/medical_e{args.med_e}'
 
 print(f'Loading: {code_dir.name} + {med_dir.name}', flush=True)
-agent_code = AFPAgent('code', str(device), model_id='EleutherAI/pythia-1.4b')
-agent_med = AFPAgent('medical', str(device), model_id='EleutherAI/pythia-1.4b')
+agent_code = AFPAgent('code', str(device), model_id=args.model_id)
+agent_med = AFPAgent('medical', str(device), model_id=args.model_id)
 agent_code.load(code_dir)
 agent_med.load(med_dir)
 
