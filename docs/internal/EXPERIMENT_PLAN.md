@@ -1,30 +1,43 @@
-# Phase 0 实验执行文件
+# Phase 0 实验数据与待做
 
-> 2026-07-11 | 论文 v2 - 3-seed 数据完成
+> 2026-07-12 | 论文 v2
 
-## 最终数据
+## 全部实验数据
 
-### LMC Barrier (Frankle 定义, 3 seeds)
+### LMC Barrier (Frankle definition, 3 seeds)
 
-```
-                         code_bar(F)          med_bar(F)
-Standard divergence      0.053 ± 0.011       0.051 ± 0.013
-High divergence          0.118 ± 0.031       0.228 ± 0.102
-```
+| 条件 | Code barrier | Medical barrier |
+|------|-------------|----------------|
+| Standard (跨域) | 0.053 ± 0.011 | 0.051 ± 0.013 |
+| High divergence (跨域) | 0.118 ± 0.031 | 0.228 ± 0.102 |
+| 域内 code | 0.049 ± 0.000 | — |
+| 域内 medical | 0.077 ± 0.003 | — |
+| 噪声地板 (identical) | ~0.000 | — |
+| 噪声上界 (random init) | TBD | — |
+| Pythia-160M | 实验中 | — |
 
-### 模型清单
+### 权重差异
 
-`experiments/trained_models/`
-- Standard: `code_lr1e-4_s{0,1,2}/` + `medical_lr1e-4_s{0,1,2}/`
-- High: `code_lr5e-4_s{0,1,2}/` + `medical_lr5e-4_s{0,1,2}/`
+| 条件 | Code ΔW | Medical ΔW | Code↔Med Cross |
+|------|---------|------------|----------------|
+| Standard | 1.4 ± 0.0% | 1.5 ± 0.1% | 2.0 ± 0.1% |
+| High | 8.0 ± 0.3% | 8.5 ± 0.2% | 11.6 ± 0.3% |
 
-### 结果文件
+## 待完成
 
-`experiments/phase0_ivn/results/lmc_lr{1,5}e-4_s{0,1,2}.json`
+| 优先级 | 任务 | 时间 |
+|--------|------|------|
+| 🔄 | 噪声地板校准 | 运行中 |
+| 🔄 | Pythia-160M 复制 | 运行中 |
+| ⬜ | 噪声地板 + 160M 数据写入论文 | 30min |
+| ⬜ | Relat ed Work 章节 | 30min |
+| ⬜ | Bootstrap CI on barriers | 15min |
 
-## 结论
+## 环境
 
-1. 标准 fine-tune 后，LMC 成立（barrier ≈ 0.05）。
-2. 增大权重差异后，barrier 升高 2-5× 但仍适中（≤0.23）。
-3. 即使 7-9% 的权重偏移，域模型仍在同一盆地。
-4. Code→medical 有不显著的正外部性（不对称）。
+| 项 | 值 |
+|----|-----|
+| 模型 | EleutherAI/pythia-1.4b |
+| 训练 | full-FT, bf16, L=256, batch=128, 1ep |
+| 硬件 | DGX Spark GB10, 121GB, ARM64 CUDA 13.0 |
+| Python | `/home/jiayu/AFP/venv/bin/python3` |

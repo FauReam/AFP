@@ -45,7 +45,7 @@ WEIGHT_DECAY = 0.1
 EPOCHS = 1             # Claude.md v2 spec
 VAL_SPLIT = 0.15
 PATIENCE = 5  # early stopping (epochs without improvement)
-MODEL_ID = "EleutherAI/pythia-1.4b"
+MODEL_ID_DEFAULT = "EleutherAI/pythia-1.4b"
 OUT_DIR = PROJECT / "experiments" / "trained_models"
 
 
@@ -183,10 +183,10 @@ def train(args) -> int:
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
 
-    print(f"=== Train AFPAgent: {MODEL_ID} on {args.domain} ===\n")
+    print(f"=== Train AFPAgent: {args.model_id} on {args.domain} ===\n")
 
     # Tokenizer (Pythia = GPT-NeoX)
-    tok = AutoTokenizer.from_pretrained(MODEL_ID, local_files_only=True)
+    tok = AutoTokenizer.from_pretrained(args.model_id, local_files_only=True)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
@@ -196,7 +196,7 @@ def train(args) -> int:
     print(f"[data] ready ({time.time() - t0_data:.0f}s)\n")
 
     # Agent
-    agent = AFPAgent(args.domain, str(device), model_id=MODEL_ID)
+    agent = AFPAgent(args.domain, str(device), model_id=args.model_id)
     agent.to_device()
     agent.train_mode()
     # No gradient checkpointing: batch=1024 full-FT Pythia-1.4B uses ~66GB/121GB.
@@ -354,6 +354,8 @@ def main():
         description="Train AFPAgent full-FT on a domain (Phase 0 prep)")
     p.add_argument("--domain", required=True, choices=["code", "medical"],
                    help="domain to train on")
+    p.add_argument("--model-id", type=str, default=MODEL_ID_DEFAULT,
+                   help="HF model ID")
     p.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     p.add_argument("--epochs", type=int, default=EPOCHS)
     p.add_argument("--lr", type=float, default=LR_MAX)
