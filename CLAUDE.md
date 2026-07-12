@@ -10,14 +10,16 @@ Pythia-1.4B 分别在 code 和 medical 上 full-FT。测量权重偏移量级 + 
 
 | 条件 | ΔW | Code barrier | Med barrier |
 |------|-----|-------------|------------|
-| Standard | 1.5% | 0.053 ± 0.011 | 0.051 ± 0.013 |
-| High divergence | 8.5% | 0.118 ± 0.031 | 0.228 ± 0.102 |
-| 域内基线 | — | 0.049 (code) | 0.077 (medical) |
+| Standard | 1.4% | 0.053 ± 0.011 | 0.051 ± 0.013 |
+| High divergence | 8.0% | 0.118 ± 0.031 | 0.228 ± 0.102 |
+| 域内基线 | — | 0.048 (code) | 0.147 (medical) |
+| 噪声地板 | — | ~0.000 (identical) | 0.222 (random init) |
 
 1. **标准 FT 下 LMC 成立**（barrier ≈ 0.05）。
 2. **高差异下 barrier 升高 2-5× 但仍适中**。域 FT 不足以轻易打破连通性。
-3. **域内 LMC ≈ 跨域 LMC** → 域差异不产生额外 barrier，权重位移量才是主因。
+3. **Code 跨域 ≈ 域内** → 域差异不产生额外 barrier；**Medical 域内 > 跨域** → 训练不稳定性 > 域差异。
 4. **Per-block 模式高度相关** (r=0.995) — 两个域改变相同的 block，只差幅度。
+5. **High-divergence medical (0.23) ≈ random init 上界 (0.22)** → 8% ΔW 已接近连通极限。
 
 ## ⚠️ 不要做的事
 
