@@ -3,7 +3,9 @@
 # Phase 1 Batch: ICLR Sprint MUST + SHOULD experiments (~14-16 GPU-hours)
 # Usage: nohup bash scripts/phase1_batch.sh >> experiments/phase0_training/phase1_batch_$(date +%Y%m%d_%H%M%S).log 2>&1 &
 # ===========================================================================
-set -euo pipefail
+set -uo pipefail
+# NOTE: NO 'set -e' — individual experiment failure must NOT kill the batch.
+# Each step has its own error handling; failed steps are logged and skipped on rerun.
 cd /home/jiayu/AFP
 export HF_ENDPOINT=https://hf-mirror.com HF_DATASETS_OFFLINE=1 PYTHONUNBUFFERED=1
 VENV=venv/bin/python3; MODELS=experiments/trained_models
@@ -65,7 +67,7 @@ if pct < 0.1:
     print(f'BUG: $outdir ΔW={pct:.3f}% < 0.1% — model may be untrained!')
     import sys; sys.exit(1)
 print(f'  $outdir ΔW={pct:.2f}% OK')
-" || { log "  FATAL: ΔW verification failed for $outdir"; exit 1; }
+" || { log "  FATAL: ΔW verification failed for $outdir"; return 1; }
 }
 
 # ===========================================================================
