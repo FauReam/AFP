@@ -13,7 +13,8 @@ TS=$(date +%Y%m%d_%H%M%S)
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 clean_symlinks() {
-    rm -rf "$MODELS/_a" "$MODELS/_b" "$MODELS/_p1" "$MODELS/_p2"
+    # Only remove symlinks and stale result — NOT _a/_b/_p1/_p2 dirs
+    # (those are managed by callers for within-domain / noise floor scans)
     rm -f "$MODELS/code_e1" "$MODELS/medical_e1" "$RESULTS/lmc_barrier_c1m1.json"
 }
 
@@ -46,7 +47,8 @@ train_model() {
         return 0
     fi
     log "  Training: $outdir"
-    $VENV -u scripts/train_agent.py --domain "$domain" --lr "$lr" \
+    mkdir -p "$outdir"
+    $VENV -u scripts/train_agent.py --domain "$domain" --lr "$lr" --output-dir "$outdir" \
         >> "$LOGDIR/train_${domain}_lr${lr}_s${suffix}_$TS.log" 2>&1
     # Verify ΔW > 0.1%
     $VENV -c "

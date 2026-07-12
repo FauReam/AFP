@@ -313,7 +313,7 @@ def train(args) -> int:
                 if k in init_state:
                     changed += (v.detach().cpu() - init_state[k]).float().norm().item()
             if changed > 1e-3:
-                save_dir = OUT_DIR / args.domain
+                save_dir = Path(args.output_dir) if args.output_dir else (OUT_DIR / args.domain)
                 agent.save(save_dir)
                 print(f"  [e{epoch}] ✓ best model saved -> {save_dir} (Δ={changed:.1f})")
             else:
@@ -327,7 +327,8 @@ def train(args) -> int:
 
         # ---- Periodic checkpoint (for LMC barrier experiments) ----
         if args.save_every_n_epochs > 0 and epoch % args.save_every_n_epochs == 0:
-            ckpt_dir = OUT_DIR / f"{args.domain}_e{epoch}"
+            base = Path(args.output_dir) if args.output_dir else OUT_DIR
+            ckpt_dir = base / f"{args.domain}_e{epoch}"
             agent.save(ckpt_dir)
             print(f"  [e{epoch}] checkpoint saved -> {ckpt_dir}")
 
@@ -339,7 +340,8 @@ def train(args) -> int:
     elapsed = time.time() - t0
     print(f"\n[done] {global_step} steps in {elapsed:.0f}s ({elapsed/60:.1f}min)")
     print(f"  best val_loss={best_val_loss:.4f} (epoch {best_epoch})")
-    print(f"  model saved to {OUT_DIR / args.domain}")
+    final_dir = Path(args.output_dir) if args.output_dir else (OUT_DIR / args.domain)
+    print(f"  model saved to {final_dir}")
     return 0
 
 
@@ -365,6 +367,8 @@ def main():
                    help="limit training samples (0 = use all)")
     p.add_argument("--save-every-n-epochs", type=int, default=1,
                    help="save checkpoint every N epochs (0 = only save best, 1 = save each epoch)")
+    p.add_argument("--output-dir", type=str, default="",
+                   help="override output directory (default: trained_models/{domain})")
     args = p.parse_args()
     # Propagate CLI override to module-level constants used by prepare_data
     MAX_LEN = args.max_len
