@@ -1,0 +1,256 @@
+\documentclass[11pt,a4paper]{article}
+
+% === Packages ===
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{float}
+
+% === Metadata ===
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=blue!40!black,
+    urlcolor=blue!60!black
+}
+
+% === Header ===
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Weight-Space Divergence and LMC in Domain-Specialized Fine-Tuning}
+\fancyhead[R]{\small Draft v1 — 2026-07-05}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% === Title ===
+\title{\textbf{Weight-Space Divergence and Loss Landscape Connectivity\\in Domain-Specialized Fine-Tuning}}
+\author{}
+\date{Draft v1 — July 5, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+% === Abstract ===
+\begin{abstract}
+We measure the relationship between domain-specific fine-tuning and weight-space divergence in Pythia-1.4B, and test whether Linear Mode Connectivity (LMC) holds between models fine-tuned on different domains. Full-parameter fine-tuning on code and medical reasoning tasks for 1--5 epochs produces only 0.26\%--1.95\% mean weight divergence from the pretrained checkpoint. LMC barrier scans across three training intensities (1, 3, 5 epochs) reveal barriers $\leq$ 0.08 — well within the linearly-connected regime. We observe an asymmetric U-shaped cross-domain transfer: code model weights improve undertrained medical model performance (up to 8.3\% loss reduction) but not vice versa. This benefit vanishes as the medical model is trained longer, with the 5-epoch model achieving optimal performance without any code knowledge. We hypothesize that the small weight divergence is a function of the learning rate ($1\times10^{-4}$) rather than an inherent property of the model, and propose experiments to test this.
+\end{abstract}
+
+% ====================
+\section{Introduction}
+% ====================
+
+Fine-tuning pretrained language models on domain-specific data is standard practice. But how far do these models actually move in weight space? And when two models are fine-tuned on different domains, does the linear path between their weights cross a loss barrier?
+
+Linear Mode Connectivity \cite{frankle2020lmc} established that neural networks fine-tuned from the same initialization often lie in the same linearly-connected loss basin. However, the relationship between the \emph{amount} of fine-tuning (epochs, learning rate, data volume) and the \emph{magnitude} of weight-space divergence remains underexplored.
+
+We conduct a systematic measurement on Pythia-1.4B, fine-tuning two variants on code reasoning (VersaPRM-code) and medical reasoning (VersaPRM-medical). We measure:
+
+\begin{enumerate}[label=\arabic*.]
+    \item Per-block weight divergence from the pretrained checkpoint
+    \item LMC barrier via 11-point linear interpolation between domain-specialized models
+    \item Cross-domain transfer asymmetry at three medical training intensities
+\end{enumerate}
+
+% ====================
+\section{Method}
+% ====================
+
+\subsection{Training}
+
+\begin{table}[H]
+\centering
+\caption{Training configuration}
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Base model & EleutherAI/pythia-1.4b (1.31B params) \\
+Training & Full-parameter fine-tuning \\
+Data & VersaPRM: code (55K train) + medical ($\sim$55K train) \\
+Precision & bfloat16 autocast, fp32 classification head \\
+Batch size & 128 \\
+Sequence length & 256 tokens \\
+Learning rate & Cosine $1\times10^{-4} \rightarrow 3\times10^{-6}$ \\
+Epochs & 1 (code), 1/3/5 (medical) \\
+Optimizer & AdamW ($\beta=0.9, 0.999$, wd$=0.1$) \\
+Hardware & NVIDIA DGX Spark GB10 (121GB unified, ARM64 CUDA 13.0) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{LMC Barrier Scan}
+
+For each model pair $(\theta_{\text{code}}, \theta_{\text{med\_e}N})$, we construct 11 interpolated models:
+
+\begin{equation}
+\theta(\alpha) = (1-\alpha) \cdot \theta_{\text{code}} + \alpha \cdot \theta_{\text{med}}, \quad \alpha \in \{0.0, 0.1, \ldots, 1.0\}
+\end{equation}
+
+We evaluate the binary cross-entropy loss of each interpolated model on both code and medical test data (2,000 samples each). The LMC barrier is defined as:
+
+\begin{equation}
+\text{barrier} = \max_{\alpha} \; \mathcal{L}(\theta(\alpha)) - \mathcal{L}(\theta(0))
+\end{equation}
+
+\subsection{Weight Divergence}
+
+Per-block relative L2 divergence from base model:
+
+\begin{equation}
+\Delta_{\text{block }j} = \frac{\| W_{\text{trained, block }j} - W_{\text{base, block }j} \|}{\| W_{\text{base, block }j} \|}
+\end{equation}
+
+% ====================
+\section{Results}
+% ====================
+
+\subsection{Weight Divergence Is Small}
+
+\begin{table}[H]
+\centering
+\caption{Weight divergence and self-domain accuracy}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Epochs} & \textbf{Mean $\| \Delta W \| / \| W \|$} & \textbf{Max $\| \Delta W \| / \| W \|$} & \textbf{Self-domain acc.} \\
+\midrule
+code     & 1 & 0.26\%  & 6.2\%  & 0.751 \\
+medical  & 1 & 1.91\%  & 13.5\% & 0.882 \\
+medical  & 3 & 1.95\%  & 14.3\% & 0.885 \\
+medical  & 5 & 1.95\%  & 14.5\% & 0.886 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Key observations:
+\begin{itemize}
+    \item Code fine-tuning produces $7.4\times$ less weight change than medical (0.26\% vs 1.91\%)
+    \item Medical training saturates after epoch 1: epochs 2--5 add only 0.04\% total divergence
+    \item Despite different magnitudes, per-block importance patterns are highly correlated (cosine $> 0.94$)
+\end{itemize}
+
+\subsection{LMC Holds Across All Model Pairs}
+
+\begin{table}[H]
+\centering
+\caption{LMC barrier scan results}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Med epoch} & $\mathcal{L}_{\text{code}}(0)$ & \textbf{Code barrier} & $\mathcal{L}_{\text{med}}(1)$ & \textbf{Med U-min} & \textbf{Cross benefit} \\
+\midrule
+1 & 0.6155 & 0.071 & 0.623 & 0.495 ($\alpha{=}0.2$) & 8.3\% \\
+3 & 0.6155 & 0.076 & 0.507 & 0.503 ($\alpha{=}0.2$) & 6.8\% \\
+5 & 0.6155 & 0.076 & 0.485 & 0.485 ($\alpha{=}1.0$) & 0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All barriers $< 0.08$ across both domains. LMC is preserved for all training intensities.
+
+\subsection{Asymmetric U-Shaped Cross-Domain Transfer}
+
+\textbf{Finding 1: Code knowledge transfers to medical, not vice versa.}
+
+The code model's loss on medical data (0.540) is \emph{lower} than base Pythia's (0.559). Code fine-tuning produces a positive externality for medical reasoning. Medical fine-tuning produces no reciprocal benefit for code.
+
+\textbf{Finding 2: The benefit decays with medical training intensity.}
+
+At 1 epoch, mixing 20\% code weights reduces medical loss by 8.3\% (U-shaped optimum at $\alpha = 0.2$). At 3 epochs, the benefit drops to 6.8\%. At 5 epochs, the medical model's own weights ($\alpha = 1.0$) are optimal — the U-shape vanishes.
+
+\textbf{Finding 3: Code is always harmed by medical mixing.}
+
+Code domain loss increases monotonically with $\alpha$ for all medical model variants. Medical knowledge does not generalize to code reasoning.
+
+\subsection{Training Speed}
+
+On DGX Spark GB10, full fine-tuning reaches 5.5 seconds per training step (batch=128, seq=256). One epoch (433 steps) completes in $\sim$42 minutes.
+
+% ====================
+\section{Discussion}
+% ====================
+
+\subsection{Why Is Pythia So Stubborn?}
+
+We hypothesize that the small weight divergence is primarily a function of the \textbf{learning rate} ($1\times10^{-4}$), not an inherent property of the model architecture or pretraining data. At lr$=10^{-4}$ with cosine decay to $3\times10^{-6}$, the average per-step update magnitude is small. With only 433 steps per epoch, the cumulative weight change is bounded.
+
+Supporting evidence:
+\begin{itemize}
+    \item Medical training (more gradient signal from clearer labels) produces $7\times$ more divergence than code training
+    \item Within medical training, epochs 2--5 add negligible divergence — the model reaches a flat region of the loss basin where gradient magnitude approaches zero
+    \item The barrier magnitude (0.07--0.08) is consistent across model pairs despite different training intensities
+\end{itemize}
+
+\textbf{Prediction}: Training at lr$=5\times10^{-4}$ or $10^{-3}$, or with more data per epoch, will produce significantly larger weight divergence and potentially break LMC.
+
+\subsection{Comparison to Prior Work}
+
+Frankle et al. (2020) demonstrated LMC for models fine-tuned on the \emph{same} task with different random seeds. Our results extend this to \emph{different domains} — even when models are optimized for qualitatively different capabilities, they remain in the same loss basin.
+
+The U-shaped cross-domain transfer curve is consistent with the ``model merging'' literature \cite{wortsman2022model,wortsman2022robust,yadav2023ties}, where small amounts of weight interpolation can improve performance through implicit regularization. Our contribution is showing this effect is (a) asymmetric between domains and (b) training-intensity dependent.
+
+\subsection{Limitations}
+
+\begin{enumerate}[label=\arabic*.]
+    \item Single model architecture (Pythia-1.4B). Results may not generalize to other scales or architectures.
+    \item Single training run per condition. No statistical significance estimates.
+    \item Only two domains (code, medical). Additional domains needed to characterize the asymmetry.
+    \item Limited training intensity range. The LR hypothesis (\S4.1) is untested.
+\end{enumerate}
+
+% ====================
+\section{Next Experiments}
+% ====================
+
+\subsection*{Priority 1: Test the LR Hypothesis}
+
+Train code and medical at lr $\in \{5\times10^{-4}, 10^{-3}, 2\times10^{-3}\}$ for 1 epoch. Measure weight divergence and re-run LMC scan. \textbf{Prediction}: lr $\geq 5\times10^{-4}$ will produce $>5\%$ weight divergence and may break LMC.
+
+\subsection*{Priority 2: Statistical Significance}
+
+Repeat the lr$=10^{-4}$ condition with 3 random seeds. Report mean $\pm$ std for all metrics.
+
+\subsection*{Priority 3: Scale Variation}
+
+Repeat on Pythia-160M and Pythia-2.8B to test whether stubbornness scales with model size.
+
+% ====================
+% === References ===
+% ====================
+\begin{thebibliography}{99}
+
+\bibitem{frankle2020lmc}
+J. Frankle, G. K. Dziugaite, D. M. Roy, and M. Carbin.
+\newblock Linear Mode Connectivity and the Lottery Ticket Hypothesis.
+\newblock In \emph{ICML}, 2020.
+
+\bibitem{wortsman2022model}
+M. Wortsman, G. Ilharco, S. Y. Gadre, R. Roelofs, R. Gontijo-Lopes, A. S. Morcos, H. Namkoong, A. Farhadi, Y. Carmon, S. Kornblith, and L. Schmidt.
+\newblock Model soups: averaging weights of multiple fine-tuned models.
+\newblock In \emph{ICML}, 2022.
+
+\bibitem{wortsman2022robust}
+M. Wortsman, G. Ilharco, J. W. Kim, M. Li, S. Kornblith, R. Roelofs, R. Gontijo-Lopes, H. Hajishirzi, A. Farhadi, H. Namkoong, and L. Schmidt.
+\newblock Robust fine-tuning of zero-shot models.
+\newblock In \emph{CVPR}, 2022.
+
+\bibitem{yadav2023ties}
+P. Yadav, D. Tam, L. Choshen, C. Raffel, and M. Bansal.
+\newblock TIES-Merging: Resolving Interference When Merging Models.
+\newblock In \emph{NeurIPS}, 2023.
+
+\bibitem{biderman2023pythia}
+S. Biderman, H. Schoelkopf, Q. Anthony, H. Bradley, K. O'Brien, E. Hallahan, M. A. Khan, S. Purohit, U. S. Prashanth, E. Raff, A. Skowron, S. Sutawika, and O. van der Wal.
+\newblock Pythia: A Suite for Analyzing Large Language Models.
+\newblock In \emph{NeurIPS}, 2023.
+
+\end{thebibliography}
+
+\end{document}
