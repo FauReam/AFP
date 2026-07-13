@@ -95,7 +95,7 @@ for domain in code medical; do
     trajdir="$outdir/trajectory"
     log ""
     log "  --- $domain trajectory LMC ---"
-    for ckpt in $(ls "$trajdir"/step_*.pt 2>/dev/null | sort -t_ -k2 -n); do
+    for ckpt in $(ls "$trajdir"/step_[0-9]*.pt 2>/dev/null | grep -v '_head' | sort -t_ -k2 -n); do
         step=$(basename "$ckpt" .pt | sed 's/step_//')
         out="$RESULTS/lmc_traj_${domain}_step${step}.json"
         [ -f "$out" ] && { log "    [skip] step_$step"; continue; }
