@@ -187,8 +187,8 @@ os.makedirs('$MODELS/_p1', exist_ok=True)
 os.makedirs('$MODELS/_p2', exist_ok=True)
 torch.save(base_sd, '$MODELS/_p1/W_code_final.pt')
 torch.save(noise_sd, '$MODELS/_p2/W_medical_final.pt')
-torch.save({}, '$MODELS/_p1/W_code_head_final.pt')   # won't be used
-torch.save({}, '$MODELS/_p2/W_medical_head_final.pt')
+import shutil; shutil.copy('$MODELS/code_lr1e-4_s0/W_code_head_final.pt', '$MODELS/_p1/W_code_head_final.pt')
+shutil.copy('$MODELS/medical_lr1e-4_s0/W_medical_head_final.pt', '$MODELS/_p2/W_medical_head_final.pt')
 print('  Gaussian models saved')
 " >> "$LOGDIR/noise_gaussian_dw${dw_target}_$TS.log" 2>&1
 
