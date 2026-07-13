@@ -286,6 +286,16 @@ def train(args) -> int:
             global_step += 1
             running_loss += loss.item()
 
+            # Trajectory checkpoint: save backbone for LMC barrier vs ΔW curve
+            if args.trajectory_step > 0 and global_step % args.trajectory_step == 0:
+                base = Path(args.output_dir) if args.output_dir else OUT_DIR
+                traj_dir = base / "trajectory"
+                traj_dir.mkdir(parents=True, exist_ok=True)
+                torch.save({k: v.cpu().clone() for k, v in agent.backbone.state_dict().items()},
+                           traj_dir / f"step_{global_step}.pt")
+                torch.save({k: v.cpu().clone() for k, v in agent.head.state_dict().items()},
+                           traj_dir / f"step_{global_step}_head.pt")
+
             if global_step % 10 == 0:
                 elapsed = time.time() - t0
                 avg = running_loss / 10
@@ -369,6 +379,8 @@ def main():
                    help="save checkpoint every N epochs (0 = only save best, 1 = save each epoch)")
     p.add_argument("--output-dir", type=str, default="",
                    help="override output directory (default: trained_models/{domain})")
+    p.add_argument("--trajectory-step", type=int, default=0,
+                   help="save backbone checkpoint every N steps for LMC trajectory (0=disabled)")
     args = p.parse_args()
     # Propagate CLI override to module-level constants used by prepare_data
     MAX_LEN = args.max_len
