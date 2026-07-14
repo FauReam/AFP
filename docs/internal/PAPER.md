@@ -79,6 +79,7 @@ Key observations:
 - At high divergence (8-12% weight displacement), barriers increase 2-5× but remain modest (Figure 1).
 - The barrier grows less than proportionally to divergence: 5-6× more weight displacement yields only 2-5× more barrier.
 - Even at 8% divergence, domain-specialized Pythia-1.4B models remain in broadly the same loss basin.
+- At intermediate divergence (~5% ΔW), we observe seed-dependent catastrophic barrier spikes: three code models with near-identical weight displacement (ΔW ≈ 4.6%) produce barriers of 0.056, 0.096, and 1.043 — a 19× range. The model with the highest barrier (1.043) has the best self-domain performance (loss 0.566 vs. 0.584-0.595), indicating that catastrophic interpolation failure can coexist with strong task-specific convergence. This provides the strongest evidence that barrier height is determined by training trajectory geometry, not weight displacement magnitude.
 
 ### 4.3 Within-Domain LMC Baseline
 
@@ -116,7 +117,7 @@ The identical-copy barrier is effectively zero, confirming the measurement pipel
 
 ### 4.6 Training Trajectory: Continuous ΔW→Barrier Curve
 
-To characterize the functional relationship between weight displacement and barrier height beyond two discrete divergence levels, we save model checkpoints every 40 training steps and measure the LMC barrier between each checkpoint and the pretrained base model. This yields a continuous ΔW→barrier curve from a single training run, eliminating the convergence confound of the LR sweep (all checkpoints come from the same optimization trajectory).
+To characterize the functional relationship between weight displacement and barrier height beyond two discrete divergence levels, we save model checkpoints every 40 training steps and measure the LMC barrier between each checkpoint and the pretrained base model. This yields a continuous ΔW→barrier curve from a single training run, eliminating the convergence confound of cross-run comparisons (all checkpoints come from the same optimization trajectory).
 
 **Code domain** (Figure 3): The barrier follows an inverted-U shape — rising from 0.029 at step 40 (ΔW ≈ 0.3%) to a peak of 0.043 at step 200 (ΔW ≈ 1.1%), then *declining* to 0.033 at step 400 (ΔW ≈ 1.4%) despite monotonically increasing weight displacement. The endpoint (final trained model vs. base) shows a *lower* barrier than the mid-training checkpoint, indicating that the model settles into a well-defined minimum that is more linearly connected to the pretrained initialization than the intermediate "partially-trained" states.
 
