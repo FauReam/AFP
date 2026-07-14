@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.6.16)  14 JUL 2026 18:49
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.6.16)  14 JUL 2026 19:03
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -269,6 +269,14 @@ File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
 \Gin@req@height=\dimen179
 \Gin@req@width=\dimen180
 )
+(/home/jiayu/texlive/2026/texmf-dist/tex/latex/float/float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count306
+\float@exts=\toks26
+\float@box=\box57
+\@float@everytoks=\toks27
+\@floatcapt=\box58
+)
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/caption/caption.sty
 Package: caption 2023/08/05 v3.6o Customizing captions (AR)
 
@@ -284,8 +292,9 @@ Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
 \caption@hangindent=\dimen188
 Package caption Info: Standard document class detected.
 )
-\c@caption@flags=\count306
-\c@continuedfloat=\count307
+\c@caption@flags=\count307
+\c@continuedfloat=\count308
+Package caption Info: float package is loaded.
 )
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/booktabs/booktabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
@@ -299,12 +308,12 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \cmidrulesep=\dimen196
 \cmidrulekern=\dimen197
 \defaultaddspace=\dimen198
-\@cmidla=\count308
-\@cmidlb=\count309
+\@cmidla=\count309
+\@cmidlb=\count310
 \@aboverulesep=\dimen199
 \@belowrulesep=\dimen256
-\@thisruleclass=\count310
-\@lastruleclass=\count311
+\@thisruleclass=\count311
+\@lastruleclass=\count312
 \@thisrulewidth=\dimen257
 )
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/xcolor/xcolor.sty
@@ -369,15 +378,15 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
  (/home/jiayu/texlive/2026/texmf-dist/tex/latex/kvoptions/kvoptions.sty
 Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
 ))
-\c@section@level=\count312
+\c@section@level=\count313
 )
 (/home/jiayu/texlive/2026/texmf-dist/tex/generic/stringenc/stringenc.sty
 Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 )
 )
 \@linkdim=\dimen258
-\Hy@linkcounter=\count313
-\Hy@pagecounter=\count314
+\Hy@linkcounter=\count314
+\Hy@pagecounter=\count315
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/hyperref/pd1enc.def
 File: pd1enc.def 2026-04-24 v7.01q Hyperref: PDFDocEncoding definition (HO)
@@ -387,7 +396,7 @@ Now handling font encoding PD1 ...
 (/home/jiayu/texlive/2026/texmf-dist/tex/generic/intcalc/intcalc.sty
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
 )
-\Hy@SavedSpaceFactor=\count315
+\Hy@SavedSpaceFactor=\count316
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/hyperref/puenc.def
 File: puenc.def 2026-04-24 v7.01q Hyperref: PDF Unicode definition (HO)
@@ -402,7 +411,7 @@ Package hyperref Info: Plain pages OFF on input line 4214.
 Package hyperref Info: Backreferencing OFF on input line 4219.
 Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
 Package hyperref Info: Bookmarks ON on input line 4466.
-\c@Hy@tempcnt=\count316
+\c@Hy@tempcnt=\count317
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/url/url.sty
 \Urlmuskip=\muskip18
@@ -418,7 +427,7 @@ Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
 Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
 )
 ))
-\Fld@menulength=\count317
+\Fld@menulength=\count318
 \Field@Width=\dimen260
 \Fld@charsize=\dimen261
 Package hyperref Info: Hyper figures OFF on input line 6091.
@@ -428,16 +437,16 @@ Package hyperref Info: backreferencing OFF on input line 6106.
 Package hyperref Info: Link coloring ON on input line 6109.
 Package hyperref Info: Link coloring with OCG OFF on input line 6116.
 Package hyperref Info: PDF/A mode OFF on input line 6121.
-\Hy@abspage=\count318
-\c@Item=\count319
-\c@Hfootnote=\count320
+\Hy@abspage=\count319
+\c@Item=\count320
+\c@Hfootnote=\count321
 )
 Package hyperref Info: Driver (autodetected): hpdftex.
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/hyperref/hpdftex.def
 File: hpdftex.def 2026-04-24 v7.01q Hyperref driver for pdfTeX
-\Fld@listcount=\count321
-\c@bookmark@seq@number=\count322
+\Fld@listcount=\count322
+\c@bookmark@seq@number=\count323
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.st
 y
@@ -468,33 +477,33 @@ Package: fancyhdr 2025/02/07 v5.2 Extensive control of page headers and footers
 \f@nch@widthL=\skip71
 \f@nch@widthC=\skip72
 \f@nch@widthR=\skip73
-\@temptokenb=\toks26
+\@temptokenb=\toks28
 )
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2026-02-18 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count323
+\l__color_backend_stack_int=\count324
 )
 (./paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -530,13 +539,13 @@ LaTeX Font Info:    ... okay on input line 62.
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-LaTeX Info: Redefining \microtypecontext on input line 62.
-Package microtype Info: Applying patch `item' on input line 62.
-Package microtype Info: Applying patch `toc' on input line 62.
-Package microtype Info: Applying patch `eqnum' on input line 62.
-Package microtype Info: Applying patch `footnote' on input line 62.
-Package microtype Info: Applying patch `verbatim' on input line 62.
-LaTeX Info: Redefining \microtypesetup on input line 62.
+LaTeX Info: Redefining \microtypecontext on input line 63.
+Package microtype Info: Applying patch `item' on input line 63.
+Package microtype Info: Applying patch `toc' on input line 63.
+Package microtype Info: Applying patch `eqnum' on input line 63.
+Package microtype Info: Applying patch `footnote' on input line 63.
+Package microtype Info: Applying patch `verbatim' on input line 63.
+LaTeX Info: Redefining \microtypesetup on input line 63.
 Package microtype Info: Generating PDF output.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
@@ -553,17 +562,17 @@ File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman
 )
 (/home/jiayu/texlive/2026/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count324
+\scratchcounter=\count325
 \scratchdimen=\dimen262
-\scratchbox=\box57
-\nofMPsegments=\count325
-\nofMParguments=\count326
-\everyMPshowfont=\toks27
-\MPscratchCnt=\count327
+\scratchbox=\box59
+\nofMPsegments=\count326
+\nofMParguments=\count327
+\everyMPshowfont=\toks29
+\MPscratchCnt=\count328
 \MPscratchDim=\dimen263
-\MPnumerator=\count328
-\makeMPintoPDFobject=\count329
-\everyMPtoPDFconversion=\toks28
+\MPnumerator=\count329
+\makeMPintoPDFobject=\count330
+\everyMPtoPDFconversion=\toks30
 ) (/home/jiayu/texlive/2026/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
@@ -575,43 +584,43 @@ e
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: hyperref package is loaded.
 Package caption Info: End \AtBeginDocument code.
-Package hyperref Info: Link coloring ON on input line 62.
+Package hyperref Info: Link coloring ON on input line 63.
 
 (./paper.out) (./paper.out)
 \@outlinefile=\write3
 \openout3 = `paper.out'.
 
 LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 7
-3.
+4.
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/lm/ot1lmr.fd
 File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 7
-3.
+4.
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/lm/omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
-73.
+74.
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/lm/omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
-73.
+74.
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/lm/omxlmex.fd
 File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 73.
+(Font)              <10> on input line 74.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 73.
+(Font)              <7> on input line 74.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 73.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 73.
+(Font)              <5> on input line 74.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 74.
 
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/amsfonts/umsa.fd
@@ -620,7 +629,7 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/microtype/mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 73.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 74.
 
 
 (/home/jiayu/texlive/2026/texmf-dist/tex/latex/amsfonts/umsb.fd
@@ -630,11 +639,11 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10.95> on input line 74.
+(Font)              <10.95> on input line 75.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 74.
+(Font)              <8> on input line 75.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 74.
+(Font)              <6> on input line 75.
  [1{/home/jiayu/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/hom
 e/jiayu/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}
 
@@ -645,66 +654,65 @@ e/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}]
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[5] [6] [7]
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 368.
-
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 368.
-
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\Delta' on input line 368.
-
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\to' on input line 368.
-
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 368.
-
+<../reports/fig1_lmc_overview.pdf, id=233, 546.13306pt x 382.42542pt>
+File: ../reports/fig1_lmc_overview.pdf Graphic file (type pdf)
+<use ../reports/fig1_lmc_overview.pdf>
+Package pdftex.def Info: ../reports/fig1_lmc_overview.pdf  used on input line 2
+58.
+(pdftex.def)             Requested size: 455.24411pt x 318.7843pt.
+[5] [6 <../reports/fig1_lmc_overview.pdf>]
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[8]
+<../reports/fig3_seedpair_stability.pdf, id=289, 539.398pt x 197.48251pt>
+File: ../reports/fig3_seedpair_stability.pdf Graphic file (type pdf)
+<use ../reports/fig3_seedpair_stability.pdf>
+Package pdftex.def Info: ../reports/fig3_seedpair_stability.pdf  used on input 
+line 346.
+(pdftex.def)             Requested size: 455.24411pt x 166.67667pt.
+[7] [8 <../reports/fig3_seedpair_stability.pdf>]
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <12> on input line 391.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 391.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\Delta' on input line 391.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\to' on input line 391.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 391.
+
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [9]
+<../reports/fig2_trajectory_analysis.pdf, id=334, 538.9156pt x 268.61441pt>
+File: ../reports/fig2_trajectory_analysis.pdf Graphic file (type pdf)
+<use ../reports/fig2_trajectory_analysis.pdf>
+Package pdftex.def Info: ../reports/fig2_trajectory_analysis.pdf  used on input
+ line 448.
+(pdftex.def)             Requested size: 455.24411pt x 226.90926pt.
+ [10] [11 <../reports/fig2_trajectory_analysis.pdf>]
 LaTeX Font Info:    Trying to load font information for OT1+lmss on input line 
-460.
- (/home/jiayu/texlive/2026/texmf-dist/tex/latex/lm/ot1lmss.fd
+493.
+
+(/home/jiayu/texlive/2026/texmf-dist/tex/latex/lm/ot1lmss.fd
 File: ot1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `lmss' (encoding: OT1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
- [10] [11]
-[12] [13]
-<../reports/fig1_lmc_overview.pdf, id=328, 546.13306pt x 382.42542pt>
-File: ../reports/fig1_lmc_overview.pdf Graphic file (type pdf)
-<use ../reports/fig1_lmc_overview.pdf>
-Package pdftex.def Info: ../reports/fig1_lmc_overview.pdf  used on input line 5
-44.
-(pdftex.def)             Requested size: 455.24411pt x 318.7843pt.
-<../reports/fig2_trajectory_analysis.pdf, id=329, 538.9156pt x 268.61441pt>
-File: ../reports/fig2_trajectory_analysis.pdf Graphic file (type pdf)
-<use ../reports/fig2_trajectory_analysis.pdf>
-Package pdftex.def Info: ../reports/fig2_trajectory_analysis.pdf  used on input
- line 555.
-(pdftex.def)             Requested size: 455.24411pt x 226.90926pt.
-<../reports/fig3_seedpair_stability.pdf, id=330, 539.398pt x 197.48251pt>
-File: ../reports/fig3_seedpair_stability.pdf Graphic file (type pdf)
-<use ../reports/fig3_seedpair_stability.pdf>
-Package pdftex.def Info: ../reports/fig3_seedpair_stability.pdf  used on input 
-line 566.
-(pdftex.def)             Requested size: 455.24411pt x 166.67667pt.
- [14 <../reports/fig1_lmc_overview.pdf>] [15 <../reports/fig2_trajectory_analys
-is.pdf> <../reports/fig3_seedpair_stability.pdf>] [16] [17]
-(./paper.aux)
+ [12] [13]
+[14] [15] [16] [17] (./paper.aux)
  ***********
 LaTeX2e <2026-06-01>
 L3 programming layer <2026-05-26>
@@ -713,13 +721,13 @@ Package rerunfilecheck Info: File `paper.out' has not changed.
 (rerunfilecheck)             Checksum: 87C6B8843984B21C945072296B0382EE;6037.
  ) 
 Here is how much of TeX's memory you used:
- 16202 strings out of 468648
- 259986 string characters out of 5446123
- 720855 words of memory out of 5000000
- 44566 multiletter control sequences out of 15000+600000
- 763898 words of font info for 291 fonts, out of 8000000 for 9000
+ 16244 strings out of 468648
+ 260705 string characters out of 5446123
+ 722133 words of memory out of 5000000
+ 44616 multiletter control sequences out of 15000+600000
+ 755150 words of font info for 282 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 74i,13n,84p,2357b,614s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 74i,13n,84p,2357b,608s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </home/jiayu/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></home/
 jiayu/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></home/jiayu/tex
 live/2026/texmf-dist/fonts/type1/public/lm/lmex10.pfb></home/jiayu/texlive/2026
@@ -735,10 +743,10 @@ ist/fonts/type1/public/lm/lmss8.pfb></home/jiayu/texlive/2026/texmf-dist/fonts/
 type1/public/lm/lmsy10.pfb></home/jiayu/texlive/2026/texmf-dist/fonts/type1/pub
 lic/lm/lmsy8.pfb></home/jiayu/texlive/2026/texmf-dist/fonts/type1/public/amsfon
 ts/symbols/msbm10.pfb>
-Output written on paper.pdf (17 pages, 414612 bytes).
+Output written on paper.pdf (17 pages, 415275 bytes).
 PDF statistics:
  539 PDF objects out of 1000 (max. 8388607)
  434 compressed objects within 5 object streams
  117 named destinations out of 1000 (max. 500000)
- 74016 words of extra memory for PDF output out of 74296 (max. 10000000)
+ 67872 words of extra memory for PDF output out of 74296 (max. 10000000)
 
