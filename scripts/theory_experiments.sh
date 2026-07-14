@@ -49,7 +49,7 @@ for p in "10 11" "10 12" "11 12"; do
     cp "$M/medical_lr1e-4_2ep_s${s2}/W_medical_head_final.pt" "$M/_b/W_medical_head_final.pt"
     rm -f "$M/code_e1" "$M/medical_e1" "$R/lmc_barrier_c1m1.json"
     (cd "$M" && ln -sfn _a code_e1 && ln -sfn _b medical_e1)
-    $V -u scripts/lmc_3pt_scan.py --model-a "$M/_a" --model-b "$M/_b" --domain-a code --domain-b medical \
+    $V -u scripts/lmc_3pt_scan.py --model-a "$M/medical_lr1e-4_2ep_s${s1}" --model-b "$M/medical_lr1e-4_2ep_s${s2}" --domain-a medical --domain-b medical \
         --output "$out" >> "$L/lmc_med_2ep_s${s1}_s${s2}_$TS.log" 2>&1
     [ -f "$out" ] && $V -c "import json;d=json.load(open('$out'));r=d['results'];m0=r[0]['loss_med'];m1=r[-1]['loss_med'];mm=max(x['loss_med'] for x in r);print(f'  => bar_med={mm-(m0+m1)/2:.4f}')" || log "  ERROR"
 done
@@ -158,7 +158,7 @@ for p in "10 11" "10 12" "11 12"; do
     cp "$M/code_noisy15_lr1e-4_s${s2}/W_code_head_final.pt" "$M/_b/W_medical_head_final.pt"
     rm -f "$M/code_e1" "$M/medical_e1" "$R/lmc_barrier_c1m1.json"
     (cd "$M" && ln -sfn _a code_e1 && ln -sfn _b medical_e1)
-    $V -u scripts/lmc_3pt_scan.py --model-a "$M/_a" --model-b "$M/_b" --domain-a code --domain-b medical \
+    $V -u scripts/lmc_3pt_scan.py --model-a "$M/medical_lr1e-4_2ep_s${s1}" --model-b "$M/medical_lr1e-4_2ep_s${s2}" --domain-a medical --domain-b medical \
         --output "$out" >> "$L/lmc_code_noisy15_s${s1}_s${s2}_$TS.log" 2>&1
     [ -f "$out" ] && $V -c "import json;d=json.load(open('$out'));r=d['results'];c0=r[0]['loss_code'];c1=r[-1]['loss_code'];cm=max(x['loss_code'] for x in r);print(f'  => bar_code={cm-(c0+c1)/2:.4f}')" || log "  ERROR"
 done
