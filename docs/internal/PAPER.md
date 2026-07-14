@@ -94,6 +94,25 @@ To calibrate the cross-domain barriers, we measure LMC between different seeds o
 
 The four domains form a stability spectrum rather than a binary contrast. Code and general models exhibit near-identical within- and cross-domain barriers (e.g., code within 0.048 ≈ code↔medical cross 0.053), while math shows intermediate instability and medical consistently produces the highest within-domain barriers. The cross-domain barrier between math and general models (0.012 on code evaluation / 0.078 on medical evaluation) is comparable to the code↔medical cross-domain barrier (0.053 / 0.051), confirming that domain difference per se contributes negligibly to barrier height. The dominant source of LMC barrier is per-domain training stability — independent of which other domain the model is compared against.
 
+### 4.3.1 Seed-Pair Compatibility at High Divergence
+
+To test whether the within-domain barrier patterns persist at larger seed counts, we trained two additional medical models at high divergence (total n=5 seeds) and measured all C(5,2)=10 pairwise barriers. The results reveal that barrier height is seed-*pair*-specific, not seed-specific:
+
+| Seed pair | Barrier | Interpretation |
+|:---|:---:|------|
+| s0↔s1 | 0.207 | |
+| s0↔s2 | 0.072 | Tightly connected |
+| s0↔s3 | 0.152 | |
+| s0↔s4 | 0.300 | |
+| s1↔s2 | 0.183 | |
+| s1↔s3 | 0.371 | |
+| s1↔s4 | **1.213** | Catastrophic disconnection |
+| s2↔s3 | 0.383 | |
+| s2↔s4 | 0.080 | Tightly connected |
+| s3↔s4 | 0.081 | Tightly connected |
+
+Across all 10 pairs, the mean barrier is 0.304 ± 0.322 (n=10), substantially higher than the original n=3 estimate (0.154 ± 0.055). Excluding the single catastrophic pair (s1↔s4) yields 0.203 ± 0.116 (n=9). The critical finding is that seed *s4* produces a barrier of 1.213 when paired with s1 — worse than the pretrained-to-random reference (0.150) — but only 0.080-0.081 when paired with s2 or s3. Barrier compatibility is pair-specific: a seed that is well-connected to one partner can be catastrophically disconnected from another. This directly demonstrates that LMC barrier height depends on the specific training trajectories of both models, not on their individual properties or ΔW magnitude (all models have ΔW ≈ 8-9%).
+
 ### 4.4 Cross-Domain Asymmetry
 
 Evaluating each domain-specialized model on the *other* domain's test data reveals a transfer asymmetry. At standard divergence (3-seed means, seed 0 shown for base):
@@ -161,7 +180,7 @@ The Gaussian perturbation experiment (§4.7) reveals that unstructured weight no
 
 The layer-selective interpolation experiment (§4.8) shows that the barrier is almost entirely driven by early transformer layers (0-7). Deep layers (16-23) can be merged with near-zero penalty. This finding, combined with the per-block pattern analysis, suggests a practical two-tier merging strategy: apply conservative, importance-weighted merging to early layers while using aggressive linear interpolation for late layers.
 
-The within-domain baselines across four domains reveal a stability spectrum rather than a binary contrast. Code (0.048) and general (0.071) models exhibit near-identical within- and cross-domain barriers — domain difference contributes nothing. Math (0.087) shows intermediate instability, and medical (0.147) consistently produces the highest within-domain barriers. Two medical models trained on the same data can differ more in the loss landscape than a code and medical model trained at the same intensity. The fact that the cross-domain barrier between math and general (0.012/0.078) is comparable to code↔medical (0.053/0.051) further confirms that domain difference per se is not the dominant factor — per-domain training stability is.
+The within-domain baselines across four domains reveal a stability spectrum rather than a binary contrast. Code (0.048) and general (0.071) models exhibit near-identical within- and cross-domain barriers — domain difference contributes nothing. Math (0.087) shows intermediate instability, and medical (0.147) consistently produces the highest within-domain barriers. Two medical models trained on the same data can differ more in the loss landscape than a code and medical model trained at the same intensity. The seed-pair analysis (§4.3.1) further demonstrates that barrier compatibility is pair-specific: s4 produces barriers from 0.080 (with s2) to 1.213 (with s1) — a 15× range depending solely on which partner seed it is paired with. This directly refutes any hypothesis that barrier height is determined by per-model properties or ΔW magnitude. The fact that the cross-domain barrier between math and general (0.012/0.078) is comparable to code↔medical (0.053/0.051) further confirms that domain difference per se is not the dominant factor — training trajectory geometry is.
 
 The noise-floor calibration confirms measurement validity. Identical model copies produce a barrier of ~0.000, ruling out numerical artifacts. Pretrained-to-random-init interpolation yields a medical-domain barrier of 0.150 ± 0.019 (3 seeds), providing a reference calibration point. The high-divergence cross-domain medical barrier (0.228 ± 0.102) exceeds this reference, which — combined with its large variance — reinforces our interpretation that high-divergence medical results are exploratory and likely confounded by convergence quality.
 
@@ -178,7 +197,7 @@ A practical implication: our layer-selective results suggest that the standard "
 - **Single model family.** Results are based on Pythia-1.4B. A preliminary scaling experiment with Pythia-160M (ΔW ≈ 0.3%, both models barely moved from pretrained) produced barriers of 0.001 (code) and 0.056 (medical), consistent with the trend that barrier magnitude tracks weight displacement. Systematic scaling across model sizes is left to future work.
 - **Task framing and domain scope.** Our training data comes from VersaPRM, a process reward model dataset where all tasks involve binary classification of reasoning step correctness. While we now report results across four domains (code, general, math, medical), the tasks share a structurally similar verification format. Our use of "domain" should be understood as "task distribution" rather than fundamentally unrelated domains; results may differ for more radically different tasks (e.g., generation vs. classification) or for genuine domain-adaptation corpora (Gururangan et al., 2020).
 - **High-divergence convergence.** The high-divergence models achieve higher self-domain loss than standard-divergence models, suggesting that the aggressive optimization settings trade off convergence quality for weight displacement. The barriers reported for these models may reflect a combination of weight displacement and under-convergence.
-- **Seed count.** Three seeds per condition provide meaningful estimates of variance (bootstrap 95% CIs are reported in the supplementary analysis), but larger seed counts would tighten the confidence intervals, particularly for the high-divergence medical condition where inter-seed variance is large.
+- **Seed count.** For standard divergence conditions, n=3 seeds provide tight estimates (code within-domain σ² < 0.001). For high-divergence medical, we expanded to n=5 seeds (10 pairs) and found the mean barrier increases from 0.154 (n=3) to 0.304 (n=10), with a 15× range across pairs. This expansion revealed pair-specific compatibility that n=3 missed. Additional seeds for other conditions would similarly sharpen the estimates.
 
 ## References
 
