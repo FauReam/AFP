@@ -522,9 +522,9 @@ where $\kappa$ is a domain-specific basin-width parameter. For code, $\kappa$ is
 \subsection{Testable Predictions}
 
 \begin{enumerate}
-\item \textbf{Extended training} (Experiment A): Training medical models for 2 epochs yields within-domain barriers of $0.182 \pm 0.034$ (3 pairs: 0.214, 0.133, 0.198), \emph{higher} than the 1-epoch mean of 0.147. The instability does not diminish with additional training, supporting the interpretation that it is a fundamental property of the data distribution rather than a transient training artifact.
-\item \textbf{Label noise on stable domain} (Experiment B): Adding 15\% random label noise to code training data produces within-domain barriers of $0.046 \pm 0.005$ (3 pairs: 0.045, 0.041, 0.053), essentially unchanged from clean code (0.048). Random symmetric noise does not induce medical-like instability — structured domain-specific ambiguity, not noise magnitude, drives barrier height.
-\item \textbf{Hessian eigenvalue estimation} (Experiment C): Power iteration with finite differences (50 samples, 5 iterations) yields $|\lambda_{\max}| \approx 1397$ for code vs.\ 3395 for medical, a 2.4$\times$ ratio qualitatively consistent with larger curvature in the medical loss landscape predicted by Eq.~\ref{eq:barrier_quadratic}, though limited by finite-difference estimator accuracy.
+\item \textbf{Extended training} (Experiment A, 3-point scans, $n=3$ pairs): Training medical models for 2 epochs yields within-domain barriers of 0.182 (3 pairs: 0.214, 0.133, 0.198), \emph{higher} than the 1-epoch mean of 0.147. The instability does not diminish with additional training, consistent with it being a fundamental property of the data distribution.
+\item \textbf{Label noise on stable domain} (Experiment B, 3-point scans, $n=3$ pairs): Adding 15\% random label noise to code training data produces within-domain barriers of 0.046 (3 pairs: 0.045, 0.041, 0.053), unchanged from clean code (0.048). This null result falsifies the simple hypothesis that noise magnitude determines barrier height. Medical-domain instability arises from \emph{structured} ambiguity, not noise quantity — directly strengthening the central thesis that training stability is a domain-specific property.
+\item \textbf{Hessian eigenvalue estimation}: We attempted finite-difference power iteration but the estimator produced unphysical negative eigenvalues at this model scale, making the estimates unreliable. The method is removed from the paper.
 \end{enumerate}
 
 % ============================================================
