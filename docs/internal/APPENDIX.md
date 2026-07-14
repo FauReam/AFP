@@ -7,7 +7,7 @@
 
 ## A. Complete Barrier Data (All Experiments)
 
-### A.1 Cross-Domain LMC Barriers (Standard Divergence, lr=1e-4)
+### A.1 Cross-Domain LMC Barriers (Standard Divergence, ΔW ≈ 1.4%)
 
 | Seed | Code barrier | Medical barrier |
 |:---:|:---:|:---:|
@@ -16,7 +16,7 @@
 | 2 | 0.044 | 0.052 |
 | **Mean ± σ** | **0.053 ± 0.011** | **0.051 ± 0.013** |
 
-### A.2 Cross-Domain LMC Barriers (High Divergence, lr=5e-4)
+### A.2 Cross-Domain LMC Barriers (High Divergence, ΔW ≈ 8%)
 
 | Seed | Code barrier | Medical barrier |
 |:---:|:---:|:---:|

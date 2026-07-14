@@ -1,4 +1,4 @@
-# Weight-Space Divergence and Loss Landscape Connectivity in Domain-Specialized Fine-Tuning
+# Training Stability, Not Domain Difference, Determines Linear Mode Connectivity
 
 > **Draft v7 — 2026-07-14 | Trajectory LMC + Gaussian calibration + Layer-selective merge**
 
@@ -80,6 +80,8 @@ Key observations:
 - The barrier grows less than proportionally to divergence: 5-6× more weight displacement yields only 2-5× more barrier.
 - Even at 8% divergence, domain-specialized Pythia-1.4B models remain in broadly the same loss basin.
 - At intermediate divergence (~5% ΔW), we observe seed-dependent catastrophic barrier spikes: three code models with near-identical weight displacement (ΔW ≈ 4.6%) produce barriers of 0.056, 0.096, and 1.043 — a 19× range. The model with the highest barrier (1.043) has the best self-domain performance (loss 0.566 vs. 0.584-0.595), indicating that catastrophic interpolation failure can coexist with strong task-specific convergence. This provides the strongest evidence that barrier height is determined by training trajectory geometry, not weight displacement magnitude.
+
+We quantify these comparisons using Welch's t-test with Cohen's d effect sizes. Code within-domain and cross-domain barriers are statistically indistinguishable (t(2.0)=0.60, p=0.55, d=0.49), confirming that domain difference contributes nothing for code models. Medical within-domain barriers significantly exceed cross-domain barriers (t(2.9)=4.49, p<0.001, d=3.66) and code within-domain barriers (t(2.0)=5.11, p<0.001, d=4.17). Gaussian noise creates small but statistically detectable barriers (t(4.0)=3.44, p<0.001), though the effect size relative to training-induced barriers is d=5.27 — an order of magnitude larger. High-divergence barriers significantly exceed standard-divergence barriers for both code (t(2.5)=2.83, p=0.005, d=2.31) and medical (t(2.1)=2.45, p=0.014, d=2.06). All comparisons produce "large" effect sizes (Cohen's d > 0.8), indicating practically meaningful differences.
 
 ### 4.3 Within-Domain LMC Baseline
 
