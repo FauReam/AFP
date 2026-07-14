@@ -83,7 +83,23 @@
 | 4.0% | 0.011 | 0.001 |
 | 8.0% | 0.014 | 0.003 |
 
-### A.8 Layer-Selective Interpolation
+### A.8 Math & General Domain LMC (3-point scan)
+
+| Condition | Pair | Code barrier | Medical barrier |
+|-----------|:---:|:---:|:---:|
+| Math↔General cross | s0 | 0.011 | 0.074 |
+| Math↔General cross | s1 | 0.014 | 0.097 |
+| Math↔General cross | s2 | 0.010 | 0.063 |
+| Math within | s0-s1 | — | 0.123 |
+| Math within | s0-s2 | — | 0.045 |
+| Math within | s1-s2 | — | 0.094 |
+| General within | s0-s1 | — | 0.069 |
+| General within | s0-s2 | — | 0.062 |
+| General within | s1-s2 | — | 0.080 |
+
+Note: 3-point scan (α=0.0, 0.5, 1.0) due to DGX ARM64 CUDA hang at intermediate alphas on these domains. Barrier computed via Frankle definition from the 3 measured points.
+
+### A.9 Layer-Selective Interpolation
 
 | Merged layers | Code barrier | Medical barrier |
 |:---|:---:|:---:|

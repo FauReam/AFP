@@ -83,14 +83,16 @@ Key observations:
 
 ### 4.3 Within-Domain LMC Baseline
 
-To calibrate the cross-domain barriers, we measure LMC between different seeds of the *same* domain (3 pairs each for code and medical, standard divergence). For each pair, we evaluate on the domain's own data:
+To calibrate the cross-domain barriers, we measure LMC between different seeds of the *same* domain (3 pairs each, standard divergence). For each pair, we evaluate on the domain's own data. We extend this analysis to two additional domains (math and general reasoning) to test whether the stability pattern generalizes:
 
-| Domain | Within-domain barrier |
-|--------|----------------------|
-| Code | 0.048 ± 0.000 |
-| Medical | 0.147 ± 0.027 |
+| Domain | Within-domain barrier | Interpretation |
+|--------|:---:|------|
+| Code | 0.048 ± 0.000 | Highly stable — near-zero seed variance |
+| General | 0.071 ± 0.007 | Stable — low seed variance |
+| Math | 0.087 ± 0.032 | Moderately unstable — moderate seed variance |
+| Medical | 0.147 ± 0.027 | Unstable — 3× code barrier |
 
-For code, the within-domain barrier (0.048) is nearly identical to the cross-domain barrier at standard divergence (0.053). Domain difference contributes negligibly. For medical, the within-domain barrier (0.147) is substantially higher than the cross-domain barrier (0.051), indicating that medical fine-tuning is intrinsically less stable across seeds — the variance between two medical training runs can exceed the variance between code and medical models trained at the same intensity. The dominant source of barrier height is the *degree of weight displacement combined with per-domain training stability*, not domain dissimilarity itself.
+The four domains form a stability spectrum rather than a binary contrast. Code and general models exhibit near-identical within- and cross-domain barriers (e.g., code within 0.048 ≈ code↔medical cross 0.053), while math shows intermediate instability and medical consistently produces the highest within-domain barriers. The cross-domain barrier between math and general models (0.012 on code evaluation / 0.078 on medical evaluation) is comparable to the code↔medical cross-domain barrier (0.053 / 0.051), confirming that domain difference per se contributes negligibly to barrier height. The dominant source of LMC barrier is per-domain training stability — independent of which other domain the model is compared against.
 
 ### 4.4 Cross-Domain Asymmetry
 
@@ -159,7 +161,7 @@ The Gaussian perturbation experiment (§4.7) reveals that unstructured weight no
 
 The layer-selective interpolation experiment (§4.8) shows that the barrier is almost entirely driven by early transformer layers (0-7). Deep layers (16-23) can be merged with near-zero penalty. This finding, combined with the per-block pattern analysis, suggests a practical two-tier merging strategy: apply conservative, importance-weighted merging to early layers while using aggressive linear interpolation for late layers.
 
-The within-domain baselines reveal domain-specific stability differences. For code, within-domain (0.048) and cross-domain (0.053) barriers are equivalent — domain difference contributes nothing. For medical, the within-domain barrier (0.147) exceeds the cross-domain barrier (0.051), indicating that medical training trajectories are intrinsically higher-variance. Two medical models trained on the same data can differ more in the loss landscape than a code and medical model trained at the same intensity.
+The within-domain baselines across four domains reveal a stability spectrum rather than a binary contrast. Code (0.048) and general (0.071) models exhibit near-identical within- and cross-domain barriers — domain difference contributes nothing. Math (0.087) shows intermediate instability, and medical (0.147) consistently produces the highest within-domain barriers. Two medical models trained on the same data can differ more in the loss landscape than a code and medical model trained at the same intensity. The fact that the cross-domain barrier between math and general (0.012/0.078) is comparable to code↔medical (0.053/0.051) further confirms that domain difference per se is not the dominant factor — per-domain training stability is.
 
 The noise-floor calibration confirms measurement validity. Identical model copies produce a barrier of ~0.000, ruling out numerical artifacts. Pretrained-to-random-init interpolation yields a medical-domain barrier of 0.22, providing a reference calibration point. The high-divergence cross-domain medical barrier (0.23) is comparable to this reference, though we note that the high-divergence condition has a convergence confound (higher self-domain loss), and the reference value itself has uncharacterized variance from a single measurement. Both numbers should be interpreted as indicative rather than precise bounds.
 
@@ -174,7 +176,7 @@ A practical implication: our layer-selective results suggest that the standard "
 - **Permutation invariance.** Following Entezari et al. (2022), we note that fine-tuned models from the same pretrained checkpoint are generally permutation-aligned by construction — unlike independently trained models, they share the same weight-space orientation. Our within-domain barriers (code: 0.048, medical: 0.147) may partially reflect residual permutation drift during aggressive fine-tuning, particularly for medical models. A Git Re-Basin alignment check (Ainsworth et al., 2023) on the highest-barrier pair would quantify this contribution; we leave this to future work and note that our trajectory-level evidence (§4.6) — which shows divergent patterns within single training runs — is unaffected by permutation concerns.
 
 - **Single model family.** Results are based on Pythia-1.4B. A preliminary scaling experiment with Pythia-160M (ΔW ≈ 0.3%, both models barely moved from pretrained) produced barriers of 0.001 (code) and 0.056 (medical), consistent with the trend that barrier magnitude tracks weight displacement. Systematic scaling across model sizes is left to future work.
-- **Task framing.** Our training data comes from VersaPRM, a process reward model dataset where both "code" and "medical" tasks involve binary classification of reasoning step correctness. While the underlying text distributions differ, both models learn structurally similar verification skills. Our use of "domain" throughout this paper should be understood as "task distribution" rather than fundamentally unrelated domains. Results may differ for more radically different tasks (e.g., generation vs. classification) or for genuine domain-adaptation corpora (Gururangan et al., 2020).
+- **Task framing and domain scope.** Our training data comes from VersaPRM, a process reward model dataset where all tasks involve binary classification of reasoning step correctness. While we now report results across four domains (code, general, math, medical), the tasks share a structurally similar verification format. Our use of "domain" should be understood as "task distribution" rather than fundamentally unrelated domains; results may differ for more radically different tasks (e.g., generation vs. classification) or for genuine domain-adaptation corpora (Gururangan et al., 2020).
 - **High-divergence convergence.** The high-divergence models achieve higher self-domain loss than standard-divergence models, suggesting that the aggressive optimization settings trade off convergence quality for weight displacement. The barriers reported for these models may reflect a combination of weight displacement and under-convergence.
 - **Seed count.** Three seeds per condition provide meaningful estimates of variance (bootstrap 95% CIs are reported in the supplementary analysis), but larger seed counts would tighten the confidence intervals, particularly for the high-divergence medical condition where inter-seed variance is large.
 
