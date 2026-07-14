@@ -5,7 +5,7 @@ Theory predicts medical > code curvature."""
 import torch, json, numpy as np, time
 from pathlib import Path
 import sys
-PROJECT = Path(__file__).resolve().parent.parent
+PROJECT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT / 'src')); sys.path.insert(0, str(PROJECT))
 from AFP.protocol import AFPAgent
 from scripts.run_ivn_phase0 import load_data

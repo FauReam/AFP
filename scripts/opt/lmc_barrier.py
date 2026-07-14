@@ -22,10 +22,10 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModel
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
 from AFP.protocol import AFPAgent, PRMHead
 
-PROJECT = Path(__file__).resolve().parent.parent
+PROJECT = Path(__file__).resolve().parent.parent.parent
 MAX_LEN = 384
 
 

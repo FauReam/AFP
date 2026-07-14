@@ -9,7 +9,7 @@ Usage:
 import torch, sys, json, time, argparse
 from pathlib import Path
 
-PROJECT = Path(__file__).resolve().parent.parent
+PROJECT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT / 'src'))
 sys.path.insert(0, str(PROJECT))
 from AFP.protocol import AFPAgent

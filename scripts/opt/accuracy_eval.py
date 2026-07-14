@@ -3,7 +3,7 @@
 import torch, sys, time, json
 from pathlib import Path
 
-PROJECT = Path(__file__).resolve().parent.parent
+PROJECT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT / 'src')); sys.path.insert(0, str(PROJECT))
 from AFP.protocol import AFPAgent
 from scripts.run_ivn_phase0 import load_data
