@@ -1,0 +1,401 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,amsthm,bm,mathtools}
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Hess}{\mathbf{H}}
+\newcommand{\btheta}{\bm{\theta}}
+\newcommand{\bDelta}{\bm{\Delta}}
+\newcommand{\bxi}{\bm{\xi}}
+
+\begin{document}
+
+\title{A Random Matrix Theory of Linear Mode Connectivity:\\Hessian-Alignment Governs Training-Stability-Dependent Barriers}
+\author{}
+\date{}
+\maketitle
+
+\section{Quadratic Expansion of the Interpolation Barrier}
+
+Let $\btheta^*_A, \btheta^*_B \in \R^d$ be two local minima of the loss $L(\btheta)$
+obtained by training from different random seeds on the same dataset $\mathcal{D}$.
+Define the linear interpolation
+\begin{equation}
+\btheta(\alpha) = (1-\alpha)\btheta^*_A + \alpha\btheta^*_B,\qquad \alpha\in[0,1],
+\end{equation}
+and the displacement vector
+\begin{equation}
+\bDelta \equiv \btheta^*_B - \btheta^*_A.
+\end{equation}
+The \emph{linear mode connectivity (LMC) barrier} is
+\begin{equation}
+\mathcal{B}(\btheta^*_A,\btheta^*_B) = \max_{\alpha\in[0,1]}
+\Bigl[L(\btheta(\alpha)) - \bigl((1-\alpha)L(\btheta^*_A)+\alpha L(\btheta^*_B)\bigr)\Bigr].
+\end{equation}
+
+Expanding $L$ to second order around the midpoint $\bar{\btheta}=(\btheta^*_A+\btheta^*_B)/2$
+(where the barrier empirically peaks in well-behaved cases):
+\begin{equation}
+L(\btheta(\alpha)) \approx L(\bar{\btheta})
++ \bigl(\alpha-\tfrac12\bigr)\bDelta^{\mathsf T}\nabla L(\bar{\btheta})
++ \tfrac12\bigl(\alpha-\tfrac12\bigr)^2\,\bDelta^{\mathsf T}\Hess(\bar{\btheta})\bDelta.
+\end{equation}
+At the midpoint $\nabla L(\bar{\btheta)}\approx \bm{0}$ when both endpoints are
+genuine minima. Retaining the quadratic term and subtracting the linear baseline gives
+the \emph{midpoint-symmetric quadratic barrier}:
+\begin{equation}
+\boxed{\mathcal{B}_{\mathrm{quad}} = \frac{1}{8}\,\bDelta^{\mathsf T}\Hess(\bar{\btheta})\bDelta.}
+\label{eq:barrier_quad}
+\end{equation}
+Equation~\eqref{eq:barrier_quad} is the central object of our analysis. It shows that
+the barrier is governed by a single quadratic form: the \emph{curvature} $\Hess(\bar{\btheta})$
+evaluated in the \emph{direction} $\bDelta$.
+
+\medskip\noindent
+\textbf{Immediate consequence---Gaussian noise vs.\ training.}
+The paper reports that isotropic Gaussian noise $\bDelta_{\mathrm{noise}}\sim\mathcal{N}(\bm{0},\sigma^2\mathbf{I}_d)$
+at $\|\bDelta_{\mathrm{noise}}\|/\|\bar{\btheta}\|=8\%$ yields $\mathcal{B}\leq0.014$, while training
+at $\|\bDelta_{\mathrm{train}}\|=1.5\%$ yields $\mathcal{B}=0.053$, a $9\times$ larger barrier from
+a $5.3\times$ \emph{smaller} displacement. From~\eqref{eq:barrier_quad}:
+\begin{align}
+\mathcal{B}_{\mathrm{noise}} &\approx \frac{\sigma^2}{8d}\,\Tr(\Hess), \label{eq:noise}\\
+\mathcal{B}_{\mathrm{train}} &\approx \frac{1}{8}\sum_{i=1}^d \lambda_i\,(\mathbf{v}_i^{\mathsf T}\bDelta_{\mathrm{train}})^2,
+\label{eq:train}
+\end{align}
+where $\{\lambda_i,\mathbf{v}_i\}_{i=1}^d$ is the eigendecomposition of $\Hess(\bar{\btheta})$.
+The training displacement $\bDelta_{\mathrm{train}}$ is \emph{not} isotropic: it aligns
+preferentially with the large-eigenvalue (sharp) eigenvectors of $\Hess$. Defining the
+\emph{Hessian-alignment ratio}:
+\begin{equation}
+\boxed{\rho(\bDelta,\Hess) \equiv \frac{\bDelta^{\mathsf T}\Hess\,\bDelta}{\|\bDelta\|^2}\,
+\Big/\,\frac{\Tr(\Hess)}{d},}
+\end{equation}
+the normalized barrier ratio is
+\begin{equation}
+\frac{\mathcal{B}_{\mathrm{train}} / \|\bDelta_{\mathrm{train}}\|^2}
+{\mathcal{B}_{\mathrm{noise}} / \|\bDelta_{\mathrm{noise}}\|^2}
+= \rho(\bDelta_{\mathrm{train}},\Hess) \approx \frac{0.053/(0.015)^2}{0.014/(0.08)^2}
+\approx 107.
+\end{equation}
+This factor of $\sim\!10^2$ directly measures the degree to which training dynamics
+concentrate weight displacement along high-curvature, task-relevant directions.
+
+\section{Hessian Spectral Model}
+
+We model the Hessian at a converged minimum as a \emph{spiked random matrix}:
+\begin{equation}
+\Hess = \underbrace{\sum_{k=1}^K \lambda_k^{\mathrm{out}}\,\mathbf{u}_k\mathbf{u}_k^{\mathsf T}}_{\Hess_{\mathrm{signal}}}
+\;+\; \underbrace{\mathbf{W}\mathbf{W}^{\mathsf T}}_{\Hess_{\mathrm{bulk}}},
+\label{eq:spiked_hessian}
+\end{equation}
+where:
+\begin{itemize}
+\item $\Hess_{\mathrm{bulk}} = \mathbf{W}\mathbf{W}^{\mathsf T}$ with $\mathbf{W}\in\R^{d\times m}$,
+$m$ being the number of data points contributing to the Gauss--Newton component of the Hessian.
+Its eigenvalue density follows the \textbf{Marchenko--Pastur law}
+$\mu_{\mathrm{MP}}(\lambda) = \frac{1}{2\pi\sigma^2}\frac{\sqrt{(\lambda_+-\lambda)(\lambda-\lambda_-)}}{\lambda q}$,
+with $q = m/d$ and spectral edges $\lambda_\pm = \sigma^2(1\pm\sqrt{q})^2$.
+\item $\Hess_{\mathrm{signal}}$ consists of $K$ rank-1 spikes with eigenvalues
+$\lambda_k^{\mathrm{out}} \gg \lambda_+$, representing task-specific sharp directions.
+\item The eigenvectors $\{\mathbf{u}_k\}$ encode the \emph{task structure}---they span the subspace
+in which the loss surface is curved by the data.
+\end{itemize}
+
+\medskip\noindent
+\textbf{Domain-dependent spectral parameters.}
+From the empirical phenomenology we infer the following spectral signatures:
+
+\begin{center}
+\begin{tabular}{c|cc|c}
+\textbf{Property} & \textbf{Code (C)} & \textbf{Medical (M)} & \textbf{Interpretation} \\
+\hline
+$K$ (number of spikes) & $\approx$ 5--15  & $\approx$ 30--80  & M has more ``sharp features'' \\
+$\lambda_k^{\mathrm{out}}$ (spike magnitude) & moderate (10--50$\times\lambda_+$) & large (50--200$\times\lambda_+$) & M task curvature dominates \\
+$\lambda_+$ (bulk edge) & low ($\approx$0.01--0.1) & moderate ($\approx$0.05--0.5) & M gradients are noisier \\
+$\Tr(\Hess)/d$ (mean curvature) & $\approx$ 1--5 & $\approx$ 5--20 & M landscape is overall sharper \\
+\end{tabular}
+\end{center}
+
+\section{Why the Barrier Follows an Inverted-U for Code but Grows Monotonically for Medical}
+
+Let $t\in[0,T]$ denote the training step. Two models $\btheta_1(t),\btheta_2(t)$
+evolve from the same initialization $\btheta_0$ under SGD with different batch ordering.
+We decompose the displacement into \emph{signal-aligned} and \emph{bulk} components:
+\begin{equation}
+\bDelta(t) = \underbrace{\sum_{k=1}^K c_k(t)\,\mathbf{u}_k}_{\bDelta_\parallel(t)}
+\;+\; \underbrace{\bDelta_\perp(t)}_{\in\,\mathrm{span}(\Hess_{\mathrm{bulk}})},
+\qquad c_k(t) = \mathbf{u}_k^{\mathsf T}\bDelta(t).
+\end{equation}
+
+The barrier~\eqref{eq:barrier_quad} becomes
+\begin{equation}
+\mathcal{B}(t) \approx \frac{1}{8}\Bigl(
+\underbrace{\sum_{k=1}^K \lambda_k^{\mathrm{out}}\,c_k^2(t)}_{\text{signal contribution}}
+\;+\;
+\underbrace{\bDelta_\perp^{\mathsf T}\Hess_{\mathrm{bulk}}\bDelta_\perp}_{\text{bulk contribution}}
+\Bigr).
+\label{eq:barrier_decomposed}
+\end{equation}
+
+\begin{proposition}[Inverted-U dynamics for ``simple'' domains]\label{prop:inverted_u}
+Consider a domain with $K$ moderate spikes. SGD dynamics exhibit two phases:
+
+\noindent\textbf{Phase I (Descent, $t<t_c$):} Both models descend the loss basin.
+The gradient signal $\nabla L$ is large and aligned with the spike subspace,
+so $|c_k(t)|$ grows as $\sim\eta t\,\E[\|\mathbf{u}_k^{\mathsf T}\nabla L\|]$.
+The barrier \emph{grows} as $\mathcal{B}(t)\propto t^2$.
+
+\noindent\textbf{Phase II (Basin-floor diffusion, $t>t_c$):} After convergence,
+$\nabla L\approx\bm{0}$ and SGD noise $\bxi(t)\sim\mathcal{N}(\bm{0},\bm{\Sigma}(t))$ dominates.
+Importantly, for \emph{simple} domains, SGD noise is predominantly isotropic in the bulk subspace:
+$\bm{\Sigma}(t)\approx\sigma_{\mathrm{SGD}}^2\mathbf{I}_d$ within the flat directions, while
+the spike-aligned components \emph{saturate}: $|c_k(t)|\to c_k^{\mathrm{sat}}$.
+Consequently $\bDelta_\perp(t)$ continues to grow as $\sim\sqrt{t}$ (random walk),
+but the signal term $\sum\lambda_k^{\mathrm{out}}c_k^2$ stabilizes.
+Since $\lambda_+\ll\lambda_k^{\mathrm{out}}$, the barrier peaks at $t_c$ and then \emph{declines}
+relative to its peak---producing the observed inverted-U.
+
+The critical time $t_c$ is determined by $\|\nabla L(\btheta(t_c))\|<\epsilon$,
+i.e., when the models enter the quadratic basin.
+\end{proposition}
+
+\begin{proposition}[Monotonic growth for ``complex'' domains]\label{prop:monotonic}
+For a domain with many large spikes (medical), the SGD noise covariance $\bm{\Sigma}(t)$ is
+\emph{itself} concentrated in the spike subspace. The noise drives a persistent random walk
+along sharp directions: $c_k(t)\sim\mathcal{N}(0,\sigma_k^2 t)$ with $\sigma_k^2$ proportional
+to $\lambda_k^{\mathrm{out}}$ (fluctuation-dissipation relationship).
+Consequently, \emph{both} $\bDelta_\parallel$ and $\bDelta_\perp$ grow as $\sim\sqrt{t}$,
+and the barrier $\mathcal{B}(t)\propto t$ grows monotonically until gradient variance
+plateaus at late training.
+
+The plateau value $\mathcal{B}_\infty \approx \frac{1}{8}\sum_k \lambda_k^{\mathrm{out}}\sigma_k^2 T_{\mathrm{eff}}$
+where $T_{\mathrm{eff}}$ is the effective diffusion time.
+\end{proposition}
+
+\medskip\noindent
+\textbf{Empirical match.}
+The paper reports that for code, $\mathcal{B}$ peaks at step~200 ($\mathcal{B}\approx0.053$)
+and declines to $0.033$ by step~400, consistent with $t_c\approx200$.
+For medical, $\mathcal{B}$ grows from $0.173$ to $0.218$---a continued increase, consistent
+with the absence of a basin-floor diffusion regime where sharp-direction variance saturates.
+
+\section{The Layer-Wise Barrier Decomposition}
+
+The Hessian of a deep network has an approximate block-diagonal structure across layers
+(empirically validated; see Sagun et al., 2016). Writing $\Hess = \bigoplus_{\ell=1}^L\Hess_\ell$
+and $\bDelta = (\bDelta_1,\dots,\bDelta_L)$:
+\begin{equation}
+\mathcal{B} = \frac{1}{8}\sum_{\ell=1}^L \bDelta_\ell^{\mathsf T}\Hess_\ell\bDelta_\ell
+\equiv \sum_{\ell=1}^L \mathcal{B}_\ell.
+\end{equation}
+
+The empirical finding that layers~0--7 account for $75\%$ of the total barrier requires
+\emph{two} conditions:
+\begin{enumerate}
+\item \textbf{Larger Hessian eigenvalues in early layers.}
+Early layers encode broad, dataset-level features whose loss curvature is sharp;
+late layers encode instance-specific features in flatter directions.
+We model this as $\lambda_{\max}(\Hess_\ell) \propto e^{-\gamma\ell}$ with $\gamma>0$.
+\item \textbf{Larger weight displacement variance in early layers.}
+Early layers experience larger gradient variance across seeds because they learn
+the most dataset-global representations. We model $\E[\|\bDelta_\ell\|^2]\propto e^{-\delta\ell}$.
+\end{enumerate}
+
+Combining these:
+\begin{equation}
+\frac{\mathcal{B}_\ell}{\mathcal{B}} \approx
+\frac{e^{-(\gamma+\delta)\ell}}{\sum_{j=1}^{L}e^{-(\gamma+\delta)j}},
+\qquad
+\frac{\sum_{\ell=1}^{7}\mathcal{B}_\ell}{\mathcal{B}} \approx 0.75
+\;\Longrightarrow\; \gamma+\delta \approx 0.08\text{--}0.12.
+\end{equation}
+
+This exponential-layer model makes a \textbf{testable prediction}: the barrier fraction of
+layer $\ell$ should decay exponentially with $\ell$, with a rate that is domain-independent
+(since the $75\%$ figure appears robust across domains).
+
+\section{Seed-Pair Compatibility as Subspace Overlap}
+
+The striking finding that seed~s4 produces $\mathcal{B}=1.213$ with s1 but $\mathcal{B}=0.080$
+with s2---a $15\times$ difference---cannot be explained by $\|\bDelta\|$ alone. We propose
+a \emph{subspace compatibility} framework.
+
+\begin{definition}[Seed basin signature]
+For seed $i$, define the \emph{basin signature} as the rank-$K$ subspace
+\begin{equation}
+\mathcal{S}_i = \mathrm{span}\{\text{top-}K \text{ eigenvectors of }\Hess(\btheta^*_i)\text{ with }\lambda_k>\lambda_{\mathrm{thresh}}\}.
+\end{equation}
+Two seeds $i,j$ are \textbf{compatible} if $\mathcal{S}_i$ and $\mathcal{S}_j$ have large
+principal angles, i.e., their sharp subspaces are approximately aligned.
+\end{definition}
+
+When two seeds are compatible, the interpolation path $\btheta(\alpha)$ remains within the
+basin of low loss. When incompatible, the path passes through a region where the curvature
+subspaces are \emph{orthogonal}, forcing the interpolated model into high-loss terrain.
+
+Quantitatively, let $\mathbf{U}_i\in\R^{d\times K}$ be an orthonormal basis for $\mathcal{S}_i$.
+The \emph{subspace overlap} is
+\begin{equation}
+\kappa_{ij} = \frac{1}{K}\Tr(\mathbf{U}_i^{\mathsf T}\mathbf{U}_j\mathbf{U}_j^{\mathsf T}\mathbf{U}_i)
+= \frac{1}{K}\sum_{p,q=1}^K (\mathbf{u}_{i,p}^{\mathsf T}\mathbf{u}_{j,q})^2 \in [0,1].
+\end{equation}
+We conjecture that $\mathcal{B}(\btheta^*_i,\btheta^*_j) \propto 1/\kappa_{ij}$ up to
+a baseline floor:
+\begin{equation}
+\boxed{\mathcal{B}_{ij} \approx \mathcal{B}_0 + \frac{\mathcal{B}_1}{\kappa_{ij}+\epsilon},}
+\label{eq:compatibility}
+\end{equation}
+with $\mathcal{B}_0\approx0.03$ (the bulk-powered floor) and $\mathcal{B}_1\approx0.05$.
+For $\mathcal{B}=1.213$ we would infer $\kappa\approx0.04$ (nearly orthogonal sharp subspaces),
+while for $\mathcal{B}=0.080$ we infer $\kappa\approx0.63$ (substantial overlap).
+
+\begin{remark}
+This framework also explains the ``Gaussian noise'' null result: a random direction
+$\bDelta_{\mathrm{noise}}$ has negligible overlap with \emph{any} seed's sharp subspace,
+so $\kappa$ is effectively zero and the barrier reduces to the bulk contribution $\mathcal{B}_0$.
+\end{remark}
+
+\section{Cross-Domain vs.\ Within-Domain Barrier Asymmetry}
+
+The empirical finding is:
+\begin{itemize}
+\item Within-domain barriers: Code $0.048$, Medical $0.147$ (wide range, domain-dependent).
+\item Cross-domain barriers: $\approx0.05$ \emph{regardless} of which two domains are paired (narrow range).
+\end{itemize}
+
+From our framework, this follows naturally. A within-domain displacement $\bDelta_{A,A'}$ is
+\emph{specialized}: it lies predominantly in the spike subspace of domain $A$, leading to
+a barrier that reflects domain $A$'s sharpness. The cross-domain displacement
+$\bDelta_{A,B}$ projects onto the \emph{union} of spike subspaces:
+\begin{equation}
+\mathcal{S}_{A\cup B} = \mathrm{span}(\mathcal{S}_A \cup \mathcal{S}_B).
+\end{equation}
+However, because the model has limited capacity, the two domains' spike subspaces
+are approximately orthogonal in the high-dimensional weight space. Consequently:
+\begin{equation}
+\bDelta_{A,B}^{\mathsf T}\Hess_{\mathrm{signal},A}\bDelta_{A,B}
+\approx \bDelta_{A,A'}^{\mathsf T}\Hess_{\mathrm{signal},A}\bDelta_{A,A'}
+\end{equation}
+(the $A$-domain displacement sees its own sharp subspace regardless), but the \emph{midpoint}
+Hessian $\Hess(\bar{\btheta}_{A,B})$ has a different structure.
+
+At the midpoint of a cross-domain interpolation, the network's representations are a mixture
+of both domains. Its Hessian spectrum is \emph{intermediate}:
+\begin{equation}
+\Hess(\bar{\btheta}_{A,B}) \approx \alpha_A\Hess_A + \alpha_B\Hess_B + \Hess_{\mathrm{cross}},
+\end{equation}
+where $\Hess_{\mathrm{cross}}$ captures the curvature due to the incompatible representations.
+Empirically, the cross-domain barriers being consistently $\approx0.05$ suggests that
+$\Hess_{\mathrm{cross}}$ has a characteristic scale independent of the individual domains,
+determined by the ``incompatibility'' between the two learned representations.
+
+\section{Why Weight-Divergence Patterns Are Identical ($r=0.995$) Despite Different Barriers}
+
+Let $\bDelta_{\mathrm{code}}$ and $\bDelta_{\mathrm{med}}$ be the within-domain weight
+displacements for code and medical domains, respectively, measured \emph{layer-wise}.
+The near-perfect correlation $r=0.995$ of their layer-wise magnitudes means
+$\|\bDelta_{\mathrm{code},\ell}\| \propto \|\bDelta_{\mathrm{med},\ell}\|$ for every layer $\ell$.
+
+But the barrier differs because:
+\begin{equation}
+\mathcal{B}^{\mathrm{med}}_\ell \approx \frac{1}{8}\|\bDelta_{\mathrm{med},\ell}\|^2\,
+\rho_\ell^{\mathrm{med}}\,\frac{\Tr(\Hess_\ell^{\mathrm{med}})}{d_\ell},
+\end{equation}
+where $\rho_\ell^{\mathrm{med}}$ is the \emph{layer-wise alignment ratio}.
+Even if $\|\bDelta_{\mathrm{med},\ell}\| \approx c\cdot\|\bDelta_{\mathrm{code},\ell}\|$,
+the alignment ratio $\rho_\ell^{\mathrm{med}} \gg \rho_\ell^{\mathrm{code}}$ can dominate,
+as can the mean curvature $\Tr(\Hess_\ell^{\mathrm{med}})/d_\ell$.
+
+This is the central thesis of the paper expressed mathematically: \textbf{the barrier is
+determined by the direction of weight displacement relative to the local Hessian, not by
+its magnitude}, and the direction is controlled by training-stability-induced SGD noise structure.
+
+\section{Catastrophic Barriers at Intermediate $\Delta W$}
+
+The observation that $\mathcal{B}=1.043$ coexists with the best within-domain test
+performance at $\|\bDelta\|\approx5\%$ (step~200 for the code domain) reveals a
+\emph{non-monotonic basin connectivity}.
+
+Within a single domain, as training proceeds, two seed trajectories first diverge
+in the signal subspace (Phase~I), creating a barrier. But in Phase~II, the signal-aligned
+components of $\bDelta$ \emph{collapse} because both models converge to the same
+basin minimum, while only the bulk (low-curvature) component continues to grow.
+Thus $\mathcal{B}(t)$ can \emph{decrease} even as $\|\bDelta(t)\|$ increases.
+
+This is the signature of \textbf{basin-convergent SGD dynamics}: the sharp-subspace
+component of inter-seed displacement is transient, peaking when models are on opposite
+sides of the basin, and vanishing once both enter the basin floor.
+
+\begin{proposition}[Basin-collapse condition]\label{prop:collapse}
+For a domain with $K$ signal spikes, the signal-subspace displacement magnitude
+\begin{equation}
+\|\bDelta_\parallel(t)\|^2 = \sum_{k=1}^K c_k^2(t)
+\end{equation}
+satisfies a \emph{non-monotone} evolution: it grows during descent, peaks at $t_c$, and decays
+to a small residual at $t\gg t_c$. The total displacement $\|\bDelta(t)\|$ grows monotonically
+(dominated by $\|\bDelta_\perp\|$ after $t_c$), so the alignment ratio
+$\rho(\bDelta,\Hess)$ decays as $t^{-1}$ after $t_c$---producing the inverted-U barrier
+and the coexistence of large $\Delta W$ with low (or, at the peak, high) barrier.
+\end{proposition}
+
+\section{Summary of Theoretical Predictions}
+
+\begin{enumerate}
+\item \textbf{Hessian-alignment ratio $\rho$ governs barrier asymmetry.}
+$\mathcal{B} \propto \|\bDelta\|^2\cdot\rho(\bDelta,\Hess)$. For isotropic noise $\rho=1$;
+for training displacements $\rho\sim10^1$--$10^2$.
+
+\item \textbf{The inverted-U requires basin-convergent dynamics (Prop.~\ref{prop:inverted_u}).}
+It occurs iff SGD noise in the signal subspace saturates while bulk-subspace diffusion continues.
+
+\item \textbf{Monotonic barrier growth (Prop.~\ref{prop:monotonic})} occurs when SGD noise
+is amplified in the signal subspace (large $K$, large $\lambda_k^{\mathrm{out}}$), so the signal
+component of $\bDelta$ grows without bound until the learning rate decays to zero.
+
+\item \textbf{Layer-wise barrier decays exponentially} with layer depth $\ell$:
+$\mathcal{B}_\ell\propto e^{-\eta\ell}$, with $\eta\approx0.08$--$0.12$.
+
+\item \textbf{Seed compatibility} is quantified by subspace overlap $\kappa_{ij}$ in
+Eq.~\eqref{eq:compatibility}; barriers scale as $1/\kappa_{ij}$.
+
+\item \textbf{Cross-domain barrier uniformity} arises from the dominant contribution of
+$\Hess_{\mathrm{cross}}$, which has a characteristic scale set by representational incompatibility.
+
+\item \textbf{Catastrophic coexistence} (high barrier + good performance at intermediate $\Delta W$)
+is a direct consequence of the transient peak in $\|\bDelta_\parallel\|$ (Prop.~\ref{prop:collapse}).
+
+\item \textbf{Identical weight-divergence patterns} ($r=0.995$) with different barriers
+confirm that $\rho_\ell^{\mathrm{med}}\gg\rho_\ell^{\mathrm{code}}$ layer-by-layer.
+\end{enumerate}
+
+\section{Experimental Validations (Proposed)}
+
+To test this framework, one should measure:
+
+\begin{itemize}
+\item \textbf{Alignment ratio $\rho(\bDelta,\Hess)$} via Hessian-vector products
+$\Hess\bDelta$ computed with automatic differentiation, for both within-domain and
+cross-domain interpolations. Predict $\rho_{\mathrm{med}}/\rho_{\mathrm{code}} \approx 5$--$10$.
+
+\item \textbf{Spike-count $K$} by Lanczos spectral density estimation of $\Hess$ at
+domain-specific minima. Predict $K_{\mathrm{med}}/K_{\mathrm{code}} \approx 3$--$6$.
+
+\item \textbf{Bulk-edge $\lambda_+$} from the Marchenko--Pastur fit. Predict
+$\lambda_+^{\mathrm{med}}/\lambda_+^{\mathrm{code}} \approx 2$--$5$.
+
+\item \textbf{Subspace overlap $\kappa_{ij}$} via CCA or principal angles between
+top-$K$ Hessian eigenvectors of seed pairs. Predict $\kappa_{s4,s1}\ll\kappa_{s4,s2}$.
+
+\item \textbf{Layer-wise alignment} $\rho_\ell$ for each layer. Predict
+$\rho_\ell^{\mathrm{med}}>\rho_\ell^{\mathrm{code}}$ at all $\ell$, with the
+ratio largest in early layers ($\ell\leq7$).
+\end{itemize}
+
+\end{document}

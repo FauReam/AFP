@@ -1,0 +1,473 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{claim}{Claim}
+\newtheorem{corollary}{Corollary}
+\newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\bSigma}{\boldsymbol{\Sigma}}
+\newcommand{\bH}{\mathbf{H}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+
+\title{A Theoretical Model of Label-Noise-Driven Training Trajectory Divergence \\
+and Linear Mode Connectivity Barrier Dynamics}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+We provide a formal optimization-dynamics model that explains why
+medical-domain fine-tuning produces monotonically growing linear-mode-connectivity
+(LMC) barriers while code-domain fine-tuning exhibits an inverted-U barrier
+profile that declines during the low-learning-rate ``putt'' phase.  The key
+mechanism is \emph{label-noise-induced gradient misalignment}, which prevents
+the low-LR convergence back to the pre-trained basin that reconnects code-domain trajectories.
+
+\section{Empirical Phenomena to Explain}
+
+\begin{enumerate}
+\item \textbf{Code domain}: barrier peaks at 0.053 (step $\sim$200, $\Delta W \approx 1.5\%$),
+      then declines to 0.033 at step 400.  Inverted-U shape.
+\item \textbf{Medical domain}: barrier grows monotonically $0.173 \to 0.218$,
+      plateaus without decline.
+\item \textbf{Gaussian noise} applied to weights produces negligible barrier
+      ($\max 0.014$) even at $\Delta W = 8\%$, while training produces 0.053 at
+      $\Delta W = 1.5\%$ --- a factor of 9--20$\times$ per unit $\Delta W$.
+\item \textbf{Early layers (0--7)} account for 75\% of total barrier; late
+      layers (16--23) have negligible barrier.
+\item \textbf{Seed-pair asymmetry}: seed $s_4$ paired with $s_1$ produces
+      barrier 1.213, but with $s_2$ produces 0.080.
+\item \textbf{Cross-domain barriers} are consistent ($\sim$0.05) regardless
+      of domain pair, while within-domain barriers span 0.048 (code) to
+      0.147 (medical).
+\item \textbf{At intermediate $\Delta W \sim 5\%$}, catastrophic barriers
+      (1.043) coexist with best self-domain performance.
+\end{enumerate}
+
+\section{SGD as a Stochastic Differential Equation}
+
+\subsection{Setup}
+
+Consider a neural network $f_\btheta: \mathcal{X} \to \R^K$ parameterized by
+$\btheta \in \R^d$ ($d \approx 1.4 \times 10^9$ for Pythia-1.4B).  We have
+a training set $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^N$.  The
+population loss is $L(\btheta) = \E_{(\mathbf{x},y) \sim P}[\ell(f_\btheta(\mathbf{x}), y)]$
+and the empirical loss is $\hat{L}(\btheta) = \frac{1}{N}\sum_i \ell(f_\btheta(\mathbf{x}_i), y_i)$.
+
+SGD with mini-batch $\mathcal{B}_t$ of size $B=128$ and learning rate $\alpha_t$:
+\begin{equation}
+\btheta_{t+1} = \btheta_t - \alpha_t \hat{\mathbf{g}}_t, \qquad
+\hat{\mathbf{g}}_t = \frac{1}{B}\sum_{i \in \mathcal{B}_t} \nabla_\btheta \ell(f_{\btheta_t}(\mathbf{x}_i), y_i).
+\end{equation}
+
+For small $\alpha_t$, this is well approximated by the continuous-time SDE (Li et al., 2017;
+Mandt et al., 2017):
+\begin{equation}
+d\btheta = -\nabla L(\btheta)\,dt + \sqrt{\alpha_t\,\bSigma(\btheta)}\,d\mathbf{W}_t,
+\label{eq:sde}
+\end{equation}
+where $\bSigma(\btheta) = \frac{1}{B}\mathrm{Cov}_{\mathcal{D}}[\nabla_\btheta \ell(f_\btheta(\mathbf{x}), y)]$
+is the gradient noise covariance matrix, and $\mathbf{W}_t$ is $d$-dimensional Brownian motion.
+
+\subsection{The Drive--Putt LR Schedule}
+
+The paper uses a cosine schedule with ``drive--putt'' structure:
+\begin{equation}
+\alpha_t = \begin{cases}
+\alpha_{\text{drive}} \approx 1 \times 10^{-4}, & t \in [0, 200] \\
+\alpha_{\text{putt}} \approx 1 \times 10^{-5},  & t \in [200, 400]
+\end{cases}
+\end{equation}
+
+The qualitative behavior differs sharply between phases:
+\begin{itemize}
+\item \textbf{Drive phase} ($\alpha_t$ large): The diffusion term
+      $\sqrt{\alpha_t \bSigma}$ dominates.  SGD explores the loss landscape
+      broadly.  Two independent seeds undergo distinct random walks, producing
+      weight divergence $\Delta W(t)$.
+\item \textbf{Putt phase} ($\alpha_t$ small): The drift term $-\nabla L$
+      dominates \emph{provided the gradient signal is clean}.  SGD converges
+      toward the nearest local minimum.  If two seeds land in overlapping
+      basins of attraction during the drive phase, they converge to nearby
+      minima during the putt phase, and the LMC barrier \emph{decreases}.
+\end{itemize}
+
+\section{Label Noise and Gradient Misalignment}
+
+\subsection{PRM Verification Data: Sources of Label Noise}
+
+In PRM (Process Reward Model) verification, each training example is a
+reasoning step annotated as $\{\text{correct}, \text{incorrect}\}$.
+
+\begin{itemize}
+\item \textbf{Code domain}: Correctness is deterministically verifiable by
+      execution.  Label noise is negligible: $\Pr(y_{\text{true}} \neq y_{\text{annotated}} | \mathbf{x}) \approx 0$.
+\item \textbf{Medical domain}: Step correctness is inherently ambiguous.
+      Clinical reasoning admits multiple valid pathways; annotator
+      disagreement is common.  We model this as:
+      \begin{equation}
+      \Pr(y_{\text{true}} = \text{correct} \mid \mathbf{x}) = p(\mathbf{x}),
+      \end{equation}
+      where $p(\mathbf{x}) \in (0.4, 0.6)$ for a substantial fraction of
+      examples.  This is \emph{maximum-entropy label noise}: the observed
+      label $y$ carries minimal information about the true function.
+\end{itemize}
+
+\subsection{Gradient Noise Covariance Under Label Noise}
+
+Let $g(\btheta; \mathbf{x}, y) = \nabla_\btheta \ell(f_\btheta(\mathbf{x}), y)$.
+Under label noise with flip probability $\varepsilon(\mathbf{x}) =
+\min(p(\mathbf{x}), 1-p(\mathbf{x}))$:
+
+\begin{proposition}[Label-noise inflation of gradient covariance]
+\label{prop:noise}
+For binary classification with cross-entropy loss, the gradient noise
+covariance decomposes as:
+\begin{equation}
+\bSigma(\btheta) = \underbrace{\bSigma_{\text{clean}}(\btheta)}_{\text{sampling noise}} \;+\;
+\underbrace{\bSigma_{\text{label}}(\btheta)}_{\text{label noise}},
+\end{equation}
+where
+\begin{equation}
+\bSigma_{\text{label}}(\btheta) \approx \frac{1}{B}\,\E_{\mathbf{x}}\Big[
+\varepsilon(\mathbf{x})(1 - \varepsilon(\mathbf{x}))\,
+\delta g(\mathbf{x}) \, \delta g(\mathbf{x})^\top \Big],
+\end{equation}
+with $\delta g(\mathbf{x}) = g(\btheta; \mathbf{x}, \text{correct}) - g(\btheta; \mathbf{x}, \text{incorrect})$
+being the gradient difference between the two label assignments.
+
+The key factor $\varepsilon(1-\varepsilon)$ is maximized at $\varepsilon = 0.5$,
+giving:
+\begin{equation}
+\frac{\|\bSigma_{\text{label}}^{\text{med}}\|}{\|\bSigma_{\text{label}}^{\text{code}}\|}
+\approx \frac{0.5 \times 0.5}{0.05 \times 0.95} \approx 5.3\times.
+\end{equation}
+\end{proposition}
+
+\subsection{Effective Diffusion During Drive Phase}
+
+The weight divergence between two seeds $A, B$ after the drive phase
+($T_{\text{drive}} = 200$ steps) is approximately:
+\begin{equation}
+\E[\|\btheta_T^A - \btheta_T^B\|^2] \approx
+2\alpha_{\text{drive}} T_{\text{drive}} \, \mathrm{tr}(\bSigma(\btheta_0)).
+\label{eq:divergence}
+\end{equation}
+
+\begin{claim}
+The medical gradient noise's 5--10$\times$ inflation of $\mathrm{tr}(\bSigma)$
+directly produces larger $\Delta W$ at the end of the drive phase, and
+\emph{qualitatively different} directions of divergence (less aligned with
+the true loss gradient, more random).
+\end{claim}
+
+\section{Convergence vs.\ Non-Convergence During Putt Phase}
+
+\subsection{The Stationary Distribution}
+
+Near a local minimum $\btheta^*$, the loss is approximately quadratic:
+$L(\btheta) \approx L(\btheta^*) + \frac{1}{2}(\btheta - \btheta^*)^\top \bH (\btheta - \btheta^*)$.
+The SDE~\eqref{eq:sde} becomes an Ornstein-Uhlenbeck process:
+\begin{equation}
+d\btheta = -\bH(\btheta - \btheta^*)\,dt + \sqrt{\alpha_{\text{putt}}\,\bSigma(\btheta^*)}\,d\mathbf{W}_t.
+\end{equation}
+
+The stationary distribution is $\mathcal{N}(\btheta^*, \alpha_{\text{putt}} \bH^{-1} \bSigma \bH^{-1})$.
+Two key metrics:
+
+\begin{enumerate}
+\item \textbf{Convergence time}: $\tau_{\text{conv}} \sim 1/(\alpha_{\text{putt}} \lambda_{\min}(\bH))$.
+      With $\alpha_{\text{putt}} = 10^{-5}$ and typical $\lambda_{\min}(\bH) \sim 10^{-2}$,
+      $\tau_{\text{conv}} \sim 10^7$ gradient steps.  The putt phase (200 steps)
+      is far too short for full convergence.
+
+\item \textbf{Stationary spread}: $\sigma_{\text{stat}} \sim
+      \sqrt{\alpha_{\text{putt}} \, \|\bH^{-1} \bSigma \bH^{-1}\|}$.
+      Larger $\bSigma$ (medical) $\implies$ wider stationary distribution
+      $\implies$ models from different seeds are more likely to occupy
+      \emph{different} minima.
+\end{enumerate}
+
+\subsection{The Peclet Number: Drift vs.\ Diffusion}
+
+Define the local Peclet number comparing deterministic drift to stochastic diffusion:
+\begin{equation}
+\mathrm{Pe}(\btheta) = \frac{\|\nabla L(\btheta)\|}{\sqrt{\alpha_{\text{putt}} \, \mathrm{tr}(\bSigma(\btheta))}}.
+\end{equation}
+
+\begin{itemize}
+\item $\mathrm{Pe} \gg 1$: Drift dominates.  SGD moves deterministically
+      toward the nearest minimum.  Multiple seeds in the same basin converge
+      to nearby points.  Barrier \emph{decreases}.
+\item $\mathrm{Pe} \lesssim 1$: Diffusion competes with drift.  SGD wanders
+      without converging to a specific minimum.  Different seeds explore
+      different regions.  Barrier \emph{does not decrease}.
+\end{itemize}
+
+\begin{proposition}[Peclet ratio across domains]
+Under the label-noise model of Proposition~\ref{prop:noise}:
+\begin{equation}
+\frac{\mathrm{Pe}_{\text{code}}}{\mathrm{Pe}_{\text{medical}}}
+\approx \sqrt{\frac{\mathrm{tr}(\bSigma_{\text{med}})}{\mathrm{tr}(\bSigma_{\text{code}})}} \approx 2.3.
+\end{equation}
+At $\alpha_{\text{putt}} = 10^{-5}$, code models satisfy $\mathrm{Pe} \gg 1$
+in most of the relevant region; medical models are marginal ($\mathrm{Pe} \sim 1$)
+in large portions of the loss landscape.
+\end{proposition}
+
+\subsection{Putt-Phase Dynamics: The Full Picture}
+
+During the putt phase (steps 200--400, $\sim$200 gradient updates):
+
+\noindent\textbf{Code models} ($\mathrm{Pe} \gg 1$, small $\bSigma$):
+\begin{itemize}
+\item Drift dominates.  $\btheta_t$ moves deterministically toward
+      $\btheta^*_{\text{code}}$, a minimum in or near the pre-trained basin.
+\item Two seeds $A, B$ both converge to nearby minima $\btheta^*_A, \btheta^*_B$
+      in the same broad basin.
+\item The linear interpolation barrier $B(\btheta^A_{400}, \btheta^B_{400})$
+      decreases relative to $B(\btheta^A_{200}, \btheta^B_{200})$.
+\item This produces the \textbf{inverted-U}: barrier rises during drive
+      (seeds diverge), then falls during putt (seeds converge to same basin).
+\item Quantitatively: barrier drops from 0.053 $\to$ 0.033, a 38\%
+      reduction in 200 steps.
+\end{itemize}
+
+\noindent\textbf{Medical models} ($\mathrm{Pe} \sim 1$, large $\bSigma$):
+\begin{itemize}
+\item Diffusion is comparable to drift.  $\btheta_t$ does not converge
+      cleanly to any particular minimum.
+\item Two seeds $A, B$ wander quasi-randomly, landing in \emph{different}
+      local minima whose distance grows over time.
+\item The barrier $B(\btheta^A_t, \btheta^B_t)$ grows monotonically because:
+      \begin{enumerate}
+      \item Each seed's path is dominated by different noise realizations.
+      \item The minima they approach are in different, disconnected basins.
+      \item Label-noise-induced gradient misalignment means even the
+            \emph{expected} gradient points in different directions for
+            different seeds at the same $\btheta$ (the noise is
+            \emph{state-dependent} as well as seed-dependent).
+      \end{enumerate}
+\item Quantitatively: barrier grows from 0.173 $\to$ 0.218, a 26\%
+      \emph{increase} over the same 200 steps.
+\end{itemize}
+
+\section{Why Gaussian Noise Produces Negligible Barriers}
+
+The empirical finding that Gaussian weight perturbation ($\max$ barrier 0.014
+at $\Delta W = 8\%$) is far weaker than training-induced barriers (0.053 at
+$\Delta W = 1.5\%$) has a clear theoretical explanation:
+
+\begin{claim}[Isotropic vs.\ structured perturbations]
+Gaussian noise $\boldsymbol{\epsilon} \sim \mathcal{N}(0, \sigma^2 \mathbf{I}_d)$
+is \textbf{isotropic} in parameter space.  The network function $f_\btheta$
+is highly insensitive to isotropic perturbations because:
+\begin{enumerate}
+\item Most directions in parameter space are ``flat'' (near-zero Hessian
+      eigenvalues) and do not affect the function.
+\item The network can internally compensate: a random perturbation in
+      layer $\ell$ is partially canceled by adjustments in layer $\ell+1$
+      during the forward pass.
+\item The effective functional change $\|f_{\btheta + \boldsymbol{\epsilon}} - f_\btheta\|$
+      scales as $\mathcal{O}(\|\boldsymbol{\epsilon}\|/\sqrt{d})$ due to
+      concentration of measure in high dimension ($d \sim 10^9$).
+\end{enumerate}
+\end{claim}
+
+In contrast, SGD noise is \textbf{structured}:
+\begin{enumerate}
+\item It is concentrated in early layers (layers 0--7), which control
+      fundamental representations.  Small perturbations here propagate
+      nonlinearly through all subsequent layers.
+\item It is aligned with the gradient, which is the direction of
+      \emph{maximal} functional change per unit parameter change.
+\item It is correlated across parameters within each layer, producing
+      coherent rather than self-canceling changes.
+\end{enumerate}
+
+A simple scaling argument: if Gaussian noise of magnitude $\delta$ changes
+the function by $\sim \delta/\sqrt{d_{\text{eff}}}$ (where $d_{\text{eff}}$
+is the effective dimension of the parameter space), while SGD noise of the
+same magnitude changes the function by $\sim \delta \cdot \|\nabla_\btheta f\|$
+(which is $\mathcal{O}(1)$ in the gradient direction), then the ratio of
+functional impact is $\sim \sqrt{d_{\text{eff}}} \sim 10^4$, explaining why
+training-induced barriers are $\sim$10--100$\times$ larger per unit $\Delta W$.
+
+\section{Early-Layer Concentration of Barriers}
+
+The empirical finding that layers 0--7 account for 75\% of the total barrier
+has a natural explanation in our framework.
+
+\begin{proposition}[Layer-wise gradient noise structure]
+For transformer architectures, the gradient norm $\|\nabla_{\btheta_\ell} L\|$
+and the gradient noise covariance $\mathrm{tr}(\bSigma_\ell)$ are both
+concentrated in early layers during fine-tuning.  This is because:
+\begin{enumerate}
+\item Early layers learn input-formatting representations that must adapt
+      to the new domain (reasoning traces vs.\ pre-training text).
+\item Changes in early layers propagate multiplicatively through the
+      self-attention and FFN blocks of all subsequent layers.
+\item The effective ``gain'' from layer $\ell$ to the output is
+      $\sim \prod_{k=\ell}^{L} \|\mathbf{W}_k\|$, which is exponentially
+      larger for small $\ell$.
+\end{enumerate}
+\end{proposition}
+
+Thus, the same amount of parameter noise in layer 0 produces exponentially
+larger functional change than in layer 23, and the LMC barrier (which measures
+functional mismatch along the linear interpolation) is correspondingly
+concentrated in early layers.
+
+\section{Seed-Pair Compatibility: A Basin-Membership Model}
+
+The stark asymmetry in seed-pair barriers ($s_4$--$s_1$: 1.213 vs.\
+$s_4$--$s_2$: 0.080) can be modeled as a \textbf{basin-membership} problem.
+
+During the drive phase, each seed's trajectory is a random walk with
+state-dependent diffusion.  Whether two seeds land in the same basin of
+attraction of the putt-phase dynamics depends on:
+\begin{enumerate}
+\item The \textbf{initial noise realization} in the first few steps,
+      which sets the ``direction'' of the random walk.
+\item The \textbf{loss landscape geometry}: basins have finite width
+      $\sim R_{\text{basin}}$ in parameter space.
+\item If the distance between seeds at the drive--putt transition
+      exceeds $R_{\text{basin}}$, they fall into different basins and
+      the putt phase cannot reconnect them.
+\end{enumerate}
+
+\begin{claim}
+For code models, $R_{\text{basin}}$ is large (clean gradient signal $\to$
+broad, well-defined basin).  Most seed pairs land in the same basin
+$\to$ low within-domain barrier (0.048 on average).  For medical models,
+$R_{\text{basin}}$ is small (noisy gradient $\to$ fragmented landscape with
+many sharp local minima).  Seed pairs routinely land in different basins
+$\to$ high within-domain barrier (0.147 on average).  The asymmetry
+($s_4$ with $s_1$ vs.\ $s_2$) reflects whether the pair happened, by
+chance, to land in the same basin or different basins.
+\end{claim}
+
+\section{Cross-Domain Barriers: The Pre-Trained Basin as a Universal Anchor}
+
+The consistent cross-domain barrier ($\sim$0.05 regardless of domain pair)
+is explained by the fact that \textbf{all models start from the same
+pre-trained initialization $\btheta_0$}.
+
+Even though code and medical models diverge in \emph{different} directions
+from $\btheta_0$, their relative displacement from the pre-trained point is
+bounded by the total training budget (400 steps).  The cross-domain barrier
+measures the barrier between two different ``spokes'' radiating from a
+common hub ($\btheta_0$).  If the pre-trained basin is broad enough that
+all 400-step trajectories remain within it, the cross-domain barrier is
+just the distance across the basin, which is relatively constant.
+
+Formally, if $\btheta_t^{\text{code}}$ and $\btheta_t^{\text{med}}$ are both within
+the pre-trained basin of radius $R_0$, then the linear interpolation between
+them stays within the basin, and the barrier is bounded by the basin's
+internal curvature, which is domain-independent.
+
+\section{Coexistence of Catastrophic Barriers and Good Performance}
+
+At intermediate $\Delta W \sim 5\%$, catastrophic barriers (1.043) coexist
+with best self-domain performance.  This is the signature of a
+\textbf{rugged loss landscape with multiple disconnected, equally deep minima}.
+
+\begin{claim}
+The loss landscape of the fine-tuning objective contains multiple
+near-equally-deep local minima that are separated by high barriers.
+During the drive phase, SGD with different seeds discovers different
+minima.  All discovered minima have similarly low training loss (good
+self-domain performance), but the linear interpolation between minima in
+different basins must cross a high-loss region (the barrier of 1.043).
+
+This is the classic signature of \textbf{loss landscape fragmentation}
+under strong label noise: the noise breaks the convexity of the basin
+around $\btheta_0$, creating many sharp, disconnected minima.  The putt
+phase is too short to allow barrier-crossing transitions between these
+minima.
+\end{claim}
+
+\section{Quantitative Summary}
+
+\begin{center}
+\begin{tabular}{lccc}
+\hline
+\textbf{Quantity} & \textbf{Symbol} & \textbf{Code} & \textbf{Medical} \\
+\hline
+Label noise rate & $\varepsilon$ & $\lesssim 0.05$ & $\sim 0.3$--$0.5$ \\
+Gradient noise inflation & $\|\bSigma_{\text{label}}\|$ & baseline & $5$--$10\times$ \\
+Drive-phase $\Delta W$ & -- & $\sim 1.5\%$ & larger (est.\ $\sim 5\%$) \\
+Putt-phase P\'eclet number & Pe & $\gg 1$ & $\sim 1$ \\
+Barrier trajectory & $B(t)$ & inverted-U (peak 0.053 $\to$ 0.033) & monotonic (0.173 $\to$ 0.218) \\
+Within-domain barrier & $\langle B_{\text{intra}}\rangle$ & 0.048 & 0.147 \\
+Cross-domain barrier & $\langle B_{\text{cross}}\rangle$ & $\sim$0.05 & $\sim$0.05 \\
+Early-layer barrier fraction & -- & $\sim$75\% & $\sim$75\% \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Testable Predictions}
+
+\begin{enumerate}
+\item \textbf{Intervention on label noise}: If we synthetically inject
+      label noise into code-domain data (flip 30--50\% of labels), the
+      code-domain barrier should transition from inverted-U to monotonic,
+      and the within-domain barrier should rise toward the medical level
+      (0.147).
+\item \textbf{Extended putt phase}: Running the putt phase for $\gg 200$
+      steps (e.g., 2000 steps at $\alpha = 10^{-5}$) should eventually
+      cause medical barriers to decline, as even weak drift dominates
+      diffusion over sufficiently long timescales.  The convergence time
+      should scale as $\tau \propto 1/(\alpha \cdot \lambda_{\min})$ for
+      code and $\tau \propto \mathrm{tr}(\bSigma)/(\alpha \cdot \lambda_{\min}^2)$
+      for medical.
+\item \textbf{Per-step gradient alignment}: Measuring the cosine similarity
+      $\langle \nabla \hat{L}(\btheta_t), \nabla L(\btheta_t) \rangle$
+      should reveal lower values for medical training throughout the putt
+      phase, directly quantifying the gradient misalignment.
+\item \textbf{Layer-wise Hessian spectrum}: The early-layer Hessian should
+      exhibit larger top eigenvalues for both domains, but medical early
+      layers should additionally show a \emph{wider} spectrum (more
+      directions with moderate curvature), reflecting the more fragmented
+      loss landscape.
+\item \textbf{LMC under label smoothing}: Training medical models with
+      label smoothing (soft targets instead of hard 0/1 labels) should
+      reduce $\bSigma_{\text{label}}$ and produce barrier dynamics more
+      similar to the code domain, potentially recovering the inverted-U
+      shape.
+\end{enumerate}
+
+\section{Conclusion}
+
+The core theoretical mechanism is:
+
+\begin{center}
+\framebox{
+\begin{minipage}{0.9\textwidth}
+\textbf{Label noise} $\varepsilon_{\text{med}} \gg \varepsilon_{\text{code}}$
+$\implies$
+\textbf{Gradient noise covariance} $\bSigma_{\text{med}} \gg \bSigma_{\text{code}}$
+$\implies$
+\textbf{Drive phase}: larger, less structured weight divergence
+$\implies$
+\textbf{Putt phase}: P\'eclet number $\mathrm{Pe}_{\text{med}} \ll \mathrm{Pe}_{\text{code}}$
+$\implies$
+Diffusion competes with drift $\implies$ \textbf{no basin reconnection}
+$\implies$
+\textbf{Monotonic barrier} (medical) vs.\ \textbf{inverted-U barrier} (code).
+\end{minipage}
+}
+\end{center}
+
+The model unifies all seven empirical phenomena under a single mechanism
+(noise-inflated gradient covariance) and makes five falsifiable predictions.
+
+\end{document}
