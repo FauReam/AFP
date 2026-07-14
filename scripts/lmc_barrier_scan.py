@@ -42,6 +42,8 @@ print(f'  Models loaded ({time.time()-t0:.0f}s)', flush=True)
 
 # Load eval data (small subset for speed)
 t0_data = time.time()
+# Note: barrier formula uses Frankle definition: max(L) - (L(0)+L(1))/2
+# Both the JSON output and printed summary use this definition (verified at bottom of script)
 data_code = load_data('code', 'EleutherAI/pythia-1.4b')
 data_med = load_data('medical', 'EleutherAI/pythia-1.4b')
 print(f'  Data loaded ({time.time()-t0_data:.0f}s)', flush=True)
