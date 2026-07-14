@@ -213,7 +213,7 @@ for name, agent in models.items():
     for _ in range(10):
         # Random direction
         grads = []
-        agent.zero_grad()
+        agent.backbone.zero_grad()
         l = loss_fn(agent); l.backward()
         for p in agent.parameters():
             if p.grad is not None:
@@ -226,13 +226,13 @@ for name, agent in models.items():
         # θ + εv
         for p, dv in zip(agent.parameters(), v):
             if p.grad is not None: p.data.add_(dv, alpha=eps)
-        agent.zero_grad(); lp = loss_fn(agent); lp.backward()
+        agent.backbone.zero_grad(); lp = loss_fn(agent); lp.backward()
         gp = [p.grad.detach().clone() for p in agent.parameters() if p.grad is not None]
 
         # θ - εv
         for p, dv in zip(agent.parameters(), v):
             if p.grad is not None: p.data.add_(dv, alpha=-2*eps)
-        agent.zero_grad(); lm = loss_fn(agent); lm.backward()
+        agent.backbone.zero_grad(); lm = loss_fn(agent); lm.backward()
         gm = [p.grad.detach().clone() for p in agent.parameters() if p.grad is not None]
 
         # Restore θ
