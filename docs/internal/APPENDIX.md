@@ -72,6 +72,8 @@
 | Random init (seed 2) | 0.033 | 0.131 |
 | **Random init Mean ± σ** | **0.033 ± 0.001** | **0.150 ± 0.019** |
 
+Note: The earlier single-measurement estimate of 0.222 has been superseded by this 3-seed recalibration. The original measurement (seed 0 alone) was an outlier; the mean across 3 seeds (0.150) is the correct reference value used throughout the paper.
+
 ### A.7 Gaussian Perturbation Calibration
 
 | ΔW | Code barrier | Medical barrier |
