@@ -59,8 +59,8 @@ def prepare_data(domain: str, tokenizer, max_samples: int = 0) -> tuple[dict, di
     Cache filename includes MAX_LEN so different sequence-length configs
     don't silently reuse stale caches.
     """
-    cache_train = PROJECT / "data" / "versaprm" / f"train_{domain}_pythia_L{MAX_LEN}.pt"
-    cache_val = PROJECT / "data" / "versaprm" / f"val_{domain}_pythia_L{MAX_LEN}.pt"
+    cache_train = PROJECT / "data" / "versaprm" / f"train_{domain}_opt_L{MAX_LEN}.pt"
+    cache_val = PROJECT / "data" / "versaprm" / f"val_{domain}_opt_L{MAX_LEN}.pt"
 
     if cache_train.exists() and cache_val.exists():
         print(f"[data] loading cached: {cache_train}")
