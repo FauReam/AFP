@@ -154,7 +154,11 @@ The within-domain baselines reveal domain-specific stability differences. For co
 
 The noise-floor calibration confirms measurement validity. Identical model copies produce a barrier of ~0.000, ruling out numerical artifacts. Pretrained-to-random-init interpolation yields a medical-domain barrier of 0.22, providing a reference calibration point. The high-divergence cross-domain medical barrier (0.23) is comparable to this reference, though we note that the high-divergence condition has a convergence confound (higher self-domain loss), and the reference value itself has uncharacterized variance from a single measurement. Both numbers should be interpreted as indicative rather than precise bounds.
 
-A practical implication: model merging techniques that rely on linear interpolation are likely to work well for domain-specialized models fine-tuned from the same base, even at aggressive optimization settings. However, for domains like medical where training trajectories are intrinsically noisy, merging different seeds of the same domain can be more challenging than merging across domains.
+A practical implication: model merging techniques that rely on linear interpolation are likely to work well for domain-specialized models fine-tuned from the same base, even at aggressive optimization settings. However, the layer-selective results suggest that the standard "interpolate everything" approach is suboptimal — practitioners should consider interpolating only deep layers (16-23) while preserving domain-specific early representations. For domains like medical where training trajectories are intrinsically noisy, merging different seeds of the same domain can be more challenging than merging across domains, suggesting that ensembling via weight averaging may require domain-specific strategies.
+
+**Connection to prior work.** Our findings extend the LMC literature in several ways. The trajectory-level inverted-U pattern for code models provides direct evidence for the "wider optimum" hypothesis of Izmailov et al. (2018): as training converges, the model settles into a flatter minimum that is more amenable to linear interpolation. The fact that medical models do not exhibit this recovery suggests that convergence to a wide optimum is not guaranteed — it depends on the interaction between optimization dynamics and data properties. The per-block divergence pattern (r = 0.995 across domains) aligns with Neyshabur et al. (2020)'s finding that fine-tuning primarily modifies feature representations in early layers, while the layer-selective merge results provide a mechanistic explanation for why TIES-Merging (Yadav et al., 2023) and Task Arithmetic (Ilharco et al., 2023) can succeed despite large per-layer divergence in early blocks: the interference is concentrated, and resolving it in just 8 layers may suffice.
+
+**Implications for continual and multi-task learning.** The domain-specific stability asymmetry has implications beyond model merging. In continual learning, the EWC framework (Kirkpatrick et al., 2017) uses Fisher information to identify important parameters for preservation. Our per-block findings suggest that EWC-like protection could be concentrated on early layers where divergence is largest, while late layers can be freely updated. Similarly, the training trajectory results suggest a practical early-stopping criterion for multi-task fine-tuning: stop training when the barrier against the pretrained model begins to decline (for stable domains like code) or plateaus (for unstable domains like medical) — continuing beyond this point yields diminishing connectivity returns.
 
 ## 6. Limitations
 
@@ -196,12 +200,18 @@ A practical implication: model merging techniques that rely on linear interpolat
 
 ## Figures
 
-**Figure 1: LMC barrier curves.** Loss along the linear interpolation path θ(α) = (1-α)·θ_code + α·θ_medical, evaluated on both code (solid) and medical (dashed) test sets. Top: standard divergence (ΔW ≈ 1.4%). Bottom: high divergence (ΔW ≈ 8%). The shaded region represents ±1 standard deviation across 3 random seeds. Barriers increase with divergence but remain modest even at 8% weight displacement.
+**Figure 1: LMC barrier curves and comparative analysis.** Panels A-D: Loss along the linear interpolation path θ(α) = (1-α)·θ_code + α·θ_medical for standard (A,B) and high (C,D) divergence, evaluated on code and medical test sets. Colored lines represent 3 independent seeds. Panel E: Within-domain vs. cross-domain barrier comparison — code models show equivalence while medical models show 3× larger within-domain barriers. Panel F: Per-block weight divergence (code and medical overlaid, r = 0.995). See Appendix A for full numerical tables.
 
-![LMC barrier curves](../docs/reports/fig1_lmc_barrier.png)
+![LMC multi-panel](../docs/reports/fig1_lmc_multipanel.png)
 
 **Figure 2: Per-block weight divergence.** Root-mean-square weight difference from the pretrained checkpoint, computed per transformer block. Code and medical models at standard divergence are overlaid (r = 0.995). Divergence concentrates in early layers (layer 0: ~5.6% at standard divergence) and decreases roughly exponentially with depth.
 
 ![Per-block divergence](../docs/reports/fig2_per_block.png)
 
-**Figure 3: Training trajectory barrier.** LMC barrier height as a function of training step when interpolating between trajectory checkpoints and the pretrained base model. Code (blue) follows an inverted-U: barrier peaks at step 200 then declines as the model converges. Medical (red) grows monotonically and plateaus — the model never re-connects to the pretrained initialization. This within-run asymmetry confirms that domain-specific training stability, not weight displacement magnitude, determines barrier height.
+**Figure 3: Training trajectory, Gaussian calibration, and layer-selective analysis.** Panel A: Code domain trajectory — inverted-U barrier peaking at step 200 then declining. Panel B: Medical domain trajectory — monotonic barrier growth without recovery. Panel C: Gaussian noise perturbation produces negligible barriers (gray) regardless of ΔW magnitude, while training-induced displacement (green) creates barriers 4-9× larger. Panel D: Layer-selective interpolation — 75% of the barrier is concentrated in early layers (0-7), with late layers (16-23) showing near-zero barrier. See Appendix B-D for complete trajectory and calibration data.
+
+![Trajectory and analysis](../docs/reports/fig3_trajectory_barrier.png)
+
+## Appendix
+
+Supplementary material including complete barrier tables, trajectory data, bootstrap confidence intervals, weight divergence measurements for all 24+ models, and hardware specifications is available in `docs/internal/APPENDIX.md`.
