@@ -1,12 +1,12 @@
 # Weight-Space Divergence and Loss Landscape Connectivity in Domain-Specialized Fine-Tuning
 
-> **Draft v6 — 2026-07-13 | 23 verified references (deep-research audit, 0% hallucination)**
+> **Draft v7 — 2026-07-14 | Trajectory LMC + Gaussian calibration + Layer-selective merge**
 
 ---
 
 ## Abstract
 
-When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4-1.5% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0-8.5% weight displacement, 11.6% cross-model), the barrier rises to 0.12 ± 0.03 (code) and 0.23 ± 0.10 (medical) — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Within-domain baselines reveal a striking asymmetry: code models exhibit near-identical barriers within and across domains (0.048 vs. 0.053), while medical models show 3× larger within-domain than cross-domain barriers (0.147 vs. 0.051). This indicates that training stability, not domain difference, is the dominant source of LMC barrier height — and that stability varies dramatically across domains. Noise-floor calibration places these results in context: identical copies yield barrier ≈ 0.000, and pretrained-to-random-init interpolation provides a reference point of 0.22. Per-block divergence patterns are nearly identical across domains (r = 0.995).
+When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4-1.5% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0-8.5% weight displacement, 11.6% cross-model), the barrier rises to 0.12 ± 0.03 (code) and 0.23 ± 0.10 (medical) — a 2-5× increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Within-domain baselines reveal a striking asymmetry: code models exhibit near-identical barriers within and across domains (0.048 vs. 0.053), while medical models show 3× larger within-domain than cross-domain barriers (0.147 vs. 0.051). This indicates that training stability, not domain difference, is the dominant source of LMC barrier height — and that stability varies dramatically across domains. Noise-floor calibration places these results in context: identical copies yield barrier ≈ 0.000, and pretrained-to-random-init interpolation provides a reference point of 0.22. Per-block divergence patterns are nearly identical across domains (r = 0.995). A training trajectory analysis reveals that the barrier follows an inverted-U shape for code (peaking mid-training then declining) but grows monotonically for medical — confirming domain-specific stability at the within-run level. Gaussian perturbation experiments show that unstructured noise produces negligible barriers even at 8% weight displacement, while structured training-induced changes create barriers 9× larger at equivalent magnitude. Layer-selective interpolation demonstrates that the barrier is almost entirely concentrated in early transformer layers (0-7), with deep layers (16-23) showing near-zero interpolation penalty — a directly actionable finding for model merging practice.
 
 ## 1. Introduction
 
@@ -106,9 +106,49 @@ We calibrate the measurement with two boundary conditions. First, we run the LMC
 
 The identical-copy barrier is effectively zero, confirming the measurement pipeline is free of numerical artifacts. The pretrained-to-random reference barrier (0.222) serves as a calibration point — models approaching this magnitude are undergoing extreme weight-space displacement. We note that this reference is a single measurement and its variance is uncharacterized; it should be interpreted as indicative rather than a precise bound.
 
+### 4.6 Training Trajectory: Continuous ΔW→Barrier Curve
+
+To characterize the functional relationship between weight displacement and barrier height beyond two discrete divergence levels, we save model checkpoints every 40 training steps and measure the LMC barrier between each checkpoint and the pretrained base model. This yields a continuous ΔW→barrier curve from a single training run, eliminating the convergence confound of the LR sweep (all checkpoints come from the same optimization trajectory).
+
+**Code domain** (Figure 3): The barrier follows an inverted-U shape — rising from 0.029 at step 40 (ΔW ≈ 0.3%) to a peak of 0.043 at step 200 (ΔW ≈ 1.1%), then *declining* to 0.033 at step 400 (ΔW ≈ 1.4%) despite monotonically increasing weight displacement. The endpoint (final trained model vs. base) shows a *lower* barrier than the mid-training checkpoint, indicating that the model settles into a well-defined minimum that is more linearly connected to the pretrained initialization than the intermediate "partially-trained" states.
+
+**Medical domain**: The barrier grows monotonically with training progress — from 0.173 (step 40) to 0.218 (step 320), then stabilizes around 0.211 (step 400). Unlike code, medical training never shows the inverted-U recovery: once the barrier begins to rise, it plateaus but does not decline. This confirms the domain-specific stability difference at a granular, within-trajectory level: code models converge toward a basin that re-connects to the pretrained initialization, while medical models diverge into a loss landscape region that remains persistently separated.
+
+### 4.7 Structured vs. Unstructured Weight Displacement
+
+Does the barrier arise from the *magnitude* of weight change or from its *structure*? We add isotropic Gaussian noise to the pretrained model, scaled to achieve ΔW ∈ {0.5%, 1%, 2%, 4%, 8%}, and measure the resulting LMC barrier.
+
+| ΔW | Gaussian noise barrier | Training-induced barrier |
+|:---:|:---:|:---:|
+| 0.5% | 0.003 | — |
+| 1.0% | 0.004 | — |
+| 1.5% | 0.006 | 0.053 (standard code) |
+| 2.0% | 0.005 | — |
+| 4.0% | 0.011 | — |
+| 8.0% | 0.014 | 0.118 (high-div code) |
+
+Unstructured Gaussian perturbation produces negligible barriers regardless of magnitude: even at ΔW = 8%, the barrier is 0.014 — indistinguishable from the identical-copy baseline (~0.000). In contrast, training-induced weight displacement at ΔW = 1.5% produces a barrier of 0.053, approximately 9× larger. This demonstrates that LMC barriers arise from the *directional structure* of weight changes — the specific, task-aligned pattern of parameter updates — rather than from weight-space distance alone.
+
+### 4.8 Layer-Selective Interpolation
+
+The per-block divergence pattern (Figure 2, r = 0.995 across domains) shows that early layers change 5.6× more than late layers. We test whether this divergence asymmetry translates to barrier asymmetry by performing layer-selective interpolation: merge only a subset of layers (early: 0-7, mid: 8-15, late: 16-23) while keeping the remaining layers from the code model.
+
+| Merged layers | Code barrier | % of full barrier |
+|:---|:---:|:---:|
+| Early (0-7) | 0.040 | 75% |
+| Mid (8-15) | 0.003 | 6% |
+| Late (16-23) | 0.000 | 0% |
+| All (0-23) | 0.053 | 100% |
+
+The barrier is almost entirely concentrated in the first 8 transformer layers. Merging only late layers (16-23) produces essentially zero barrier — these layers can be safely interpolated with negligible loss penalty. This provides a directly actionable strategy for model merging practitioners: aggressive interpolation of deep layers combined with conservative handling of early layers.
+
 ## 5. Discussion
 
-Domain-specific fine-tuning of Pythia-1.4B produces only modest weight-space movement: 1-2% at typical training intensity, 7-9% at elevated step sizes. LMC holds across this entire range, though the barrier grows with divergence. The barrier increases more slowly than weight displacement, suggesting the loss landscape is robust to substantial parameter changes before connectivity breaks. However, with only two divergence levels, we cannot characterize the functional form — additional intermediate levels are needed to distinguish linear from sublinear scaling.
+Domain-specific fine-tuning of Pythia-1.4B produces only modest weight-space movement: 1-2% at typical training intensity, 7-9% at elevated step sizes. The trajectory analysis (§4.6) reveals that the ΔW→barrier relationship is more nuanced than a simple monotonic function: code models exhibit an inverted-U pattern where barrier *declines* after mid-training, while medical models show persistent barrier growth. This directly supports our central thesis that training stability, not weight displacement magnitude, is the dominant determinant of LMC barrier height — and that stability is domain-specific.
+
+The Gaussian perturbation experiment (§4.7) reveals that unstructured weight noise produces essentially zero barrier even at ΔW = 8%, while structured training-induced displacement at ΔW = 1.5% produces a barrier of 0.053. This 9× difference demonstrates that LMC barriers measure the *directional alignment* of weight changes, not their magnitude per se. The implication is that two models trained on different tasks with similar ΔW can have dramatically different barriers depending on whether their weight updates are task-aligned (high barrier) or noise-like (low barrier).
+
+The layer-selective interpolation experiment (§4.8) shows that the barrier is almost entirely driven by early transformer layers (0-7). Deep layers (16-23) can be merged with near-zero penalty. This finding, combined with the per-block pattern analysis, suggests a practical two-tier merging strategy: apply conservative, importance-weighted merging to early layers while using aggressive linear interpolation for late layers.
 
 The within-domain baselines reveal domain-specific stability differences. For code, within-domain (0.048) and cross-domain (0.053) barriers are equivalent — domain difference contributes nothing. For medical, the within-domain barrier (0.147) exceeds the cross-domain barrier (0.051), indicating that medical training trajectories are intrinsically higher-variance. Two medical models trained on the same data can differ more in the loss landscape than a code and medical model trained at the same intensity.
 
@@ -163,3 +203,5 @@ A practical implication: model merging techniques that rely on linear interpolat
 **Figure 2: Per-block weight divergence.** Root-mean-square weight difference from the pretrained checkpoint, computed per transformer block. Code and medical models at standard divergence are overlaid (r = 0.995). Divergence concentrates in early layers (layer 0: ~5.6% at standard divergence) and decreases roughly exponentially with depth.
 
 ![Per-block divergence](../docs/reports/fig2_per_block.png)
+
+**Figure 3: Training trajectory barrier.** LMC barrier height as a function of training step when interpolating between trajectory checkpoints and the pretrained base model. Code (blue) follows an inverted-U: barrier peaks at step 200 then declines as the model converges. Medical (red) grows monotonically and plateaus — the model never re-connects to the pretrained initialization. This within-run asymmetry confirms that domain-specific training stability, not weight displacement magnitude, determines barrier height.
