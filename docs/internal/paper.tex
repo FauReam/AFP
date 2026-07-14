@@ -167,7 +167,7 @@ To disentangle the effects of weight displacement \emph{magnitude} from \emph{di
 
 where $\sigma$ is chosen such that $\Delta W(\theta_{\text{noise}}, \theta_0)$ matches a target displacement level. The barrier $\mathcal{B}(\theta_0, \theta_{\text{noise}})$ measures the effect of \emph{unstructured} weight displacement, providing a baseline against which training-induced (structured) displacement can be compared.
 
-\subsection{Layer-Selective Interpolation}\label{sec:layers}
+\subsection{Layer-Selective Interpolation}
 
 For a subset of layers $\mathcal{S} \subseteq \{0, \dots, L-1\}$, we construct the partially-merged model:
 
@@ -537,12 +537,9 @@ The domain-specific stability asymmetry has implications beyond model merging. I
 \end{enumerate}
 
 % ============================================================
-% FIGURES
+% FIGURE 1 — placed near first reference (Weight Divergence §4.1)
 % ============================================================
-\clearpage
-\section*{Figures}
-
-\begin{figure}[p]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{../reports/fig1_lmc_overview.pdf}
     \caption{\textbf{LMC barrier curves and comparative analysis.}
@@ -553,7 +550,7 @@ The domain-specific stability asymmetry has implications beyond model merging. I
     \label{fig:fig1}
 \end{figure}
 
-\begin{figure}[p]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{../reports/fig2_trajectory_analysis.pdf}
     \caption{\textbf{Training trajectory, Gaussian calibration, and layer-selective analysis.}
@@ -564,7 +561,7 @@ The domain-specific stability asymmetry has implications beyond model merging. I
     \label{fig:fig2}
 \end{figure}
 
-\begin{figure}[p]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{../reports/fig3_seedpair_stability.pdf}
     \caption{\textbf{Seed-pair compatibility and domain stability spectrum.}
