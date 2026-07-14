@@ -269,15 +269,15 @@ To test whether loss-based barriers predict actual merge quality, we measured ac
 
 **Figure 1: LMC barrier curves and comparative analysis.** Panels A-D: Loss along the linear interpolation path θ(α) = (1-α)·θ_code + α·θ_medical for standard (A,B) and high (C,D) divergence, evaluated on code and medical test sets. Colored lines represent 3 independent seeds. Panel E: Within-domain vs. cross-domain barrier comparison — code models show equivalence while medical models show 3× larger within-domain barriers. Panel F: Per-block weight divergence (code and medical overlaid, r = 0.995). See Appendix A for full numerical tables.
 
-![LMC multi-panel](../docs/reports/fig1_lmc_multipanel.png)
+![LMC multi-panel](../docs/reports/fig1_lmc_overview.png)
 
-**Figure 2: Per-block weight divergence.** Root-mean-square weight difference from the pretrained checkpoint, computed per transformer block. Code and medical models at standard divergence are overlaid (r = 0.995). Divergence concentrates in early layers (layer 0: ~5.6% at standard divergence) and decreases roughly exponentially with depth.
+**Figure 2: Training trajectory, Gaussian calibration, and layer-selective analysis.** Panel A: Code domain trajectory — inverted-U barrier peaking at step 200 then declining. Panel B: Medical domain trajectory — monotonic barrier growth without recovery. Panel C: Gaussian noise perturbation produces negligible barriers (gray) regardless of ΔW magnitude, while training-induced displacement (green) creates barriers ~9× larger at equivalent magnitude. Panel D: Layer-selective interpolation — 75% of the barrier is concentrated in early layers (0-7), with late layers (16-23) showing near-zero barrier. See Appendix B-D for complete trajectory and calibration data.
 
-![Per-block divergence](../docs/reports/fig2_per_block.png)
+![Trajectory and analysis](../docs/reports/fig2_trajectory_analysis.png)
 
-**Figure 3: Training trajectory, Gaussian calibration, and layer-selective analysis.** Panel A: Code domain trajectory — inverted-U barrier peaking at step 200 then declining. Panel B: Medical domain trajectory — monotonic barrier growth without recovery. Panel C: Gaussian noise perturbation produces negligible barriers (gray) regardless of ΔW magnitude, while training-induced displacement (green) creates barriers 4-9× larger. Panel D: Layer-selective interpolation — 75% of the barrier is concentrated in early layers (0-7), with late layers (16-23) showing near-zero barrier. See Appendix B-D for complete trajectory and calibration data.
+**Figure 3: Seed-pair compatibility and domain stability spectrum.** Panel A: Barrier matrix for all C(5,2) = 10 medical high-divergence seed pairs. Cell color encodes barrier magnitude (blue → white → red). Seed s4 produces barriers from 0.080 (with s2) to 1.213 (with s1) — a 15× range depending solely on which partner it is paired with. Red boxes highlight the catastrophic s1↔s4 pair. Panel B: Within-domain LMC barriers across four domains, ordered by stability. The cross-domain mean (~0.05) is shown as a dashed reference line, highlighting that domain difference contributes negligibly to barrier height compared to domain-specific training stability.
 
-![Trajectory and analysis](../docs/reports/fig3_trajectory_barrier.png)
+![Seed-pair and stability](../docs/reports/fig3_seedpair_stability.png)
 
 ## Appendix
 
