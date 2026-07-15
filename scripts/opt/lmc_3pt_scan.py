@@ -76,7 +76,7 @@ def ev(agent, data, n_samples=2000):
     msk = data['attention_mask'][:n].to(device)
     labs = data['labels'][:n].to(device, dtype=torch.float32)
     total_loss, total = 0.0, 0
-    batch = 128
+    batch = 512
     for i in range(0, n, batch):
         end = min(i + batch, n)
         with torch.amp.autocast('cuda', dtype=torch.bfloat16):

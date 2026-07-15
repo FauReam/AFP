@@ -176,20 +176,18 @@ The barrier is almost entirely concentrated in the first 8 transformer layers. M
 
 ### 4.9 Cross-Architecture Replication on OPT-1.3B
 
-To test whether the domain stability spectrum generalizes beyond Pythia's GPT-NeoX architecture, we replicated the core within-domain/cross-domain comparison on **OPT-1.3B** (Meta, GPT-2 decoder architecture, GPT-2 tokenizer, ~1.3B params), a model family with a different architecture, training corpus (RoBERTa/CCNews/CC-Stories), and tokenizer vocabulary.
+To test generalizability, we replicated the core within-domain/cross-domain comparison on **OPT-1.3B** (Meta, GPT-2 decoder, GPT-2 tokenizer, ~1.3B params). OPT has a different architecture, training corpus, and tokenizer from Pythia. We trained code and medical models for 2 epochs at matched divergence levels to achieve comparable convergence (code val loss 0.545 vs. Pythia 0.599). This is a minimal viability check — 9 LMC scans vs. 50+ for Pythia — not a full experimental replication.
 
 | Model | Code within | Medical within | Code↔Med cross (code) | Code↔Med cross (med) |
 |-------|:---:|:---:|:---:|:---:|
 | Pythia-1.4B | 0.048 ± 0.000 | 0.147 ± 0.027 | 0.053 ± 0.011 | 0.051 ± 0.013 |
-| OPT-1.3B | 0.410 ± 0.025 | 0.591 ± 0.131 | 0.341 ± 0.146 | 0.373 ± 0.207 |
+| OPT-1.3B | 0.251 ± 0.108 | 0.896 ± 0.042 | 0.485 ± 0.010 | 0.462 ± 0.029 |
 
-Three findings emerge. First, the **qualitative pattern replicates**: within-domain barriers consistently exceed cross-domain barriers for both architectures, and medical-domain training produces the highest within-domain barriers in both cases. The "domain stability spectrum" is not a Pythia artifact.
+The **qualitative pattern replicates**: medical within-domain barriers exceed code within-domain barriers (0.896 vs. 0.251, a 3.6× ratio), and medical within exceeds cross-medical (0.896 vs. 0.462, 1.9×). The domain stability gradient is not a Pythia artifact.
 
-Second, the **absolute barrier scale differs dramatically**: OPT barriers are 4-8× larger than Pythia barriers. For example, code within-domain barriers are 0.048 (Pythia) vs. 0.410 (OPT). This suggests that architecture and tokenizer choice strongly modulate the absolute barrier magnitude, even as the relative stability ordering between domains is preserved. The GPT-2 tokenizer's smaller vocabulary (50,272 vs. Pythia's 50,304) and the OPT architecture's different attention mechanism (standard causal vs. GPT-NeoX parallel) may contribute to greater training trajectory divergence.
+However, the **absolute barrier scale and within/cross structure differ**. OPT barriers are 5-6× larger than Pythia's, and the within/cross relationship differs: Pythia shows code within ≈ code cross (0.048 vs. 0.053), while OPT shows code within < code cross (0.251 vs. 0.485). This suggests that code-trained OPT models are more similar to each other than to medical models — the tokenizer and architecture modulate both the absolute barrier scale and the relative positioning of domains in weight space. The core finding — medical training is less stable than code training — generalizes, but the detailed barrier structure is architecture-dependent.
 
-Third, the within/cross ratio — our primary metric for domain stability — shows a consistent pattern: code within/cross ≈ 1.2× for OPT (vs. 0.9× for Pythia), and medical within/cross ≈ 1.6× for OPT (vs. 2.9× for Pythia). Medical training is consistently less stable than code training, regardless of architecture.
-
-We caution that OPT models were trained with 3-point LMC scans (11-point for Pythia) and evaluated on the same VersaPRM-derived datasets tokenized with the GPT-2 tokenizer. Direct numerical comparison of barrier magnitudes across architectures should account for these differences in tokenization and evaluation data distribution.
+We caution that OPT uses 3-point LMC scans (vs. 11-point for Pythia), 2-epoch training (vs. 1-epoch for Pythia standard), and GPT-2 tokenized evaluation data. The experimental depth is asymmetric (9 OPT scans vs. 50+ Pythia scans), and further OPT experiments — including trajectory analysis, Gaussian calibration, and seed-pair expansion — would strengthen the cross-architecture comparison.
 
 ## 5. Theoretical Framework
 
