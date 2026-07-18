@@ -46,8 +46,8 @@ log "=== Training (6 models, 2-epoch) ==="
 for domain in code medical; do for seed in 0 1 2; do
     outdir="$M/${domain}_lr1e-4_s${seed}"
     [ -f "$outdir/W_${domain}_final.pt" ] && { log "  [skip] $domain s$seed"; continue; }
-    mkdir -p "$outdir"; log "  Training $domain s$seed..."
-    $V -u scripts/train_agent.py --domain "$domain" --lr 1e-4 --epochs 2 --output-dir "$outdir" --model-id "$MID" >> "$L/train_${domain}_s${seed}_$TS.log" 2>&1
+    mkdir -p "$outdir"; log "  Training $domain s$seed..."; $V -u scripts/train_agent.py --domain "$domain" --lr 1e-4 --epochs 2 --output-dir "$outdir" --model-id "$MID" >> "$L/train_${domain}_s${seed}_$TS.log" 2>&1; $V -c "import torch; torch.cuda.empty_cache()"
+    ($V -u scripts/train_agent.py --domain "$domain" --lr 1e-4 --epochs 2 --output-dir "$outdir" --model-id "$MID" ) >> "$L/train_${domain}_s${seed}_$TS.log" 2>&1
 done; done
 
 log "=== Cross-domain LMC ==="
