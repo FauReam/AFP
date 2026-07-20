@@ -181,6 +181,34 @@
 
 ---
 
+# OPT 图表修复 — 2026-07-20
+
+> 完整度检查 C10: "OPT 大量分析无图表" — 已修复。
+
+## 数据来源
+
+OPT 原始数据（轨迹 21 checkpoint、逐层散度、Gaussian 各 ΔW 值）未存储在 repo 中，只有论文正文中的汇总统计数据。基于现有数据生成了 Fig 4。
+
+## Fig 4: Cross-Architecture Replication
+
+| Panel | 内容 | 数据类型 |
+|-------|------|----------|
+| A | Pythia-2ep vs OPT-2ep 三指标对比柱状图 (code within, med within, cross) + error bars | 论文 Table §4.9 精确值 |
+| B | Med/code 比值对比 (Pythia 3.7× vs OPT 3.6×) | 论文 Table §4.9 计算值 |
+| C | OPT 扩展实验定性摘要 (Gaussian/trajectory/per-block) | 论文正文文本摘要 |
+
+## 生成
+
+- 脚本: `scripts/generate_fig4_opt.py`
+- 输出: `docs/reports/fig4_opt_replication.pdf` (39KB vector) + `.png`
+- 论文: 插入 §4.9，`\ref{fig:fig4}` 引用
+
+## 编译
+
+- 页数: 19 → 20 (+Fig 4 图表)
+
+---
+
 # 理论修复 — 2026-07-19
 
 > 论文 v19 理论部分 (§4.10–4.13) 发现 5 处过时/错误，已全部修复。
