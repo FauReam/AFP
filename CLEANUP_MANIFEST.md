@@ -1,7 +1,186 @@
 # AFP 项目清理清单 — 2026-07-19
 
 > 论文已迭代至 v19，以下为已过时/废弃/冗余文件，共 46 项已删除。
-> 同日修复论文理论部分 5 处过时问题，见底部 §理论修复。
+> 同日修复论文理论部分 5 处过时问题 + 12 处完整度问题。
+> 2026-07-20 添加 Fig 4 OPT 跨架构图 + DGX 主机待办清单。
+
+---
+
+# ⚠️ DGX 实验主机 — 待办清单
+
+> **说明**：以下任务需要在 DGX 实验主机 (`/home/jiayu/AFP/`) 上执行。
+> 本文档上传到主机后，按顺序逐项完成。
+
+## 最高优先级：恢复 OPT 原始实验数据
+
+> **背景**：论文 v19 的 §4.9 报告了 OPT-1.3B 跨架构复制实验。三模型对比表的数据已写入论文，但以下三类原始 JSON 数据未提交到 GitHub，导致 Fig 4 Panel C 只能以文字摘要形式呈现，无法画折线图/散点图。
+
+### 1. OPT 训练轨迹数据
+
+**论文描述**: 21 checkpoints × 840 steps, code 0.14→0.20 monotonic, medical 0.09→0.14 flat
+
+**查找位置**:
+```bash
+# 检查 phase4_trajectory.sh 的输出目录
+ls experiments/opt_trajectory/
+ls experiments/phase4_opt/
+find experiments/ -name '*trajectory*' -o -name '*opt*traj*' | grep -v '.git'
+
+# 检查 scripts/opt/phase4_trajectory.sh 中的输出路径
+grep -E 'OUT|output|results|save' scripts/opt/phase4_trajectory.sh
+```
+
+**需要的数据格式** (JSON):
+```json
+{
+  "model": "OPT-1.3B",
+  "domain": "code",
+  "trajectory": [
+    {"step": 40,  "dw_pct": 0.31, "barrier": 0.029},
+    {"step": 80,  "dw_pct": 0.58, "barrier": 0.027},
+    ...
+    {"step": 840, "dw_pct": 1.41, "barrier": 0.20}
+  ]
+}
+```
+
+**导出到**: `experiments/opt_results/trajectory_code.json` + `trajectory_med.json`
+
+---
+
+### 2. OPT 逐层散度数据
+
+**论文描述**: Pythia r=0.995, OPT r=0.91, 24 layers × 2 domains
+
+**查找位置**:
+```bash
+find experiments/ -name '*per_block*' -o -name '*layer*div*' -o -name '*block*' | grep -v '.git'
+grep -r 'per.block\|per_block\|layer.*div' scripts/opt/ --include='*.py' -l
+```
+
+**需要的数据格式** (JSON):
+```json
+{
+  "model": "OPT-1.3B",
+  "layers": 24,
+  "code_divergence":   [5.6, 4.2, 3.1, ...],
+  "medical_divergence": [5.8, 4.5, 3.3, ...],
+  "pearson_r": 0.91
+}
+```
+
+**导出到**: `experiments/opt_results/per_block_divergence.json`
+
+---
+
+### 3. OPT Gaussian 扰动数据
+
+**论文描述**: 0.0003@ΔW=0.5% 到 0.055@ΔW=8%
+
+**查找位置**:
+```bash
+find experiments/ -name '*gaussian*' -o -name '*noise*' -o -name '*perturb*' | grep -v '.git'
+grep -r 'gaussian\|noise\|perturb' scripts/opt/theory_experiments.sh -l
+```
+
+**需要的数据格式** (JSON):
+```json
+{
+  "model": "OPT-1.3B",
+  "gaussian_barriers": [
+    {"dw_pct": 0.5, "barrier_code": 0.0003, "barrier_med": null},
+    {"dw_pct": 1.0, "barrier_code": null,   "barrier_med": null},
+    {"dw_pct": 2.0, "barrier_code": null,   "barrier_med": null},
+    {"dw_pct": 4.0, "barrier_code": null,   "barrier_med": null},
+    {"dw_pct": 8.0, "barrier_code": 0.055,  "barrier_med": null}
+  ]
+}
+```
+
+**导出到**: `experiments/opt_results/gaussian_calibration.json`
+
+---
+
+### 4. 导出后操作
+
+```bash
+cd /home/jiayu/AFP
+
+# 创建目录
+mkdir -p experiments/opt_results
+
+# 复制找到的原始文件
+cp <找到的路径> experiments/opt_results/
+
+# 如果原始数据不是 JSON 格式（Python pickle/npy 等），转换为 JSON
+python3 -c "
+import json, torch
+# 示例：从 .pt 转换为 .json
+data = torch.load('experiments/opt_trajectory/results.pt')
+with open('experiments/opt_results/trajectory_code.json', 'w') as f:
+    json.dump(data, f, indent=2)
+"
+
+# 提交到 GitHub
+git add experiments/opt_results/
+git commit -m 'data: OPT raw experiment results (trajectory + per-block + gaussian)'
+git push origin main
+```
+
+---
+
+## 次优先级：确认 GPT-Neo 实验状态
+
+**论文描述**: GPT-Neo-1.3B 行已从三模型表中删除（数据为 "—"），Limitations 写 "GPT-Neo replication is pending"。
+
+**确认**:
+```bash
+# 是否已有 GPT-Neo 模型训练？
+ls experiments/trained_models/ | grep -i neo
+ls experiments/ | grep -i neo
+
+# 是否有 GPT-Neo 训练脚本输出？
+grep -r 'neo' scripts/gptneo_*.sh
+ls experiments/gptneo*/
+```
+
+**如已完成**: 导出数据 → `experiments/gptneo_results/` → 提交 → 更新三模型表和论文。
+
+**如未完成**: 评估是否需要（OPT 已足以支撑跨架构结论），决定继续或放弃。
+
+---
+
+## 低优先级：同步本地清理
+
+```bash
+cd /home/jiayu/AFP
+
+# 拉取最新（包含本地清理的 46 个文件删除）
+git pull origin main
+
+# 确认清理生效
+git status  # 应显示干净的工作区
+
+# 检查是否有本地未追踪的残留文件
+git clean -nd  # -n = dry run，预览
+```
+
+---
+
+## 检查清单
+
+| # | 任务 | 状态 |
+|---|------|------|
+| 1 | 找到 OPT 轨迹数据并导出 JSON | ☐ |
+| 2 | 找到 OPT 逐层散度数据并导出 JSON | ☐ |
+| 3 | 找到 OPT Gaussian 数据并导出 JSON | ☐ |
+| 4 | 提交 `experiments/opt_results/` 到 GitHub | ☐ |
+| 5 | 确认 GPT-Neo 实验状态 | ☐ |
+| 6 | `git pull` 同步清理 | ☐ |
+
+---
+
+---
 
 ---
 
