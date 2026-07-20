@@ -1,0 +1,535 @@
+% ============================================================
+%  AFP 论文新手教程 — "训练稳定性决定LMC"
+%  用最通俗的语言解释论文的每一个概念和发现
+%  编译: xelatex tutorial.tex && xelatex tutorial.tex
+% ============================================================
+\documentclass[12pt,a4paper]{article}
+
+% --- Layout ---
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Chinese + Typography (xelatex, use system fonts) ---
+\usepackage{fontspec}
+\usepackage{microtype}
+
+% --- Math ---
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{bm}
+
+% --- Figures ---
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+
+% --- Tables ---
+\usepackage{booktabs}
+\usepackage{array}
+
+% --- Colors ---
+\usepackage[dvipsnames]{xcolor}
+\definecolor{codeblue}{HTML}{2196F3}
+\definecolor{medred}{HTML}{F44336}
+\definecolor{generalgreen}{HTML}{4CAF50}
+\definecolor{mathorange}{HTML}{FF9800}
+\definecolor{noisegray}{HTML}{9E9E9E}
+\definecolor{purple}{HTML}{9C27B0}
+\definecolor{highlight}{HTML}{FFF3E0}
+\definecolor{conceptbg}{HTML}{E3F2FD}
+\definecolor{tipbg}{HTML}{E8F5E9}
+\definecolor{warnbg}{HTML}{FFEBEE}
+
+% --- Fancy boxes ---
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{conceptbox}{
+  colback=conceptbg, colframe=codeblue!70, arc=3mm, boxrule=0.5pt,
+  fonttitle=\bfseries, title=概念讲解, breakable
+}
+\newtcolorbox{tipbox}{
+  colback=tipbg, colframe=generalgreen!70, arc=3mm, boxrule=0.5pt,
+  fonttitle=\bfseries, title=直观理解, breakable
+}
+\newtcolorbox{warnbox}{
+  colback=warnbg, colframe=medred!70, arc=3mm, boxrule=0.5pt,
+  fonttitle=\bfseries, title=常见误区, breakable
+}
+\newtcolorbox{keybox}{
+  colback=highlight, colframe=mathorange!80, arc=3mm, boxrule=0.8pt,
+  fonttitle=\bfseries, title=核心发现, breakable
+}
+
+% --- Hyperlinks ---
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
+
+% --- Headers ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{AFP 论文新手教程}}
+\fancyhead[R]{\small\textit{训练稳定性，而非领域差异，决定 LMC}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\textbf{论文新手教程}\\[6pt]
+       \Large 训练稳定性，而非领域差异，\\[3pt]
+       决定线性模式连通性 (LMC)}
+\author{基于 AFP v19 论文编写}
+\date{2026-07-20}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+% ============================================================
+\section{这篇论文到底在研究什么？}
+% ============================================================
+
+\subsection{一个直观的问题}
+
+想象你有一个预训练好的大语言模型（比如 Pythia-1.4B）。它已经读了很多书，是个\"通才\"。
+
+现在，你想让它变成某个领域的\"专家\"。于是你拿代码数据训练它（微调），得到\"代码专家 A\"。又拿医疗数据训练另一个副本，得到\"医疗专家 B\"。
+
+\textbf{核心问题：这两个专家在数学空间里离彼此有多远？}
+
+\begin{tipbox}
+\textbf{类比：两个厨师}
+
+一个厨师被派去学做法餐（代码），另一个去学做中餐（医疗）。他们都从同一个基础培训班（预训练模型）毕业。
+
+问题：
+\begin{itemize}
+    \item 他们的烹饪\"风格\"（模型参数）变了多少？
+    \item 如果把两个人的风格各取一半混合（插值），做出来的菜还能吃吗？
+\end{itemize}
+\end{tipbox}
+
+% ============================================================
+\section{概念词典：每个专有名词是什么意思}
+% ============================================================
+
+\subsection{模型参数 (Model Parameters / Weights)}
+
+\begin{conceptbox}
+\textbf{一句话定义}：模型内部的可调节\"旋钮\"。Pythia-1.4B 有大约 13.1 亿个这样的旋钮。
+
+\textbf{详细解释}：一个神经网络模型本质上是一个巨大的数学函数。这个函数的行为由一系列数值决定，这些数值被称为\"参数\"或\"权重\"。训练/微调的过程，就是调整这些数值，让模型的输出越来越好。
+
+\textbf{为什么用符号 $\theta$}：数学惯例中 $\theta$（希腊字母 theta）常用来表示一个模型的全部参数。$\theta_0$ 表示初始的预训练参数。
+\end{conceptbox}
+
+\subsection{微调 (Fine-Tuning / FT)}
+
+\begin{conceptbox}
+\textbf{一句话定义}：在预训练模型的基础上，用特定领域的数据继续训练，让它适应那个领域。
+
+\textbf{本文的做法}：取 Pythia-1.4B（已预训练好的通才），用代码推理数据训练 $\rightarrow$ 代码专家模型。用医疗推理数据训练另一个副本 $\rightarrow$ 医疗专家模型。
+
+\textbf{Full-FT}：\"全参数微调\"——所有 13.1 亿个参数都可以改变，而不是只改一小部分。
+\end{conceptbox}
+
+\subsection{权重位移 (Weight Displacement / $\Delta W$)}
+
+\begin{conceptbox}
+\textbf{一句话定义}：模型参数从起点到底改变了多少的度量。
+
+\textbf{公式}：
+\[
+\Delta W(\theta, \theta_0) = \frac{\|\theta - \theta_0\|_2}{\|\theta_0\|_2} \times 100\%
+\]
+
+\textbf{翻译成人话}：
+\begin{itemize}
+    \item $\|\theta - \theta_0\|_2$：新参数和旧参数之间的\"欧几里得距离\"（$\ell_2$ 范数）—— 就是每个旋钮拧了多少的总和
+    \item $\|\theta_0\|_2$：初始参数的大小，用作分母来做归一化（这样不同大小的模型可以比较）
+    \item 乘以 100\%：转成百分比
+\end{itemize}
+
+\textbf{例子}：$\Delta W = 1.4\%$ 意思是：相比于初始状态，模型的参数平均偏移了 1.4\%。
+\end{conceptbox}
+
+\subsection{线性模式连通性 (Linear Mode Connectivity / LMC)}
+
+\begin{conceptbox}
+\textbf{一句话定义}：如果把两个模型的参数按比例混合（线性插值），混合后的模型还能正常工作吗？
+
+\textbf{详细解释}：
+假设你训练了两个模型 A 和 B。现在做这样一个实验：
+\begin{itemize}
+    \item $\alpha = 0$：100\% A + 0\% B → 纯代码模型
+    \item $\alpha = 0.5$：50\% A + 50\% B → 混合模型
+    \item $\alpha = 1$：0\% A + 100\% B → 纯医疗模型
+\end{itemize}
+
+如果从 $\alpha = 0$ 走到 $\alpha = 1$ 的整个过程中，模型的性能（损失函数）不出现剧烈恶化，那我们就说 A 和 B 是\"线性连通\"的。
+
+\begin{tipbox}
+\textbf{类比：调鸡尾酒}
+
+代码模型 = 一杯威士忌，医疗模型 = 一杯伏特加。
+
+如果你把两杯酒倒在一起（混合），喝起来还不错 $\rightarrow$ LMC 成立（连通）。
+
+如果你把两杯酒倒在一起，喝起来像毒药 $\rightarrow$ LMC 破裂（不连通）。
+\end{tipbox}
+\end{conceptbox}
+
+\subsection{LMC 障碍 (LMC Barrier / $\mathcal{B}$)}
+
+\begin{conceptbox}
+\textbf{一句话定义}：混合模型的最差性能减去两个端点性能的平均值。衡量\"混合有多糟糕\"。
+
+\textbf{公式}：
+\[
+\mathcal{B}(\theta_A, \theta_B) = \max_{\alpha \in [0,1]} \mathcal{L}\big(\theta(\alpha)\big) - \frac{\mathcal{L}(\theta_A) + \mathcal{L}(\theta_B)}{2}
+\]
+
+\textbf{翻译}：
+\begin{itemize}
+    \item 我们测量从 $\alpha=0$ 到 $\alpha=1$ 每一步的损失（loss）
+    \item 取最高（最差）的那个损失值
+    \item 减去两个端点的平均损失
+    \item 差值就是障碍 bar
+\end{itemize}
+
+\textbf{读障碍值}：
+\begin{itemize}
+    \item bar $\approx 0$：完美连通，混合无害
+    \item bar $\approx 0.05$：轻微障碍，基本可混合
+    \item bar $\approx 0.2$：显著障碍，混合有代价
+    \item bar $\approx 1.0+$：灾难性障碍，混合崩溃
+\end{itemize}
+\end{conceptbox}
+
+\subsection{损失函数 (Loss / $\mathcal{L}$)}
+
+\begin{conceptbox}
+\textbf{一句话定义}：衡量模型\"犯了多少错\"的分数。分数越低，模型越好。
+
+\textbf{本文用的是 BCE (Binary Cross-Entropy)}：适用于\"是/否\"分类问题。本文的任务是判断一个推理步骤是否正确（对/错），所以用 BCE。
+\end{conceptbox}
+
+\subsection{域内障碍 vs 跨域障碍}
+
+\begin{conceptbox}
+\textbf{域内障碍 (Within-domain barrier)}：用同一个域的两个不同训练结果（不同随机种子）来测障碍。
+
+\textit{两个代码模型之间混合 → 域内障碍。}
+
+\textbf{跨域障碍 (Cross-domain barrier)}：用不同域的两个模型来测障碍。
+
+\textit{一个代码模型 + 一个医疗模型混合 → 跨域障碍。}
+
+\textbf{直觉}：你可能会觉得跨域障碍一定比域内障碍大（两个学不同东西的人差异更大）。这篇论文的核心发现恰恰反驳了这个直觉。
+\end{conceptbox}
+
+\subsection{Per-Block 散度}
+
+\begin{conceptbox}
+\textbf{一句话定义}：不是看模型整体变了多少，而是一层一层地看每层变了多少。
+
+\textbf{Transformer 分层}：Pythia-1.4B 有 24 个 Transformer 层（从 layer 0 到 layer 23）。每层负责不同的信息处理。
+
+\textbf{r 值（Pearson 相关系数）}：衡量代码模型和医疗模型在各层的散度模式有多相似。
+\begin{itemize}
+    \item r = 1.0：完全相同的模式（你变哪层我也变哪层）
+    \item r = 0.0：不相关的模式
+    \item 本文结果：r = 0.995（Pythia），几乎完全相同
+\end{itemize}
+\end{conceptbox}
+
+\subsection{Gaussian 扰动校准}
+
+\begin{conceptbox}
+\textbf{一句话定义}：随机地把参数乱改一通（不加方向性），看看会造成多大障碍。作为\"无意义改动\"的基准线。
+
+\textbf{为什么叫 Gaussian}：因为随机改动服从高斯分布（正态分布），又叫\"各向同性噪声\"。
+
+\textbf{目的}：区分\"参数改了多少\"和\"参数改了哪个方向\"哪个更重要。结果发现——方向远比幅度重要。
+\end{conceptbox}
+
+\subsection{层选择性插值 (Layer-Selective Interpolation)}
+
+\begin{conceptbox}
+\textbf{一句话定义}：只混合某些层，其他层保持不变。用来找出\"哪些层是障碍的罪魁祸首\"。
+
+\textbf{本文的分组}：
+\begin{itemize}
+    \item Early (0--7)：前 8 层
+    \item Mid (8--15)：中间 8 层
+    \item Late (16--23)：后 8 层
+\end{itemize}
+
+\textbf{发现}：75\% 的障碍集中在前 8 层，后 8 层可以随便混合，几乎零代价。
+\end{conceptbox}
+
+\subsection{训练轨迹分析}
+
+\begin{conceptbox}
+\textbf{一句话定义}：在一次训练过程中，每隔几步保存一个检查点，观察障碍如何随着训练的进行而变化。
+
+\textbf{倒 U 形 (Inverted-U)}：代码模型的障碍先上升再下降——像个倒扣的碗。
+\begin{itemize}
+    \item 训练初期：模型变化小，障碍低
+    \item 训练中期：模型找到特殊路径，障碍升高
+    \item 训练后期：模型收敛到宽阔的\"山谷\"，障碍反而降低
+\end{itemize}
+
+\textbf{单调上升 (Monotonic)}：医疗模型的障碍一直上升——只升不降。
+\begin{itemize}
+    \item 医疗模型不断收敛到狭窄的\"山谷\"，回不去了
+\end{itemize}
+\end{conceptbox}
+
+\subsection{Hessian 矩阵与损失景观}
+
+\begin{conceptbox}
+\textbf{一句话定义}：Hessian 矩阵 $\mathbf{H}$ 描述损失函数的\"弯曲程度\"。它告诉我们在参数空间的每个方向上，损失变化的加速度。
+
+\textbf{损失景观 (Loss Landscape)}：把模型的\"犯错程度\"画成一张地形图。
+\begin{itemize}
+    \item 宽谷 (Wide Basin)：平坦的大坑，掉进去就出不来，但在坑里走没问题
+    \item 窄谷 (Narrow Basin)：狭窄的小沟，稍微偏一点损失就飙升
+\end{itemize}
+
+\textbf{论文的发现}：代码模型倾向于收敛到宽谷（容易连通），医疗模型倾向于收敛到窄谷（不容易连通）。
+\end{conceptbox}
+
+\subsection{SGD 动力学与 Peclet 数}
+
+\begin{conceptbox}
+\textbf{SGD (随机梯度下降)}：标准的神经网络训练算法。每次看一小批数据，往\"下山\"的方向走一步。因为只看小批数据，步子带有随机性（噪声）。
+
+\textbf{Peclet 数 (Pe)}：衡量\"往下走\"和\"随机乱走\"哪个更强的指标。
+\begin{itemize}
+    \item Pe 大：方向性强，确定性地收敛 → 趋向宽谷
+    \item Pe 小：噪声主导，随机探索 → 可能卡在窄谷
+\end{itemize}
+
+\textbf{本文的解释}：代码数据噪声小，医疗数据噪声大。医疗领域有更多的模糊/不确定判断，导致梯度噪声更大，所以医疗模型更容易卡在窄谷里。
+\end{conceptbox}
+
+% ============================================================
+\section{实验到底做了什么？}
+% ============================================================
+
+\subsection{实验设定}
+
+\begin{table}[h]
+\centering
+\caption{训练配置一览}
+\begin{tabular}{@{}>{\bfseries}ll@{}}
+\toprule
+项目 & 值 \\
+\midrule
+基础模型 & Pythia-1.4B（13.1 亿参数）\\
+训练方式 & 全参数微调 (Full-FT)\\
+训练数据 & 代码推理 $\sim$55K 条 + 医疗推理 $\sim$55K 条\\
+任务类型 & 判断推理步骤是否正确（是/否，二分类）\\
+精度 & bfloat16（省显存的浮点格式）\\
+优化器 & AdamW（一种改进的 SGD）\\
+硬件 & NVIDIA DGX Spark（121GB 统一内存）\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{两种发散级别}
+
+\begin{enumerate}
+    \item \textbf{标准发散 (Standard)}：正常训练，$\Delta W \approx 1.4\%$
+    \item \textbf{高发散 (High)}：用更大的学习率训练，$\Delta W \approx 8\%$
+\end{enumerate}
+
+\textbf{为什么要两种}：看看\"参数改得多\"和\"障碍变大\"之间的关系。结果发现——不是线性关系！参数偏离 6 倍，障碍只增大 2-5 倍。
+
+\subsection{四个领域}
+
+除了代码和医疗这两个主要领域，还扩展到了：
+\begin{itemize}
+    \item General（通用推理）
+    \item Math（数学推理）
+\end{itemize}
+
+目的：验证\"训练稳定性决定障碍\"这个结论是不是只适用于特定领域。
+
+% ============================================================
+\section{论文发现了什么？}
+% ============================================================
+
+\subsection{发现一：训练稳定性比领域差异更重要}
+
+\begin{keybox}
+\textbf{反直觉的发现}：两个医疗模型之间（同一个域）的障碍，比一个医疗和一个代码模型之间（不同域）的障碍还要大 3 倍。
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{对比类型} & \textbf{障碍值} & \textbf{含义} \\
+\midrule
+代码 ↔ 代码（域内） & 0.048 & 非常稳定 \\
+代码 ↔ 医疗（跨域） & 0.053 & 几乎一样 \\
+医疗 ↔ 医疗（域内） & \textbf{0.147} & 最不稳定！\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{这意味着}：决定 LMC 障碍高度的不是\"训练数据有多不同\"，而是\"训练本身有多稳定\"。医疗数据的模糊性导致训练过程本身不稳定，同一个域训练两次都会走到差异很大的位置。
+\end{keybox}
+
+\subsection{发现二：四个领域形成稳定性谱系}
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{领域} & \textbf{域内障碍} & \textbf{稳定性} \\
+\midrule
+代码 (Code) & 0.048 & \color{generalgreen}{最稳定 ★★★★}\\
+通用 (General) & 0.071 & \color{generalgreen}{稳定 ★★★}\\
+数学 (Math) & 0.087 & \color{mathorange}{中等 ★★}\\
+医疗 (Medical) & 0.147 & \color{medred}{不稳定 ★}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+这不是简单的\"代码好、医疗差\"二元对立，而是一个连续的光谱。
+
+\subsection{发现三：倒 U 形 vs 单调增长}
+
+代码模型的障碍随训练进行：先升（0.029 $\to$ 0.043）后降（$\to$ 0.033），呈\"倒 U 形\"。
+
+医疗模型的障碍：从 0.173 一路升到 0.218，只升不降。
+
+\begin{tipbox}
+\textbf{为什么会倒 U？}
+
+想象你在爬山找山谷：
+\begin{itemize}
+    \item 代码训练：你找到了一个宽阔的大盆地，越往里走越平坦，从盆地的不同位置都能轻松走到一起。
+    \item 医疗训练：你卡在了一条狭窄的峡谷里，越走越深，从峡谷的不同位置很难走到一起。
+\end{itemize}
+\end{tipbox}
+
+\subsection{发现四：有方向的变化 vs 随机乱改}
+
+\begin{keybox}
+\textbf{核心数字}：同样改 1.5\% 的参数，训练产生的变化造成的障碍（0.053）是随机乱改（0.006）的 \textbf{9 倍}。
+
+即使把随机乱改的幅度加到 8\%，障碍也只有 0.014——几乎为零。
+
+\textbf{含义}：不是\"变了多少\"决定障碍，而是\"变了什么方向\"。训练产生的参数变化是有特定方向（\"结构性\"）的，随机噪声没有方向性。
+\end{keybox}
+
+\subsection{发现五：障碍集中在前 8 层}
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{混合哪些层} & \textbf{障碍} & \textbf{占比} \\
+\midrule
+前 8 层 (0--7)  & 0.040 & \textbf{75\%} \\
+中 8 层 (8--15) & 0.003 & 6\% \\
+后 8 层 (16--23)& 0.000 & 0\% \\
+全部 24 层      & 0.053 & 100\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{tipbox}
+\textbf{实际应用}：如果你想合并两个模型，后 16 层可以放心大胆混合，只需小心处理前 8 层。这比处理全部 13 亿参数容易得多。
+\end{tipbox}
+\end{conceptbox}
+
+\subsection{发现六：种子配对的随机性}
+
+用 5 个不同的随机种子训练医疗模型，两两配对测试（共 10 对）：
+
+\begin{itemize}
+    \item 种子 s4 配 s1：障碍高达 1.213（灾难性）
+    \item 种子 s4 配 s2：障碍只有 0.080（良好）
+    \item 差了 \textbf{15 倍}！
+\end{itemize}
+
+\textbf{含义}：两个模型能不能\"兼容\"，取决于它们各自走了哪条训练路径，而不是它们各自\"有多好\"。这和交朋友一样——能不能处得来取决于双方，不是单方面的。
+
+\subsection{发现七：跨架构复制——OPT-1.3B}
+
+\begin{keybox}
+\textbf{问题}：这些发现是不是只适用于 Pythia 这个特定模型？
+
+\textbf{答案}：不。在 OPT-1.3B（Meta 发布的另一个模型，不同的架构、训练数据和分词器）上复制实验：
+
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{模型} & \textbf{代码域内} & \textbf{医疗域内} & \textbf{医疗/代码比值} \\
+\midrule
+Pythia-1.4B & 0.063 & 0.231 & 3.7$\times$ \\
+OPT-1.3B    & 0.251 & 0.896 & 3.6$\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{两个关键结论}：
+\begin{enumerate}
+    \item 医疗/代码比值高度一致（3.7 vs 3.6），说明稳定性排序不是 Pythia 特例
+    \item OPT 的绝对障碍值比 Pythia 大 4 倍，说明不同模型家族有不同的\"基础稳定性水平\"
+\end{enumerate}
+\end{keybox}
+
+\subsection{发现八：合并基准测试}
+
+测试了三种模型合并算法：
+\begin{itemize}
+    \item 纯平均：直接把参数加起来除以 2
+    \item TIES-Merging：先修剪再合并（更智能的方法）
+    \item Task Arithmetic：用权重的差值做\"任务向量\"加减
+\end{itemize}
+
+\textbf{结果}：纯平均效果最好！代码性能保留 95\%，医疗性能保留 99\%。简单的方法赢了，这与\"障碍不大\"的结论一致。
+
+% ============================================================
+\section{为什么这个研究重要？}
+% ============================================================
+
+\subsection{实践意义}
+
+\begin{enumerate}
+    \item \textbf{模型合并指南}：想知道两个微调后的模型能不能合并？先测它们各自的训练稳定性。稳定域（代码）的可以大胆合并，不稳定域（医疗）的要小心。
+
+    \item \textbf{层选择性合并}：不需要合并所有层。只处理前 8 层就能解决 75\% 的障碍。
+
+    \item \textbf{训练监控}：在训练过程中监控 LMC 障碍。如果障碍开始下降（倒 U 形），说明模型正在收敛到宽谷——可以放心继续。如果障碍持续上升，可能需要调整。
+
+    \item \textbf{选择基础模型}：不同模型家族（Pythia、OPT、GPT-Neo）有不同的\"基础稳定性\"。OPT 的绝对障碍比 Pythia 高 4 倍。如果你要做模型合并，Pythia 可能是更好的起点。
+\end{enumerate}
+
+\subsection{理论贡献}
+
+\begin{itemize}
+    \item 提出了统一的 Hessian-SGD 理论框架来解释所有观察到的现象
+    \item 证明了\"参数改了多少\"远不如\"改了哪个方向\"重要
+    \item 发现训练数据的噪声结构（医疗的模糊性 vs 代码的确定性）决定了模型最终落在\"宽谷\"还是\"窄谷\"
+\end{itemize}
+
+% ============================================================
+\section{一句话总结}
+% ============================================================
+
+\begin{keybox}
+\textbf{Take-home message}
+
+微调语言模型时，决定两个模型能不能\"合并\"的，不是它们学了什么不同的东西（代码 vs 医疗），而是训练过程本身有多稳定。医疗数据的不确定性导致训练更不稳定，相同数据训练两次都会产生很大差异。代码数据的确定性让训练更稳定，模型总是收敛到同一个宽阔区域。
+
+\textbf{就像两个学徒}：在一个规则清晰的领域（代码编程），不同师傅教的学徒最终会学到相似的东西。在一个规则模糊的领域（医疗诊断），不同师傅教的学徒可能学到完全不同的东西——即使他们学的是同一本教材。
+\end{keybox}
+
+\vspace{1cm}
+\begin{center}
+\rule{0.5\textwidth}{0.5pt}\\[6pt]
+{\small 本文档基于 AFP 项目 v19 论文编写。}\\
+{\small 论文仓库：\texttt{https://github.com/FauReam/AFP}}
+\end{center}
+
+\end{document}
