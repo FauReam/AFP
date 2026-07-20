@@ -8,161 +8,182 @@
 
 # ⚠️ DGX 实验主机 — 待办清单
 
-> **说明**：以下任务需要在 DGX 实验主机 (`/home/jiayu/AFP/`) 上执行。
-> 本文档上传到主机后，按顺序逐项完成。
-
-## 最高优先级：恢复 OPT 原始实验数据
-
-> **背景**：论文 v19 的 §4.9 报告了 OPT-1.3B 跨架构复制实验。三模型对比表的数据已写入论文，但以下三类原始 JSON 数据未提交到 GitHub，导致 Fig 4 Panel C 只能以文字摘要形式呈现，无法画折线图/散点图。
-
-### 1. OPT 训练轨迹数据
-
-**论文描述**: 21 checkpoints × 840 steps, code 0.14→0.20 monotonic, medical 0.09→0.14 flat
-
-**查找位置**:
-```bash
-# 检查 phase4_trajectory.sh 的输出目录
-ls experiments/opt_trajectory/
-ls experiments/phase4_opt/
-find experiments/ -name '*trajectory*' -o -name '*opt*traj*' | grep -v '.git'
-
-# 检查 scripts/opt/phase4_trajectory.sh 中的输出路径
-grep -E 'OUT|output|results|save' scripts/opt/phase4_trajectory.sh
-```
-
-**需要的数据格式** (JSON):
-```json
-{
-  "model": "OPT-1.3B",
-  "domain": "code",
-  "trajectory": [
-    {"step": 40,  "dw_pct": 0.31, "barrier": 0.029},
-    {"step": 80,  "dw_pct": 0.58, "barrier": 0.027},
-    ...
-    {"step": 840, "dw_pct": 1.41, "barrier": 0.20}
-  ]
-}
-```
-
-**导出到**: `experiments/opt_results/trajectory_code.json` + `trajectory_med.json`
+> **读者**：DGX 主机操作者。
+> **仓库**：`https://github.com/FauReam/AFP`，分支 `main`。
+> **论文版本**：v19（文件：`docs/internal/paper.tex`，已编译 PDF：`paper.pdf`）。
+> **背景**：本地 Mac 已做大量清理和论文修改，但无法直接访问 DGX 上的实验输出。以下任务需在 DGX 上完成。
 
 ---
 
-### 2. OPT 逐层散度数据
-
-**论文描述**: Pythia r=0.995, OPT r=0.91, 24 layers × 2 domains
-
-**查找位置**:
-```bash
-find experiments/ -name '*per_block*' -o -name '*layer*div*' -o -name '*block*' | grep -v '.git'
-grep -r 'per.block\|per_block\|layer.*div' scripts/opt/ --include='*.py' -l
-```
-
-**需要的数据格式** (JSON):
-```json
-{
-  "model": "OPT-1.3B",
-  "layers": 24,
-  "code_divergence":   [5.6, 4.2, 3.1, ...],
-  "medical_divergence": [5.8, 4.5, 3.3, ...],
-  "pearson_r": 0.91
-}
-```
-
-**导出到**: `experiments/opt_results/per_block_divergence.json`
-
----
-
-### 3. OPT Gaussian 扰动数据
-
-**论文描述**: 0.0003@ΔW=0.5% 到 0.055@ΔW=8%
-
-**查找位置**:
-```bash
-find experiments/ -name '*gaussian*' -o -name '*noise*' -o -name '*perturb*' | grep -v '.git'
-grep -r 'gaussian\|noise\|perturb' scripts/opt/theory_experiments.sh -l
-```
-
-**需要的数据格式** (JSON):
-```json
-{
-  "model": "OPT-1.3B",
-  "gaussian_barriers": [
-    {"dw_pct": 0.5, "barrier_code": 0.0003, "barrier_med": null},
-    {"dw_pct": 1.0, "barrier_code": null,   "barrier_med": null},
-    {"dw_pct": 2.0, "barrier_code": null,   "barrier_med": null},
-    {"dw_pct": 4.0, "barrier_code": null,   "barrier_med": null},
-    {"dw_pct": 8.0, "barrier_code": 0.055,  "barrier_med": null}
-  ]
-}
-```
-
-**导出到**: `experiments/opt_results/gaussian_calibration.json`
-
----
-
-### 4. 导出后操作
+## 步骤 0：先同步仓库（必须先做）
 
 ```bash
 cd /home/jiayu/AFP
+git pull origin main
+# 如果本地有未提交的修改，先 stash：
+#   git stash && git pull origin main && git stash pop
+```
 
-# 创建目录
-mkdir -p experiments/opt_results
+---
 
-# 复制找到的原始文件
-cp <找到的路径> experiments/opt_results/
+## 任务 A：恢复 OPT 原始实验数据（最高优先级）
 
-# 如果原始数据不是 JSON 格式（Python pickle/npy 等），转换为 JSON
-python3 -c "
-import json, torch
-# 示例：从 .pt 转换为 .json
-data = torch.load('experiments/opt_trajectory/results.pt')
-with open('experiments/opt_results/trajectory_code.json', 'w') as f:
-    json.dump(data, f, indent=2)
-"
+> **为什么需要**：论文 §4.9 报告了 OPT-1.3B 跨架构复制实验。三模型对比表（Pythia-2ep vs OPT-2ep vs GPT-Neo-2ep）的汇总统计已在论文中，但以下三类原始逐点数据未提交到 GitHub。当前论文的 Fig 4 Panel C 只能用文字摘要代替折线图/散点图。拿到原始数据后可以补全定量图表。
 
-# 提交到 GitHub
-git add experiments/opt_results/
-git commit -m 'data: OPT raw experiment results (trajectory + per-block + gaussian)'
+### A1. 先定位 OPT 实验的原始输出
+
+OPT 实验由 `scripts/opt/opt_full_pipeline.sh` 统一调度。先看这个脚本把结果写到了哪里：
+
+```bash
+cd /home/jiayu/AFP
+grep -nE 'OUT|output|results|save|RESULT|\.json|\.pt|\.npy|\.pkl' scripts/opt/opt_full_pipeline.sh | head -30
+```
+
+同时也检查各个 phase 脚本的输出位置：
+
+```bash
+for f in scripts/opt/phase*.sh scripts/opt/theory_experiments.sh; do
+    echo "=== $f ==="
+    grep -nE 'OUT|OUTPUT|output_dir|results|save' "$f" | head -10
+done
+```
+
+用这些信息确定 OPT 实验的输出根目录（可能是 `experiments/opt_results/`、`experiments/opt/`、`experiments/phase4_opt/` 等）。
+
+### A2. 恢复训练轨迹数据
+
+**论文中的描述**：21 checkpoints × 840 training steps。Code domain barrier: 0.14→0.20（单调上升）。Medical domain barrier: 0.09→0.14（相对平坦）。
+
+⚠️ 注意：OPT 轨迹形状和 Pythia 不同。Pythia code 是倒 U 形，OPT code 是单调上升。不要混用 Pythia 的数值。
+
+**查找**（从 A1 确定的输出目录开始）：
+```bash
+# 如果 A1 找到了输出目录，直接进去看
+ls -la <输出目录>/
+
+# 否则广撒网
+find experiments/ -maxdepth 3 -type f \( -name '*trajectory*' -o -name '*traj*' -o -name '*checkpoint*' \) | grep -v '.git'
+find experiments/ -maxdepth 3 -type d | grep -iE 'traj|phase4'
+```
+
+**可能的数据形式**：
+- 一个 `.json` 文件包含所有 checkpoint 的 (step, loss, barrier) 数组 → 最好
+- 多个 `.pt` / `.npy` 文件，每文件一个 checkpoint → 需要合并
+- 脚本输出日志中有打印的数值 → 需要手动提取（最差情况）
+
+**无论如何**，把找到的原始文件（不修改）复制到统一位置：
+```bash
+mkdir -p experiments/opt_recovery/trajectory
+cp <原始文件路径> experiments/opt_recovery/trajectory/
+```
+
+**验证**：打开文件，确认 barrier 的端点与论文一致：
+- code trajectory 第一个点 barrier ≈ 0.14，最后一个点 ≈ 0.20
+- medical trajectory 第一个点 barrier ≈ 0.09，最后一个点 ≈ 0.14
+- 应有 ~21 个数据点（840 steps ÷ 40 steps/checkpoint）
+
+### A3. 恢复逐层散度数据
+
+**论文中的描述**：24 层 transformer × 2 个域（code + medical）。Pythia 的 per-block 模式跨域高度相关（r=0.995），OPT 的相关性稍低（r=0.91）。
+
+**查找**：
+```bash
+find experiments/ -maxdepth 3 -type f \( -name '*per_block*' -o -name '*layer*' -o -name '*block*div*' \) | grep -v '.git'
+find experiments/ -maxdepth 3 -type d | grep -iE 'block|layer|div'
+```
+
+**可能的数据形式**：
+- 一个 (24,) 或 (2, 24) 的 numpy 数组
+- 一个 JSON，key 为 `code_divergence` / `medical_divergence`
+
+**导出**：
+```bash
+mkdir -p experiments/opt_recovery/per_block
+cp <原始文件路径> experiments/opt_recovery/per_block/
+```
+
+**验证**：确认 24 个值大致递减（浅层散度 > 深层散度），且 code 和 medical 的两条曲线形状相似（r ≈ 0.91）。
+
+### A4. 恢复 Gaussian 扰动数据
+
+**论文中的描述**：在 ΔW ∈ {0.5%, 1%, 2%, 4%, 8%} 五个级别上做 Gaussian 噪声扰动。障碍极小：从 0.0003（ΔW=0.5%）到 0.055（ΔW=8%）。
+
+**查找**：
+```bash
+find experiments/ -maxdepth 3 -type f \( -name '*gaussian*' -o -name '*noise*' -o -name '*calib*' -o -name '*perturb*' \) | grep -v '.git'
+```
+
+**导出**：
+```bash
+mkdir -p experiments/opt_recovery/gaussian
+cp <原始文件路径> experiments/opt_recovery/gaussian/
+```
+
+**验证**：确认 barrier 值在 0.0003 到 0.055 之间，且基本上随 ΔW 增大而增大。
+
+### A5. 如果找不到任何数据
+
+检查 DGX 上是否有其他工作目录：
+
+```bash
+find /home/jiayu -maxdepth 3 -name '*opt*' -type d 2>/dev/null
+find /tmp -name '*opt*' -o -name '*AFP*' 2>/dev/null
+ls -la ~/AFP/experiments/
+```
+
+如果确实丢失了，记录结论：**"OPT 原始数据已丢失，论文中的汇总数字是唯一留存记录。如有需要可重新运行实验。"**
+
+### A6. 提交到 GitHub
+
+```bash
+cd /home/jiayu/AFP
+git add experiments/opt_recovery/
+git commit -m "data: recover OPT raw experiment outputs from DGX
+
+- Trajectory: 21-ckpt code (0.14→0.20) + medical (0.09→0.14)
+- Per-block divergence: 24-layer × 2-domain (r=0.91)
+- Gaussian calibration: 5-level ΔW (0.0003–0.055)
+- Raw files preserved as-is; format may vary"
 git push origin main
 ```
 
 ---
 
-## 次优先级：确认 GPT-Neo 实验状态
+## 任务 B：确认 GPT-Neo 实验状态
 
-**论文描述**: GPT-Neo-1.3B 行已从三模型表中删除（数据为 "—"），Limitations 写 "GPT-Neo replication is pending"。
-
-**确认**:
-```bash
-# 是否已有 GPT-Neo 模型训练？
-ls experiments/trained_models/ | grep -i neo
-ls experiments/ | grep -i neo
-
-# 是否有 GPT-Neo 训练脚本输出？
-grep -r 'neo' scripts/gptneo_*.sh
-ls experiments/gptneo*/
-```
-
-**如已完成**: 导出数据 → `experiments/gptneo_results/` → 提交 → 更新三模型表和论文。
-
-**如未完成**: 评估是否需要（OPT 已足以支撑跨架构结论），决定继续或放弃。
-
----
-
-## 低优先级：同步本地清理
+**背景**：论文三模型对比表中 GPT-Neo 行曾为全 "—" 占位符，已被删除。Limitations 节写 "GPT-Neo replication is pending"。
 
 ```bash
 cd /home/jiayu/AFP
 
-# 拉取最新（包含本地清理的 46 个文件删除）
+# 检查是否已有训练好的 GPT-Neo 模型
+ls experiments/trained_models/ | grep -i neo
+ls experiments/ | grep -i neo
+find experiments/ -name '*neo*' -o -name '*gptneo*' | grep -v '.git'
+
+# 检查批量脚本是否定义了 GPT-Neo 输出路径
+grep -nE 'neo|GPT.Neo|EleutherAI' scripts/gptneo_pipeline.sh scripts/gptneo_v5.sh
+```
+
+**如果已有数据**：参照任务 A 的方式导出到 `experiments/gptneo_results/`，提交。
+
+**如果没有**：OPT 已经足以支撑跨架构复制的结论（两个不同架构 + 一致的 3.6-3.7× med/code 比值）。可以标记 GPT-Neo 为 "未执行"，无需阻塞。
+
+---
+
+## 任务 C：同步本地清理
+
+> 本地 Mac 已删除 46 个过时文件（详见下方类别 1-9）。拉取后 DGX 本地的对应文件也会被删除。
+
+```bash
+cd /home/jiayu/AFP
 git pull origin main
 
-# 确认清理生效
-git status  # 应显示干净的工作区
+# 确认清理后状态
+git status
 
-# 检查是否有本地未追踪的残留文件
-git clean -nd  # -n = dry run，预览
+# 预览 DGX 本地未追踪的残留文件（不会自动删除）
+git clean -nd
 ```
 
 ---
@@ -171,12 +192,15 @@ git clean -nd  # -n = dry run，预览
 
 | # | 任务 | 状态 |
 |---|------|------|
-| 1 | 找到 OPT 轨迹数据并导出 JSON | ☐ |
-| 2 | 找到 OPT 逐层散度数据并导出 JSON | ☐ |
-| 3 | 找到 OPT Gaussian 数据并导出 JSON | ☐ |
-| 4 | 提交 `experiments/opt_results/` 到 GitHub | ☐ |
-| 5 | 确认 GPT-Neo 实验状态 | ☐ |
-| 6 | `git pull` 同步清理 | ☐ |
+| 0 | `git pull` 同步仓库 | ☐ |
+| A1 | 定位 OPT 实验输出目录 | ☐ |
+| A2 | 恢复训练轨迹原始数据 | ☐ |
+| A3 | 恢复逐层散度原始数据 | ☐ |
+| A4 | 恢复 Gaussian 扰动原始数据 | ☐ |
+| A5 | 如找不到数据，记录结论 | ☐ |
+| A6 | 提交 `experiments/opt_recovery/` | ☐ |
+| B | 确认 GPT-Neo 状态 | ☐ |
+| C | `git pull` 同步本地清理 | ☐ |
 
 ---
 
@@ -402,39 +426,3 @@ OPT 原始数据（轨迹 21 checkpoint、逐层散度、Gaussian 各 ΔW 值）
 3. 补充后更新 `generate_fig4_opt.py` 的 Panel C，将文本替换为 3 个子图
 
 **当前 Fig 4 的价值**：Panel A+B 的定量对比已完整（数据来自论文 Table §4.9），可独立支撑跨架构复制结论。
-
----
-
-# 理论修复 — 2026-07-19
-
-> 论文 v19 理论部分 (§4.10–4.13) 发现 5 处过时/错误，已全部修复。
-
-## 🔴 #1: "目前正在运行" — 事实性错误
-**位置**: Discussion §6  
-**原文**: "Three theory-driven experiments are **currently running** to validate these predictions"  
-**问题**: 实验 A/B/C 早已完成，结果已在同节报告  
-**修复**: 改为过去时，并追加实验结论摘要
-
-## 🟡 #2: "可测试预测" — 标题过时
-**位置**: §4.13 (原标题)  
-**原文**: `\subsection{Testable Predictions}`  
-**问题**: 内容实际已是实验结果，不是预测  
-**修复**: 改为 `Theory Verification Experiments`
-
-## 🟡 #3: Code inverted-U 理论缺 OPT 架构限定
-**位置**: §4.12 SGD Dynamics  
-**原文**: "In the code domain ... barrier declines (inverted-U)" 作为普遍规律呈现  
-**问题**: OPT-1.3B code 轨迹是 monotonic (0.14→0.20)，不是 inverted-U  
-**修复**: (a) 将 "code domain" 改为 "code domain on Pythia"; (b) 追加段落说明 inverted-U 是架构依赖的，OPT 表现为 monotonic，domain stability ordering 一致但 trajectory shape 不通用
-
-## 🟡 #4: Per-block r=0.995 当普遍值
-**位置**: §4.10 Barrier Decomposition  
-**原文**: "near-identical divergence patterns (r = 0.995) follow from..."  
-**问题**: OPT 只有 r=0.91，0.995 是 Pythia 特定值  
-**修复**: 改为 "on Pythia (r = 0.995 across domains)"，追加 OPT r=0.91 提及并解释架构差异
-
-## 🟡 #5: `\ref{sec:theory}` 引用断裂
-**位置**: Discussion §6 + §4.10  
-**原文**: `Section~\ref{sec:theory}` 引用的 label 不存在  
-**问题**: 理论子节缺少 `\label{sec:theory}`，引用指向空  
-**修复**: 在 `\subsection{Barrier Decomposition}` 添加 `\label{sec:theory}`，编译后引用正常解析
