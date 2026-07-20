@@ -207,6 +207,23 @@ OPT 原始数据（轨迹 21 checkpoint、逐层散度、Gaussian 各 ΔW 值）
 
 - 页数: 19 → 20 (+Fig 4 图表)
 
+## ⚠️ 待补充：OPT 原始实验数据
+
+> Fig 4 Panel C 目前仅为文本摘要，缺少定量图表（折线图/散点图）。以下数据未存储在 repo 中，需要从 OPT 实验输出中恢复或重新采集：
+
+| 数据项 | 当前状态 | 需要的内容 | 用途 |
+|--------|----------|------------|------|
+| OPT 训练轨迹 | 仅有端点范围 (code 0.14→0.20, med 0.09→0.14) | 21 checkpoints × 840 steps 的 (step, ΔW, barrier) 三元组 | Panel C 折线图：Pythia inverted-U vs OPT monotonic 对比 |
+| OPT 逐层散度 | 仅有 r=0.91 | 24 layers × 2 domains 的各层 ΔW 值 | Panel C 散点图：Pythia r=0.995 vs OPT r=0.91 逐层对比 |
+| OPT Gaussian 扰动 | 仅有端点 (0.0003@0.5% → 0.055@8%) | ΔW ∈ {0.5%, 1%, 2%, 4%, 8%} 各级 barrier 值 | Panel C 折线图：Pythia vs OPT Gaussian barrier 对比 |
+
+**恢复路径**：
+1. 检查 `scripts/opt/` 下脚本的输出目录（`opt_full_pipeline.sh`, `theory_experiments.sh` 等）
+2. 如原始 JSON 仍在 DGX 机器上，导出至 `experiments/opt_results/`
+3. 补充后更新 `generate_fig4_opt.py` 的 Panel C，将文本替换为 3 个子图
+
+**当前 Fig 4 的价值**：Panel A+B 的定量对比已完整（数据来自论文 Table §4.9），可独立支撑跨架构复制结论。
+
 ---
 
 # 理论修复 — 2026-07-19
