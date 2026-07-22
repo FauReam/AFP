@@ -70,11 +70,11 @@ def prepare_data(domain: str, tokenizer, max_samples: int = 0) -> tuple[dict, di
         return train, val
 
     jsonl = PROJECT / "data" / "versaprm" / "versa_prm.jsonl"
-    input_ids_list, labels_list = [], []
     n_samples, n_filtered = 0, 0
     lens = []
 
-    print(f"[data] tokenizing {domain}...")
+    # ── Pass 1: count valid samples (use SAME text format as Pass 2) ──
+    print(f"[data] scanning {domain}...")
     with open(jsonl) as f:
         for line in f:
             d = json.loads(line)
@@ -82,35 +82,46 @@ def prepare_data(domain: str, tokenizer, max_samples: int = 0) -> tuple[dict, di
                 continue
             n_samples += 1
             question = d.get("question", "")
-            for step, label in zip(d["steps"], d["labels"]):
+            for step in d.get("steps", []):
                 text = f"{question}\n{step}"
-                ids = tokenizer.encode(text)
+                ids = tokenizer.encode(text, truncation=True, max_length=MAX_LEN)
                 if len(ids) <= MAX_LEN:
-                    input_ids_list.append(ids)
-                    # VersaPRM labels are -1/1 → convert to 0/1 for BCEWithLogitsLoss
-                    labels_list.append(1.0 if int(label) == 1 else 0.0)
                     lens.append(len(ids))
                 else:
                     n_filtered += 1
 
-    n = len(input_ids_list)
+    n = len(lens)
     print(f"[data] {domain}: {n} valid steps from {n_samples} samples "
           f"(filtered {n_filtered} > {MAX_LEN} tok)")
 
     if lens:
-        lens.sort()
+        ls_sorted = sorted(lens)
         for p in [10, 50, 90, 95, 99]:
-            print(f"[data]   p{p}: {lens[n * p // 100]} tok")
+            print(f"[data]   p{p}: {ls_sorted[n * p // 100]} tok")
 
-    # Build tensors
+    # ── Pre-allocate tensors (ONE allocation, no list-of-lists) ──
     pad_id = tokenizer.pad_token_id or 0
-    inp = torch.full((n, MAX_LEN), pad_id, dtype=torch.long)
+    inp  = torch.full((n, MAX_LEN), pad_id, dtype=torch.long)
     mask = torch.zeros(n, MAX_LEN, dtype=torch.bool)
-    for i, ids in enumerate(input_ids_list):
-        L = len(ids)
-        inp[i, :L] = torch.tensor(ids[:L])
-        mask[i, :L] = True
-    labs = torch.tensor(labels_list, dtype=torch.float32)
+    labs = torch.zeros(n, dtype=torch.float32)
+
+    # ── Pass 2: fill tensors directly ──
+    idx = 0
+    with open(jsonl) as f:
+        for line in f:
+            d = json.loads(line)
+            if d.get("domain") != domain:
+                continue
+            question = d.get("question", "")
+            for step, label in zip(d.get("steps", []), d.get("labels", [])):
+                text = f"{question}\n{step}"
+                ids = tokenizer.encode(text, truncation=True, max_length=MAX_LEN)
+                L = len(ids)
+                if L <= MAX_LEN and idx < n:
+                    inp[idx, :L] = torch.tensor(ids[:L], dtype=torch.long)
+                    mask[idx, :L] = True
+                    labs[idx] = 1.0 if int(label) == 1 else 0.0
+                    idx += 1
 
     # Shuffle + split 85/15
     perm = torch.randperm(n)
