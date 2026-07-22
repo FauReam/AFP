@@ -1,6 +1,6 @@
 # Complete Data Inventory — AFP Phase 0 LMC Paper
 
-> v18 — 2026-07-17
+> v19 — 2026-07-19 (data current as of paper v19)
 > All data verified via Frankle formula recomputation from raw JSON
 
 ---

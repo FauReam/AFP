@@ -60,10 +60,11 @@ bash scripts/monitor.sh
     ├─ 有进程 → 别动
     ├─ 没进程 → 看要做什么：
     │   ├─ 训练: $VENV -u scripts/train_agent.py --domain <code|medical> --lr <1e-4|5e-4>
-    │   ├─ LMC扫描: bash scripts/lmc_6scans.sh
-    │   ├─ 域内基线: bash scripts/lmc_within_domain.sh
-    │   └─ 噪声地板: bash scripts/noise_floor.sh
-    └─ 做完了 → 更新 PAPER.md → git push
+    │   ├─ LMC扫描: bash scripts/phase1_batch.sh  (标准批量)
+    │   ├─ 合并基准: $VENV scripts/merge_benchmark.py
+    │   ├─ 理论验证: bash scripts/theory_experiments.sh
+    │   └─ OPT实验: bash scripts/opt/opt_full_pipeline.sh
+    └─ 做完了 → 更新 paper.tex / PAPER.md → git push
 ```
 
 ## 核心数据
@@ -75,7 +76,10 @@ bash scripts/monitor.sh
 | 域内(code) | — | 0.048±0.000 | — | Code: 域差异≈0 额外 barrier |
 | 域内(med) | — | 0.147±0.027 | — | Medical: 训练不稳定性 > 域差异 |
 | Identical | — | ~0.000 | — | 噪声地板 |
-| Random | — | 0.033 | 0.222 | 上界；high-div med 已接近 |
+| Random | — | 0.033 | 0.150 | 上界（3-seed 校准） |
+| **OPT-2ep** | — | **0.251** | **0.896** | 跨架构: 绝对值 4-8×, 比值一致 (3.6× vs 3.7×) |
+
+> 论文 §4.9 + DATA_INVENTORY.md 有完整三模型对比表。
 
 ## 模型目录
 
@@ -102,12 +106,13 @@ print(f'ΔW={(d/(n+1e-8))*100:.2f}%' if d/n > 0.001 else 'BUG: model is base!')
 
 ## 已知 Bug
 
-详见 `docs/internal/ENGINEERING.md`（Bug 1-22）。
+详见 `docs/internal/ENGINEERING.md`（Bug 1-23 + 共享内存警告）。
 
 | # | 最关键的 |
 |---|---------|
 | 22 | code_e1 曾是 base 模型，所有早期 LMC 无效 |
+| 23 | 多 seed 训练静默覆盖（输出路径无 seed/lr 区分） |
 | 21 | 训练后保存的模型可能是 base（做验证！） |
 | 18 | code epoch 2+ 退化 |
-| — | symlink 覆盖导致模型丢失（禁用 symlink） |
+| — | ⚠️ 绝对不能清除 CPU-GPU 共享内存（Tailscale 永久断连） |
 ```

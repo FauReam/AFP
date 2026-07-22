@@ -1,6 +1,7 @@
 # Training Stability, Not Domain Difference, Determines Linear Mode Connectivity
 
-> **Draft v14 — 2026-07-14 | Theory framework + accuracy barriers + publication figures**
+> **Draft v19 — 2026-07-19 | Tri-model comparison + OPT extended experiments + theory verification**
+> Markdown mirror of `docs/internal/paper.tex`. LaTeX source is authoritative.
 
 ---
 

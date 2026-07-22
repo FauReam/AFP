@@ -3,7 +3,7 @@
 > **Target:** ICLR 2028 (estimated deadline: Oct 2027)
 > **Fallback:** TMLR (rolling submission)
 > **Hardware:** NVIDIA DGX Spark GB10, 121GB, ARM64 CUDA 13.0
-> **Current date:** 2026-07-13
+> **Current date:** 2026-07-22 | **Paper:** v19 (20 pages, tri-model + theory verification done)
 > **Based on:** 6-expert adversarial panel findings (see `EXPERT_PANEL_FINDINGS.md`)
 
 ---

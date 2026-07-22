@@ -71,7 +71,7 @@
 \rule{0.95\textwidth}{0.5pt}\\[4pt]
 \begin{minipage}{0.92\textwidth}
 \small
-When a pretrained language model is fine-tuned on different domains, how far do the resulting models move in weight space? Do they remain in the same linearly-connected loss basin? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning tasks. At standard training intensity, the models diverge by 1.4--1.5\% in weight space and the LMC barrier is 0.05 — well within the linearly-connected regime. At higher divergence (8.0--8.5\% weight displacement, 11.6\% cross-model), the barrier rises to $0.12 \pm 0.03$ (code) and $0.23 \pm 0.10$ (medical) — a 2--5$\times$ increase. However, even at this divergence level the barrier remains modest, suggesting that domain specialization alone does not easily break linear connectivity. Within-domain baselines reveal a striking asymmetry: code models exhibit near-identical barriers within and across domains ($0.048$ vs.\ $0.053$), while medical models show 3$\times$ larger within-domain than cross-domain barriers ($0.147$ vs.\ $0.051$). This indicates that training stability, not domain difference, is the dominant source of LMC barrier height — and that stability varies dramatically across domains. Noise-floor calibration places these results in context: identical copies yield barrier $\approx 0.000$, and pretrained-to-random-init interpolation provides a reference point of $0.150 \pm 0.019$ (3-seed calibration). Per-block divergence patterns are nearly identical across domains ($r = 0.995$). On Pythia, a training trajectory analysis reveals that the barrier follows an inverted-U shape for code (peaking mid-training then declining) but grows monotonically for medical, confirming domain-specific stability at the within-run level; OPT trajectory shapes differ ($\S\ref{sec:opt}$), indicating architecture-dependence. Gaussian perturbation experiments show that unstructured noise produces negligible barriers even at 8\% weight displacement, while structured training-induced changes create barriers 9$\times$ larger at equivalent magnitude. Layer-selective interpolation demonstrates that the barrier is almost entirely concentrated in early transformer layers (0--7), with deep layers (16--23) showing near-zero interpolation penalty — a directly actionable finding for model merging practice. Cross-architecture replication on OPT-1.3B confirms the qualitative domain stability pattern (medical $>$ code within-domain barriers) despite 4--8$\times$ larger absolute barrier magnitudes, supporting generalizability beyond the Pythia architecture.
+When fine-tuning on different domains, how far do models move in weight space? We measure this on Pythia-1.4B fine-tuned on code and medical reasoning. At standard intensity, models diverge by 1.4\%--1.5\% with LMC barriers of $\sim$0.05. At higher divergence (8\%), barriers rise to 0.12 (code) and 0.23 (medical). Within-domain baselines reveal a striking asymmetry: code models show near-identical within- and cross-domain barriers (0.048 vs.\ 0.053), while medical models show 3$\times$ larger within-domain barriers (0.147 vs.\ 0.051). Training stability, not domain difference, is the dominant driver of barrier height — and stability varies dramatically across domains. Gaussian perturbation shows unstructured noise creates negligible barriers at equivalent displacement (9$\times$ smaller than training-induced). Layer-selective interpolation reveals 75\% barrier concentration in early layers (0--7), with deep layers (16--23) mergeable at near-zero penalty. Cross-architecture replication on OPT-1.3B confirms the domain stability gradient (medical $>$ code) with a consistent 3.6--3.7$\times$ med/code ratio across architectures.
 \end{minipage}\\[4pt]
 \rule{0.95\textwidth}{0.5pt}
 \end{center}
@@ -480,7 +480,7 @@ Medical high $>$ std & $t(2.1) = 2.45$ & 0.014 & 2.06 & large \\
 Code within-domain and cross-domain barriers are statistically indistinguishable ($p = 0.55$, $d = 0.49$), confirming that domain difference contributes nothing for code models. Medical within-domain barriers significantly exceed cross-domain barriers ($p < 0.001$, $d = 3.66$) and code within-domain barriers ($p < 0.001$, $d = 4.17$). Gaussian noise creates small but statistically detectable barriers ($p < 0.001$), though the effect size relative to training-induced barriers is $d = 5.27$ — an order of magnitude larger. All comparisons produce ``large'' effect sizes ($|d| > 0.8$), indicating practically meaningful differences.
 
 % ============================================================
-% 5. THEORETICAL FRAMEWORK
+% 4.x Cross-Architecture Replication on OPT-1.3B (subsection of Results)
 % ============================================================
 \subsection{Cross-Architecture Replication on OPT-1.3B}\label{sec:opt}
 
@@ -593,17 +593,6 @@ Our findings extend the LMC literature in several ways. The trajectory-level inv
 The domain-specific stability asymmetry has implications beyond model merging. In continual learning, the EWC framework~\cite{kirkpatrick2017ewc} uses Fisher information to identify important parameters for preservation. Our per-block findings suggest that EWC-like protection could be concentrated on early layers where divergence is largest, while late layers can be freely updated. Similarly, the training trajectory results suggest a practical early-stopping criterion for multi-task fine-tuning: stop training when the barrier against the pretrained model begins to decline (for stable domains like code) or plateaus (for unstable domains like medical) — continuing beyond this point yields diminishing connectivity returns.
 
 % ============================================================
-% 6. CONCLUSION
-% ============================================================
-\section{Conclusion}
-
-We have shown that training stability, not domain difference, is the dominant determinant of Linear Mode Connectivity barrier height in fine-tuned language models. Across Pythia-1.4B and OPT-1.3B, spanning four domains (code, general, math, medical), the pattern is consistent: within-domain training instability produces barriers up to 3$\times$ larger than cross-domain interpolation, and the domain stability ordering (medical $>$ math $>$ general $>$ code) is preserved across architectures despite substantial differences in absolute barrier magnitude.
-
-Three mechanistic findings sharpen this picture. First, LMC barriers arise from the \emph{directional structure} of weight changes, not their magnitude — Gaussian noise at equivalent displacement produces negligible barriers (9$\times$ smaller than training-induced). Second, the barrier is concentrated in early transformer layers (0--7), with deep layers (16--23) mergeable at near-zero penalty — a directly actionable insight for model merging. Third, the trajectory shape (inverted-U vs.\ monotonic) is architecture-dependent, while the domain stability \emph{ordering} is not, suggesting that basin-width properties are an architectural prior modulated by data distribution.
-
-These findings have immediate practical implications: practitioners can estimate expected merge quality from per-domain training stability measurements, apply conservative merging only to early layers, and use trajectory analysis to determine optimal early-stopping points. The theoretical framework — Hessian-aligned SGD diffusion with domain-specific noise structure — unifies all observed phenomena and makes testable predictions, three of which we have confirmed experimentally.
-
-% ============================================================
 % 7. LIMITATIONS
 % ============================================================
 \section{Limitations}
@@ -611,7 +600,7 @@ These findings have immediate practical implications: practitioners can estimate
 \begin{enumerate}
     \item \textbf{Permutation invariance.} We verified that permutation drift does not explain our barriers. A neuron-level correlation analysis on the highest-barrier pair (medical high-divergence s0$\leftrightarrow$s1, within-domain barrier 0.207) shows mean per-neuron correlation of 0.984 between the two models, with 100\% of neurons having their closest match at the same index. This confirms Entezari et al.~\cite{entezari2022permutation}'s prediction: same-checkpoint fine-tuned models remain permutation-aligned by construction, even at high divergence. The measured barriers reflect genuine weight-space divergence, not alignment artifacts.
 
-\item \textbf{Cross-architecture replication (see \S\ref{sec:opt}):} OPT-1.3B confirms the domain stability gradient (medical 0.896 $>$ code 0.251), with the med/code barrier ratio consistent at 3.6--3.7$\times$ across architectures. GPT-Neo replication is pending. The 30+ OPT scans (vs.\ 70+ for Pythia) constitute a viability check, not a full replication.
+\item \textbf{Cross-architecture replication (see \S\ref{sec:opt}):} OPT-1.3B confirms the domain stability gradient (medical 0.896 $>$ code 0.251), with the med/code barrier ratio consistent at 3.6--3.7$\times$ across architectures. OPT experiments use 3-point LMC scans (vs.\ 11-point for Pythia), which may systematically underestimate barriers. All OPT values reported here have been independently verified against raw JSON (71 scan files). GPT-Neo replication is in progress as a third architectural data point. The 30+ OPT scans (vs.\ 70+ for Pythia) constitute a viability check, not a full replication.
 
     \item \textbf{Task framing and domain scope.} Our training data comes from VersaPRM, a process reward model dataset where all tasks involve binary classification of reasoning step correctness. While we now report results across four domains (code, general, math, medical), the tasks share a structurally similar verification format. Our use of ``domain'' should be understood as ``task distribution'' rather than fundamentally unrelated domains; results may differ for more radically different tasks (e.g., generation vs.\ classification) or for genuine domain-adaptation corpora~\cite{gururangan2020dapt}.
 
@@ -620,6 +609,18 @@ These findings have immediate practical implications: practitioners can estimate
     \item \textbf{Seed count.} For standard divergence conditions, $n = 3$ seeds provide tight estimates (code within-domain $\sigma^2 < 0.001$). For high-divergence medical, we expanded to $n = 5$ seeds (10 pairs) and found the mean barrier increases from 0.154 ($n = 3$) to 0.304 ($n = 10$), with a 15$\times$ range across pairs. This expansion revealed pair-specific compatibility that $n = 3$ missed. Additional seeds for other conditions would similarly sharpen the estimates.
 \end{enumerate}
 
+
+% ============================================================
+% ============================================================
+% 8. CONCLUSION
+% ============================================================
+\section{Conclusion}
+
+We have shown that training stability, not domain difference, is the dominant determinant of Linear Mode Connectivity barrier height in fine-tuned language models. Across Pythia-1.4B and OPT-1.3B, spanning four domains (code, general, math, medical), the pattern is consistent: within-domain training instability produces barriers up to 3$\times$ larger than cross-domain interpolation, and the domain stability ordering (medical $>$ math $>$ general $>$ code) is preserved across architectures despite substantial differences in absolute barrier magnitude.
+
+Three mechanistic findings sharpen this picture. First, LMC barriers arise from the \emph{directional structure} of weight changes, not their magnitude — Gaussian noise at equivalent displacement produces negligible barriers (9$\times$ smaller than training-induced). Second, the barrier is concentrated in early transformer layers (0--7), with deep layers (16--23) mergeable at near-zero penalty — a directly actionable insight for model merging. Third, the trajectory shape (inverted-U vs.\ monotonic) is architecture-dependent, while the domain stability \emph{ordering} is not, suggesting that basin-width properties are an architectural prior modulated by data distribution.
+
+These findings have immediate practical implications: practitioners can estimate expected merge quality from per-domain training stability measurements, apply conservative merging only to early layers, and use trajectory analysis to determine optimal early-stopping points. The theoretical framework — Hessian-aligned SGD diffusion with domain-specific noise structure — unifies all observed phenomena and makes testable predictions, three of which we have confirmed experimentally.
 
 % ============================================================
 % DATA AVAILABILITY

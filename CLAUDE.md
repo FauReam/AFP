@@ -13,13 +13,13 @@ Pythia-1.4B 分别在 code 和 medical 上 full-FT。测量权重偏移量级 + 
 | Standard | 1.4% | 0.053 ± 0.011 | 0.051 ± 0.013 |
 | High divergence | 8.0% | 0.118 ± 0.031 | 0.228 ± 0.102 |
 | 域内基线 | — | 0.048 (code) | 0.147 (medical) |
-| 噪声地板 | — | ~0.000 (identical) | 0.222 (random init) |
+| 噪声地板 | — | ~0.000 (identical) | 0.150 ± 0.019 (random init, 3-seed) |
 
 1. **标准 FT 下 LMC 成立**（barrier ≈ 0.05）。
 2. **高差异下 barrier 升高 2-5× 但仍适中**。域 FT 不足以轻易打破连通性。
 3. **Code 跨域 ≈ 域内** → 域差异不产生额外 barrier；**Medical 域内 > 跨域** → 训练不稳定性 > 域差异。
 4. **Per-block 模式高度相关** (r=0.995) — 两个域改变相同的 block，只差幅度。
-5. **High-divergence medical (0.23) ≈ random init 上界 (0.22)** → 8% ΔW 已接近连通极限。
+5. **High-divergence medical (0.23) > random init ref (0.15)** → 8% ΔW 下 medical 两个 seed 的 barrier 已超过 pretrained↔random 参考值。seed-pair 兼容性范围极大（0.072–1.213, 15×）。
 
 ## ⚠️ 不要做的事
 
@@ -58,16 +58,25 @@ Pythia-1.4B 分别在 code 和 medical 上 full-FT。测量权重偏移量级 + 
 | Python | `/home/jiayu/AFP/venv/bin/python3` |
 | 速度 | ~42min/训练, ~15min/LMC 扫描 |
 
+## 论文
+
+`docs/internal/paper.tex` v19（20 页，三模型对比 + OPT 扩展实验 + 理论验证）。编译：`pdflatex paper.tex`。根目录 `paper.pdf` 为最新编译版。
+
 ## 入口
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com HF_DATASETS_OFFLINE=1 PYTHONUNBUFFERED=1
 
-# 训练单个模型
+# 训练单个模型（~42 min）
 python -u scripts/train_agent.py --domain code --lr 1e-4 --model-id EleutherAI/pythia-1.4b
 
-# LMC 扫描（需 code_e1 和 medical_e1 symlink）
+# LMC 扫描（11 点线性插值）
 python -u scripts/lmc_barrier_scan.py
+
+# 批量实验
+bash scripts/phase1_batch.sh       # LR sweeps, within-domain, baselines
+bash scripts/final_batch.sh         # Merge benchmark, OPT trajectory
+bash scripts/theory_experiments.sh  # Label noise, extended putt, Hessian
 
 # 查看状态
 bash scripts/monitor.sh
@@ -77,11 +86,11 @@ bash scripts/monitor.sh
 
 | 文件 | 内容 |
 |------|------|
-| `docs/internal/PAPER.md` | 论文草稿 v4 |
-| `docs/internal/EXPERIMENT_PLAN.md` | 实验数据 + 待做 |
+| `docs/internal/PAPER.md` | 论文草稿 v19（Markdown mirror，LaTeX 为权威版本） |
 | `docs/internal/EXPERT_PANEL_FINDINGS.md` | **6-Expert 评审报告** — 11 条弱点 + 7 大优势 + venue strategy |
 | `docs/internal/ICLR_SPRINT_PLAN.md` | **ICLR 2028 冲刺计划** — 3-phase 实验清单 + timeline + GPU budget |
-| `docs/internal/ENGINEERING.md` | 22 条已知 Bug |
+| `docs/internal/ENGINEERING.md` | 23 条已知 Bug + 训练代码规范 + 共享内存警告 |
+| `docs/internal/DATA_INVENTORY.md` | 完整数据清单（42+ 模型，110+ 扫描） |
 | `experiments/RESTART_PROMPT.md` | 新会话重启指南 |
 
 ## 项目结构
@@ -90,13 +99,15 @@ bash scripts/monitor.sh
 AFP/
 ├── scripts/
 │   ├── train_agent.py           # 训练 full-FT
-│   ├── lmc_barrier_scan.py      # LMC 扫描
-│   ├── lmc_6scans.sh            # 批量跨域 LMC
-│   ├── lmc_within_domain.sh     # 域内 LMC 基线
-│   └── noise_floor.sh           # 噪声地板校准
+│   ├── lmc_barrier_scan.py      # LMC 扫描（11 点）
+│   ├── lmc_3pt_scan.py          # LMC 快速扫描（3 点）
+│   ├── phase1_batch.sh          # ICLR sprint: LR sweeps, baselines
+│   ├── final_batch.sh           # Merge benchmark, OPT trajectory
+│   └── theory_experiments.sh    # Label noise, extended putt, Hessian
 ├── experiments/
 │   ├── trained_models/          # 独立目录: {domain}_lr{lr}_s{seed}/
-│   └── phase0_ivn/results/      # LMC 结果 JSON
-├── docs/internal/               # 设计文档
-└── docs/reports/                # 图表
+│   ├── trained_models_opt/      # OPT-1.3B 模型
+│   └── phase0_ivn/results/      # LMC 结果 JSON (122 files)
+├── docs/internal/               # 论文 + 工程 + 评审
+└── docs/reports/                # 图表 (PDF vector)
 ```

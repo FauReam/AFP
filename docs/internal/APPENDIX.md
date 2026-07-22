@@ -1,7 +1,7 @@
 # Appendix — Supplementary Material
 
 > For: "Weight-Space Divergence and Loss Landscape Connectivity in Domain-Specialized Fine-Tuning"
-> v7, 2026-07-14
+> v19, 2026-07-19 (synced with paper.tex v19)
 
 ---
 
