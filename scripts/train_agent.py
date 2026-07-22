@@ -94,10 +94,33 @@ def prepare_data(domain: str, tokenizer, max_samples: int = 0) -> tuple[dict, di
     print(f"[data] {domain}: {n} valid steps from {n_samples} samples "
           f"(filtered {n_filtered} > {MAX_LEN} tok)")
 
+    # ── Memory budget guard ──
+    BYTES_PER_STEP = MAX_LEN * 8 + MAX_LEN * 1 + 4  # int64 ids + bool mask + float32 label ≈ 2.3KB
+    MAX_DATA_GB = 30  # hard cap — leaves ~50GB for model+optimizer on 80GB target
+    est_gb = n * BYTES_PER_STEP / 1e9
+    print(f"[data] estimated tensor: {est_gb:.1f} GB ({n} steps × {BYTES_PER_STEP} bytes)")
+    if est_gb > MAX_DATA_GB:
+        cap_n = int(MAX_DATA_GB * 1e9 / BYTES_PER_STEP)
+        print(f"[data] ⚠ CAP: {n}→{cap_n} steps (>{MAX_DATA_GB}GB, subsampling)")
+        import random; random.seed(42)
+        keep = sorted(random.sample(range(n), cap_n))
+        lens = [lens[i] for i in keep]
+        n = cap_n
+
     if lens:
         ls_sorted = sorted(lens)
         for p in [10, 50, 90, 95, 99]:
             print(f"[data]   p{p}: {ls_sorted[n * p // 100]} tok")
+
+    # ── Read meminfo for logging ──
+    try:
+        with open('/proc/meminfo') as mf:
+            for line in mf:
+                if 'MemAvailable' in line:
+                    avail = int(line.split()[1]) / 1e6
+                    print(f"[data] MemAvailable: {avail:.1f} GB")
+                    break
+    except: pass
 
     # ── Pre-allocate tensors (ONE allocation, no list-of-lists) ──
     pad_id = tokenizer.pad_token_id or 0
@@ -129,10 +152,17 @@ def prepare_data(domain: str, tokenizer, max_samples: int = 0) -> tuple[dict, di
     val_idx = perm[:n_val]
     train_idx = perm[n_val:]
 
-    train = {"input_ids": inp[train_idx], "attention_mask": mask[train_idx],
-             "labels": labs[train_idx], "n": len(train_idx)}
-    val = {"input_ids": inp[val_idx], "attention_mask": mask[val_idx],
-           "labels": labs[val_idx], "n": len(val_idx)}
+    train = {"input_ids": inp[train_idx].clone(), "attention_mask": mask[train_idx].clone(),
+             "labels": labs[train_idx].clone(), "n": len(train_idx)}
+    val = {"input_ids": inp[val_idx].clone(), "attention_mask": mask[val_idx].clone(),
+           "labels": labs[val_idx].clone(), "n": len(val_idx)}
+
+    # Release full tensor — views don't free storage; clone() does
+    del inp, mask, labs, perm, lens
+    import gc; gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    print(f"[data] train: {train['n']}, val: {val['n']} (full tensors released)")
 
     # Cache
     cache_train.parent.mkdir(parents=True, exist_ok=True)
