@@ -1,12 +1,13 @@
-\documentclass[11pt,a4paper]{article}
+% !TEX program = xelatex
+\documentclass[11pt,a4paper]{ctexart}
 
-% ── Layout ──
+% ── 页面布局 ──
 \usepackage[hmargin=2.2cm,vmargin=2.5cm]{geometry}
 \usepackage{setspace}\onehalfspacing
 \usepackage{lmodern}\usepackage[T1]{fontenc}
 \usepackage{microtype}
 
-% ── Typography ──
+% ── 排版 ──
 \usepackage{amsmath,amssymb,bm}
 \usepackage{graphicx,float}
 \usepackage[labelfont=bf,font=small]{caption}
@@ -14,171 +15,181 @@
 \usepackage[svgnames]{xcolor}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=teal]{hyperref}
 \usepackage{fancyhdr}
-\pagestyle{fancy}\fancyhf{}\fancyhead[L]{\small\color{gray}AFP Project Guide}\fancyhead[R]{\small\color{gray}\thepage}
+\pagestyle{fancy}\fancyhf{}\fancyhead[L]{\small\color{gray}AFP 项目指南}\fancyhead[R]{\small\color{gray}\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
-% ── Custom ──
+% ── 自定义盒子 ──
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{keybox}{colback=blue!6,colframe=blue!40,boxrule=0.5pt,arc=3pt,left=8pt,right=8pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt}
+\newtcolorbox{warnbox}{colback=orange!8,colframe=orange!50,boxrule=0.5pt,arc=3pt,left=8pt,right=8pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt}
+\newtcolorbox{goodbox}{colback=green!6,colframe=green!40,boxrule=0.5pt,arc=3pt,left=8pt,right=8pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt}
+
 \definecolor{codeblue}{RGB}{33,150,243}
 \definecolor{medred}{RGB}{244,67,54}
-\definecolor{warnorange}{RGB}{255,152,0}
-\definecolor{goodgreen}{RGB}{76,175,80}
 \definecolor{notegray}{RGB}{120,120,120}
 
-\newcommand{\keypoint}[1]{\noindent\colorbox{blue!8}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\small\bfseries #1}}\medskip}
-\newcommand{\warn}[1]{\noindent\colorbox{orange!12}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\small #1}}\medskip}
-\newcommand{\good}[1]{\noindent\colorbox{green!8}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\small #1}}\medskip}
 \newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\good}[1]{\textcolor{green!50!black}{\textbf{#1}}}
+\newcommand{\warn}[1]{\textcolor{orange!80!black}{\textbf{#1}}}
+\newcommand{\done}[1]{\textcolor{green!50!black}{#1}}
 
 \begin{document}
 
-\title{\textbf{AFP Project}\\{\large A Complete Onboarding Guide for New Contributors}}
-\author{Prepared for the Experiment Machine Operator\\\small DGX Spark GB10 \,|\, 121\,GB Unified Memory \,|\, ARM64 CUDA 13.0}
+\title{\textbf{AFP 项目完全指南}\\{\large 从零到专家的新人上手教程}}
+\author{编写给 DGX 实验机操作者\\\small NVIDIA DGX Spark GB10 \,|\, 121\,GB 统一内存 \,|\, ARM64 CUDA 13.0}
 \date{\today}
 \maketitle
 \thispagestyle{fancy}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{In 30 Seconds: What Is This Project?}
+\section{30 秒理解这个项目}
 % ═══════════════════════════════════════════════════════════════════
 
-We take a 1.3-billion-parameter language model (Pythia), fine-tune it on two different domains (code reasoning and medical reasoning), and measure two things:
+我们拿一个 13 亿参数的语言模型（Pythia），分别用代码推理数据和医学推理数据对它进行全参数微调，然后测量两件事：
 
 \begin{enumerate}
-  \item \textbf{How far do the weights move?} (Weight Divergence, $\Delta W$)
-  \item \textbf{Can you draw a straight line between them without crossing a loss barrier?} (Linear Mode Connectivity, LMC)
+  \item \textbf{权重移动了多远？}（权重散度，$\Delta W$）
+  \item \textbf{两个模型之间能画一条直线而不碰到 loss 高峰吗？}（线性模式连通性，LMC）
 \end{enumerate}
 
-\vspace{4pt}
-\keypoint{Core finding: Training stability, not domain difference, determines the barrier height. Medical training is 3$\times$ less stable than code training.}
+\begin{keybox}
+\textbf{核心发现：决定 LMC 障碍高度的是训练稳定性，不是领域差异。医学训练的稳定性比代码训练差 3 倍。}
+\end{keybox}
 
-The paper is titled: \textit{``Training Stability, Not Domain Difference, Determines Linear Mode Connectivity.''} Current version: v19 (20 pages, 4 domains, 2 model families, theory section).
+论文标题：\textit{``Training Stability, Not Domain Difference, Determines Linear Mode Connectivity''}（训练稳定性，而非领域差异，决定线性模式连通性）。当前版本：v19，20 页，4 个领域，2 个模型家族，含理论章节。
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The Hardware: Your Machine}
+\section{你的硬件：DGX Spark GB10}
 % ═══════════════════════════════════════════════════════════════════
-
-You're working on a \textbf{NVIDIA DGX Spark GB10}. Its key property:
 
 \begin{itemize}
-  \item \textbf{121\,GB unified memory} --- CPU and GPU \emph{share} the same physical RAM. There's no separate VRAM.
-  \item \textbf{ARM64 CPU} --- This means \code{torch.compile()} does NOT work (Triton is x86-only).
-  \item \textbf{CUDA 13.0} on Blackwell architecture (compute capability 12.1).
-  \item Training speed: Pythia-1.4B full-FT at batch=128, seq\_len=256: $\approx$5.5\,s/step ($\approx$42\,min per epoch).
+  \item \textbf{121\,GB 统一内存} --- CPU 和 GPU \emph{共享同一块物理内存}，没有独立的显存。
+  \item \textbf{ARM64 CPU} --- 这意味着 \code{torch.compile()} \textbf{不可用}（Triton 只支持 x86）。
+  \item \textbf{CUDA 13.0}，Blackwell 架构（算力 12.1）。
+  \item 训练速度：Pythia-1.4B 全参数微调，batch=128，seq\_len=256：$\approx$\,5.5 秒/步（$\approx$\,42 分钟/epoch）。
 \end{itemize}
 
-\warn{Never run \code{ipcrm} or clear \code{/dev/shm}! The DGX's unified memory is shared with Tailscale's runtime state. Clearing it will permanently destroy remote access --- you'll need physical access to the machine to fix it.}
+\begin{warnbox}
+\textbf{绝对禁止：} 清除 CPU-GPU 共享内存。不要运行 \code{ipcrm}，不要手动清理 \code{/dev/shm}，不要做任何释放共享内存的操作。
+
+\textbf{后果：} Tailscale 远程连接会永久丢失，只能物理接触机器才能恢复。DGX 的统一内存由 Tailscale 运行时状态和 GPU 计算共享，清除即断连。
+\end{warnbox}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{Project Map: Where Everything Lives}
+\section{项目地图：每个文件是干什么的}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{table}[H]
 \centering\small
-\begin{tabular}{@{}llp{5.5cm}@{}}
+\begin{tabular}{@{}llp{4.8cm}@{}}
 \toprule
-\textbf{Directory / File} & \textbf{Type} & \textbf{What's Inside} \\
+\textbf{路径} & \textbf{类型} & \textbf{内容} \\
 \midrule
-\code{CLAUDE.md} & Instruction & Rules the AI must follow; core data table; ``DO NOT'' list \\
-\code{README.md} & Public & GitHub landing page; paper title and abstract-level summary \\
-\code{paper.pdf} & Deliverable & Compiled 20-page paper (authoritative) \\
+\code{CLAUDE.md} & 指令 & AI 必须遵守的规则；核心数据表；``禁止做''清单 \\
+\code{README.md} & 公开 & GitHub 首页；论文标题和摘要级概述 \\
+\code{paper.pdf} & 产出 & 编译好的 20 页论文（权威版本） \\
 \midrule
-\code{docs/internal/paper.tex} & Source & \textbf{LaTeX source v19} --- the authoritative paper text \\
-\code{docs/internal/PAPER.md} & Mirror & Markdown copy of the paper (convenience; LaTeX is authoritative) \\
-\code{docs/internal/APPENDIX.md} & Data & Numerical appendix tables \\
-\code{docs/internal/ENGINEERING.md} & Manual & \textbf{23 documented bugs} with root causes + fixes + lessons \\
-\code{docs/internal/ICLR\_SPRINT\_PLAN.md} & Roadmap & 3-phase experiment plan, timeline, GPU budget \\
-\code{docs/internal/EXPERT\_PANEL\_FINDINGS.md} & Review & 6-expert adversarial review (v4 era, historical) \\
-\code{docs/internal/DATA\_INVENTORY.md} & Catalog & Complete list of all 42+ models and 110+ scans \\
+\code{docs/internal/paper.tex} & 源码 & \textbf{LaTeX 源码 v19} --- 论文的权威文本 \\
+\code{docs/internal/PAPER.md} & 镜像 & 论文的 Markdown 版（LaTeX 才是权威） \\
+\code{docs/internal/APPENDIX.md} & 数据 & 附录数值表格 \\
+\code{docs/internal/ENGINEERING.md} & 手册 & \textbf{23 条已知 Bug}，含根因 + 修复 + 教训 \\
+\code{docs/internal/ICLR\_SPRINT\_PLAN.md} & 路线图 & 3 阶段实验计划、时间线、GPU 预算 \\
+\code{docs/internal/DATA\_INVENTORY.md} & 清单 & 全部 42+ 模型和 110+ 次扫描的完整目录 \\
+\code{docs/internal/EXPERT\_PANEL\_FINDINGS.md} & 评审 & 6 专家对抗评审（v4 时期，历史文档） \\
 \midrule
-\code{docs/reports/FIGURE\_SPEC\_V2.md} & Spec & \textbf{Figure specifications} --- exact data, colors, layout \\
-\code{docs/reports/figure\_data.json} & Data & Pythia primary results (Figs 1--3) \\
-\code{docs/reports/fig*.pdf} & Output & Vector figures for the paper \\
+\code{docs/reports/FIGURE\_SPEC\_V2.md} & 规格 & \textbf{图表规格} --- 精确数据、颜色、布局 \\
+\code{docs/reports/figure\_data.json} & 数据 & Pythia 主要结果（图 1--3） \\
+\code{docs/reports/fig*.pdf} & 产出 & 论文插图（矢量 PDF） \\
+\code{docs/reports/ONBOARDING\_GUIDE.pdf} & 教程 & 本文档 \\
+\code{docs/reports/BUGFIX\_TOKENIZE.md} & 报告 & Tokenize 内存爆炸修复详情 \\
+\code{docs/reports/INCIDENT\_REPORT\_TOKENIZE\_OOM.md} & 报告 & 完整事故报告 \\
 \midrule
-\code{scripts/train\_agent.py} & Code & Full-FT training with drive-putt LR schedule \\
-\code{scripts/lmc\_barrier\_scan.py} & Code & 11-point LMC barrier measurement \\
-\code{scripts/lmc\_3pt\_scan.py} & Code & Fast 3-point LMC scan (used for OPT) \\
-\code{scripts/gptneo\_pipeline.sh} & Pipeline & GPT-Neo full workflow: tokenize + train + LMC \\
-\code{scripts/generate\_figures.py} & Viz & Generate Fig 1--3 from \code{figure\_data.json} \\
-\code{scripts/generate\_fig4.py} & Viz & Generate Fig 4 (cross-architecture) \\
+\code{scripts/train\_agent.py} & 代码 & 全参数微调，含 drive-putt 学习率调度 \\
+\code{scripts/lmc\_barrier\_scan.py} & 代码 & 11 点 LMC 障碍扫描 \\
+\code{scripts/lmc\_3pt\_scan.py} & 代码 & 快速 3 点 LMC 扫描（OPT 用） \\
+\code{scripts/gptneo\_pipeline.sh} & 流水线 & GPT-Neo 全流程：tokenize + 训练 + LMC \\
+\code{scripts/generate\_figures.py} & 可视化 & 从 \code{figure\_data.json} 生成图 1--3 \\
+\code{scripts/generate\_fig4.py} & 可视化 & 生成图 4（跨架构复制） \\
 \midrule
-\code{experiments/trained\_models/} & Data & Pythia-1.4B checkpoints (288\,GB, 240 \code{.pt} files) \\
-\code{experiments/trained\_models\_opt/} & Data & OPT-1.3B checkpoints (184\,GB) \\
-\code{experiments/phase0\_ivn/results/} & Data & \textbf{122 LMC barrier JSONs} --- primary data \\
-\code{experiments/phase0\_opt/results/} & Data & OPT replication results \\
-\code{data/versaprm/} & Data & Tokenized training data (2.1\,GB) \\
+\code{experiments/trained\_models/} & 数据 & Pythia-1.4B 检查点（288\,GB，240 个 \code{.pt} 文件） \\
+\code{experiments/trained\_models\_opt/} & 数据 & OPT-1.3B 检查点（184\,GB） \\
+\code{experiments/phase0\_ivn/results/} & 数据 & \textbf{122 个 LMC 障碍 JSON} --- 核心数据 \\
+\code{experiments/phase0\_opt/results/} & 数据 & OPT 复制实验结果 \\
+\code{data/versaprm/} & 数据 & 已 tokenize 的训练数据（2.1\,GB） \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The Core Numbers}
+\section{核心数据表}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{table}[H]
 \centering
 \begin{tabular}{lccc}
 \toprule
-\textbf{Condition} & $\mathbf{\Delta W}$ & \textbf{Code Barrier} & \textbf{Medical Barrier} \\
+\textbf{条件} & $\mathbf{\Delta W}$ & \textbf{Code 障碍} & \textbf{Medical 障碍} \\
 \midrule
-Standard divergence & 1.4\% & 0.053 $\pm$ 0.011 & 0.051 $\pm$ 0.013 \\
-High divergence & 8.0\% & 0.118 $\pm$ 0.031 & 0.228 $\pm$ 0.102 \\
-Within-domain (code) & --- & 0.048 & --- \\
-Within-domain (medical) & --- & --- & \textcolor{medred}{\textbf{0.147}} \\
-Noise floor (identical) & --- & $\approx$0.000 & $\approx$0.000 \\
-Noise floor (random init) & --- & 0.033 $\pm$ 0.001 & 0.150 $\pm$ 0.019 \\
+标准散度 & 1.4\% & 0.053 $\pm$ 0.011 & 0.051 $\pm$ 0.013 \\
+高散度 & 8.0\% & 0.118 $\pm$ 0.031 & 0.228 $\pm$ 0.102 \\
+域内基线（code） & --- & 0.048 & --- \\
+域内基线（medical） & --- & --- & \textcolor{medred}{\textbf{0.147}} \\
+噪声地板（同模型） & --- & $\approx$0.000 & $\approx$0.000 \\
+噪声地板（随机初始化） & --- & 0.033 $\pm$ 0.001 & 0.150 $\pm$ 0.019 \\
 \bottomrule
 \end{tabular}
-\caption{Core results table. Source: \code{CLAUDE.md} and paper \S4.2--4.5.}
+\caption{核心结果表。来源：\code{CLAUDE.md} 和论文 \S4.2--4.5。}
 \end{table}
 
-\subsection*{What These Numbers Mean}
+\subsection*{这些数字意味着什么}
 
-\good{
-\textbf{1. Standard FT: LMC holds cleanly.} Barrier $\approx$\,0.05 is small. Models fine-tuned on code and medical from the same pretrained checkpoint remain in the same loss basin. You can linearly interpolate between them without a big loss penalty.
+\begin{goodbox}
+\textbf{1. 标准微调下 LMC 成立。} 障碍 $\approx$\,0.05 很小。从同一个预训练检查点出发微调的 code 模型和 medical 模型，仍然在同一个 loss 盆地中。你可以在这两个模型之间做线性插值，不会遇到大的 loss 惩罚。
 
-\textbf{2. The Medical Anomaly.} Medical within-domain barrier (0.147) is 3$\times$ the cross-domain barrier (0.051). Two models trained on the \emph{same} medical data differ \emph{more} in the loss landscape than a code model and a medical model. Training on medical data is inherently less stable.
+\textbf{2. Medical 异常。} Medical 的域内障碍（0.147）是跨域障碍（0.051）的 \textbf{3 倍}。两个在\emph{同一份}医学数据上训练的模型，它们在 loss 地貌中的差异，比一个 code 模型和一个 medical 模型还要大。医学数据的训练本质上更不稳定。
 
-\textbf{3. Code is Remarkably Stable.} Code within-domain $\approx$ cross-domain (0.048 $\approx$ 0.053). Domain difference contributes essentially nothing for code.
+\textbf{3. Code 出奇稳定。} Code 域内 $\approx$ 跨域（0.048 $\approx$ 0.053）。对 code 来说，领域差异几乎不产生额外障碍。
 
-\textbf{4. Barrier $\neq$ Weight Distance.} Gaussian noise at $\Delta W = 8\%$ produces barrier 0.014. Training at $\Delta W = 1.5\%$ produces barrier 0.053 --- 9$\times$ larger. It's the \emph{direction} of weight change, not the magnitude.
-}
+\textbf{4. 障碍 $\neq$ 权重距离。} 对模型加 $\Delta W = 8\%$ 的高斯噪声，障碍只有 0.014。训练产生的 $\Delta W = 1.5\%$ 却产生障碍 0.053 --- \textbf{9 倍差异}。决定障碍的是权重变化的\emph{方向}，不是幅度。
+\end{goodbox}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The Experiments}
+\section{所有实验一览}
 % ═══════════════════════════════════════════════════════════════════
 
-\subsection*{Core Measurements (Pythia-1.4B, 1 epoch)}
+\subsection*{核心测量（Pythia-1.4B，1 epoch）}
 
 \begin{enumerate}
-  \item \textbf{Weight Divergence:} For each model pair, compute $\Delta W_i = \|\theta_i - \theta_{\text{base}}\|_2 / \|\theta_{\text{base}}\|_2$ for each layer, then average.
-  \item \textbf{LMC Barrier Scan:} 11-point linear interpolation $\theta(\alpha) = (1-\alpha)\theta_{\text{code}} + \alpha\theta_{\text{medical}}$, $\alpha \in \{0, 0.1, \dots, 1.0\}$. Measure BCE loss on 2,000 test samples per domain. Compute: $\text{barrier} = \max_\alpha \mathcal{L}(\theta(\alpha)) - (\mathcal{L}(\theta(0)) + \mathcal{L}(\theta(1)))/2$.
-  \item \textbf{Within-Domain Baseline:} Same-domain, different-seed pairs. Is the barrier from domain difference or from seed variance?
-  \item \textbf{Seed-Pair Compatibility:} All $C(5,2)=10$ pairs of high-divergence medical models. Found 15$\times$ range (0.072--1.213) --- \textbf{pair-specific, not model-specific}.
+  \item \textbf{权重散度：} 对每对模型，逐层计算 $\Delta W_i = \|\theta_i - \theta_{\text{base}}\|_2 \;/\; \|\theta_{\text{base}}\|_2$，然后取平均。
+  \item \textbf{LMC 障碍扫描：} 11 点线性插值 $\theta(\alpha) = (1-\alpha)\theta_{\text{code}} + \alpha\theta_{\text{medical}}$，$\alpha \in \{0, 0.1, \dots, 1.0\}$。每个域用 2,000 条测试样本测 BCE loss。障碍定义：$\text{barrier} = \max_\alpha \mathcal{L}(\theta(\alpha)) - (\mathcal{L}(\theta(0)) + \mathcal{L}(\theta(1)))/2$。
+  \item \textbf{域内基线：} 同域不同种子的模型对。障碍到底来自领域差异，还是种子方差？
+  \item \textbf{种子对兼容性：} 高散度 medical 的 $C(5,2)=10$ 对全部测量。发现 \textbf{15 倍范围}（0.072--1.213）--- 障碍是\emph{配对特定}的，不是\emph{模型特定}的。
 \end{enumerate}
 
-\subsection*{Mechanistic Experiments}
+\subsection*{机制实验}
 
 \begin{enumerate}
   \setcounter{enumi}{4}
-  \item \textbf{Training Trajectory:} Checkpoints every 40 steps. Code shows inverted-U (peak at step 200, then declines). Medical shows monotonic growth (plateaus at $\approx$0.21).
-  \item \textbf{Gaussian Perturbation:} Add isotropic noise at 5 $\Delta W$ levels. Near-zero barriers even at 8\%. Proves barriers come from \emph{structured} weight changes.
-  \item \textbf{Layer-Selective Interpolation:} Merge only subsets of layers. 75\% of barrier lives in layers 0--7. Late layers (16--23): near-zero penalty.
-  \item \textbf{Merge Quality Benchmark:} Pure weight averaging beats TIES-Merging and Task Arithmetic. Accuracy barriers are much smaller than loss barriers.
+  \item \textbf{训练轨迹：} 每 40 步保存检查点。Code 呈现倒 U 形（步 200 达峰，然后下降）。Medical 单调增长（在 $\approx$0.21 趋于平稳）。
+  \item \textbf{高斯扰动：} 加 5 个 $\Delta W$ 级别的各向同性噪声。即使 8\% 散度也几乎没有障碍。证明障碍来自\emph{结构化}的权重变化。
+  \item \textbf{分层选择性插值：} 只合并部分层。75\% 的障碍集中在 0--7 层。深层（16--23）：几乎为零。
+  \item \textbf{合并质量基准：} 纯权重平均优于 TIES-Merging 和 Task Arithmetic。Accuracy barrier 远小于 loss barrier。
 \end{enumerate}
 
-\subsection*{Cross-Architecture Replication (OPT-1.3B)}
+\subsection*{跨架构复制（OPT-1.3B）}
 
-OPT-1.3B (different architecture, corpus, tokenizer) confirms the medical $>$ code within-domain pattern (ratio: 3.6$\times$ vs.\ Pythia's 3.7$\times$). Absolute barriers are 4--8$\times$ larger, but the relative ordering is preserved.
+OPT-1.3B（不同架构、不同训练语料、不同 tokenizer）确认了 medical $>$ code 的域内障碍模式（比值：OPT 3.6$\times$ vs.\ Pythia 3.7$\times$）。绝对障碍值 OPT 大 4--8 倍，但\emph{相对排序保持一致}。
 
 \subsection*{GPT-Neo-1.3B}
 
-\textbf{Status: Pending.} Training scripts exist (\code{gptneo\_pipeline.sh}) but results are not yet reported.
+\textbf{状态：待完成。} 训练脚本已就绪（\code{gptneo\_pipeline.sh}），但结果尚未报告。
 
 % ═══════════════════════════════════════════════════════════════════
-\section{How to Run Things}
+\section{怎么跑实验}
 % ═══════════════════════════════════════════════════════════════════
 
-\subsection*{Environment Setup}
+\subsection*{环境设置}
 
 \begin{verbatim}
 export HF_ENDPOINT=https://hf-mirror.com
@@ -188,7 +199,7 @@ cd /home/jiayu/AFP
 VENV=/home/jiayu/AFP/venv/bin/python3
 \end{verbatim}
 
-\subsection*{Train a Single Model ($\approx$42 min)}
+\subsection*{训练一个模型（$\approx$42 分钟）}
 
 \begin{verbatim}
 $VENV -u scripts/train_agent.py \
@@ -196,221 +207,225 @@ $VENV -u scripts/train_agent.py \
     --model-id EleutherAI/pythia-1.4b
 \end{verbatim}
 
-Output goes to \code{experiments/trained\_models/code/}.
+输出到 \code{experiments/trained\_models/code/}。
 
-\subsection*{Run an LMC Barrier Scan ($\approx$15 min)}
+\subsection*{跑一次 LMC 障碍扫描（$\approx$15 分钟）}
 
 \begin{verbatim}
 $VENV -u scripts/lmc_barrier_scan.py
 \end{verbatim}
 
-\subsection*{Batch Pipeline ($\approx$2--3 GPU-hours)}
+\subsection*{批量流水线（$\approx$2--3 GPU-小时）}
 
 \begin{verbatim}
-bash scripts/phase1_batch.sh        # LR sweeps + within-domain
-bash scripts/final_batch.sh          # Merge benchmark + OPT trajectory
-bash scripts/theory_experiments.sh   # Label noise + extended putt + Hessian
+bash scripts/phase1_batch.sh        # 学习率扫描 + 域内基线
+bash scripts/final_batch.sh          # 合并基准 + OPT 轨迹
+bash scripts/theory_experiments.sh   # 标签噪声 + 延长 putt + Hessian
 \end{verbatim}
 
-\subsection*{Quick Status Check}
+\subsection*{快速状态检查}
 
 \begin{verbatim}
 bash scripts/monitor.sh
 \end{verbatim}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The 10 Iron Rules}
+\section{十条铁律}
 % ═══════════════════════════════════════════════════════════════════
 
-These rules exist because each one was violated at least once, causing real damage.
+这些规则每一条都曾经被违反过，每一次都造成了真实的损失。
 
 \begin{enumerate}
-  \item \textbf{Use \code{nohup}} --- All batch experiments must launch with \code{nohup \dots \&}.
-  \item \textbf{Redirect output} --- stdout/stderr go to timestamped log files in \code{experiments/}.
-  \item \textbf{Zero stdin} --- No \code{input()} or \code{sys.stdin.read()} in batch scripts.
-  \item \textbf{\code{HF\_DATASETS\_OFFLINE=1}} --- Zero network during training/eval. Always.
-  \item \textbf{No \code{set -e}} --- One experiment crashing must NOT kill the entire batch.
-  \item \textbf{Fail gracefully} --- Use \code{|| \{ log "ERROR"; return 1; \}}, never \code{exit 1}.
-  \item \textbf{Skip if done} --- Check \code{[ -f "\$out" ] \&\& continue} for idempotent re-runs.
-  \item \textbf{Verify $\Delta W > 0.1\%$} --- After every training run. Bug\,22: base model was saved as ``trained'' model with zero weight change, invalidating ALL early LMC experiments.
-  \item \textbf{Verify process alive} --- \code{sleep 3 \&\& ps -p \$PID} after launch.
-  \item \textbf{Log crashes} --- Structured failure logs into \code{crashes/} directory.
+  \item \textbf{必须用 \code{nohup}} --- 所有批量实验必须以 \code{nohup ... \&} 启动。
+  \item \textbf{重定向输出} --- stdout/stderr 写到 \code{experiments/} 下的时间戳日志文件。
+  \item \textbf{零 stdin} --- 批量脚本里不能有 \code{input()} 或 \code{sys.stdin.read()}。
+  \item \textbf{\code{HF\_DATASETS\_OFFLINE=1}} --- 训练/评估期间全程零网络。永远。
+  \item \textbf{禁用 \code{set -e}} --- 一个实验挂了绝不能杀死整个批量。
+  \item \textbf{优雅失败} --- 用 \code{|| \{ log "ERROR"; return 1; \}}，绝不用 \code{exit 1}。
+  \item \textbf{输出存在即跳过} --- \code{[ -f "\$out" ] \&\& continue}，保证幂等重跑。
+  \item \textbf{训练后必须验证 $\Delta W > 0.1\%$} --- Bug 22 的教训：base 模型曾被当作``已训练''模型保存，重量变化为零，\textbf{使所有早期 LMC 实验无效}。
+  \item \textbf{启动后验证进程存活} --- \code{sleep 3 \&\& ps -p \$PID}。
+  \item \textbf{写崩溃日志} --- 结构化失败日志写到 \code{crashes/} 目录。
 \end{enumerate}
 
-\warn{Rule \#8 is the most important. Bug\,22 cost weeks of work. After every training: compute $\Delta W$ vs.\ the base checkpoint. If $\Delta W < 0.1\%$, the training failed silently and the output is garbage.}
+\begin{warnbox}
+\textbf{第 8 条是最重要的。} Bug 22 浪费了数周的工作。每次训练后：计算 $\Delta W$ 对比 base 检查点。如果 $\Delta W < 0.1\%$，训练静默失败了，输出是垃圾。
+\end{warnbox}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The ``DO NOT'' List}
+\section{绝对不能做的事}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{itemize}
-  \item \textbf{Do NOT mention LR in conclusions or titles.} LR is a knob for creating divergence, not a scientific contribution.
-  \item \textbf{Do NOT mention AFP / IVN / gate.} That research direction is abandoned. \code{VISION.md} is historical archive only.
-  \item \textbf{Do NOT chase an ``LMC broke'' narrative.} The experiments showed it didn't break. The story is about \emph{stability asymmetry}, not failure.
-  \item \textbf{Do NOT use symlinks for model directories.} Every model lives in its own \code{\{domain\}\_lr\{lr\}\_s\{seed\}/} directory.
-  \item \textbf{Do NOT trust caches blindly.} The cache filename includes \code{MAX\_LEN}. If you change the config, delete the old cache.
-  \item \textbf{Do NOT use \code{return\_tensors='pt'} in tokenization loops.} It creates one tensor object per sample --- OOM on large datasets.
-  \item \textbf{Do NOT store token IDs as Python \code{list[int]}.} Python ints are 3.5$\times$ larger than tensor int64.
+  \item \textbf{不要把 LR 写进结论或标题。} LR 只是制造散度的旋钮，不是科学贡献。
+  \item \textbf{不要提 AFP / IVN / gate。} 那个研究方向已废弃。\code{VISION.md} 仅为历史存档。
+  \item \textbf{不要追``LMC 破裂''叙事。} 实验证明它没破。故事是关于\emph{稳定性不对称}，不是失败。
+  \item \textbf{不要用软链接管理模型目录。} 每个模型独立放在 \code{\{domain\}\_lr\{lr\}\_s\{seed\}/}。
+  \item \textbf{不要盲目信任缓存。} 缓存文件名含 \code{MAX\_LEN}。如果改了配置，必须删旧缓存。
+  \item \textbf{不要在 tokenize 循环里用 \code{return\_tensors='pt'}。} 每个样本创建一个 tensor 对象 --- 大数据集直接 OOM。
+  \item \textbf{不要把 token ID 存为 Python \code{list[int]}。} Python int 比 tensor int64 大 3.5 倍。
 \end{itemize}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The 23 Known Bugs}
+\section{23 条已知 Bug 中最关键的 5 条}
 % ═══════════════════════════════════════════════════════════════════
 
-Read \code{docs/internal/ENGINEERING.md} for full details. Here are the 5 most important:
+完整列表见 \code{docs/internal/ENGINEERING.md}。
 
 \begin{enumerate}
-  \item \textbf{Bug\,11: \code{.item()} in inner loop $\to$ 10,416 GPU syncs.} MAS importance computation took 5+ hours instead of 1 minute. Fix: accumulate on GPU, sync once.
-  \item \textbf{Bug\,12: MAS ran on CPU.} \code{to\_device()} was called after the computation, not before. Fix: move model to GPU before any computation.
-  \item \textbf{Bug\,21: $\Delta W$ not verified after training.} Base model was saved as ``trained'' with zero weight change. Fix: mandatory post-training $\Delta W$ check.
-  \item \textbf{Bug\,22: \code{code\_e1} was the untrained base model.} ALL early LMC experiments invalidated. The ``code'' model was just Pythia-1.4B with zero fine-tuning.
-  \item \textbf{Bug\,23: Multi-seed training silently overwrites.} Output paths lacked seed differentiation. Running 3 seeds produced 1 model (the last one).
+  \item \textbf{Bug 11：内层循环 \code{.item()} → 10,416 次 GPU 同步。} MAS 重要性计算耗时 5+ 小时而非 1 分钟。修复：GPU 端累积，最后一次性同步。
+  \item \textbf{Bug 12：MAS 在 CPU 上跑。} \code{to\_device()} 调用在计算之后，不在之前。修复：在任何计算之前把模型移到 GPU。
+  \item \textbf{Bug 21：训练后未验证 $\Delta W$。} Base 模型被当作``已训练''保存，权重零变化。修复：强制训练后 $\Delta W$ 检查。
+  \item \textbf{Bug 22：\code{code\_e1} 实际上是没有训练过的 base 模型。} \textbf{所有早期 LMC 实验全部无效。} ``code''模型就是纯净的 Pythia-1.4B，零微调。
+  \item \textbf{Bug 23：多种子训练静默覆盖。} 输出路径没有区分种子。跑 3 个种子只产出了 1 个模型（最后一个）。
 \end{enumerate}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The Paper Structure}
+\section{论文结构}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{table}[H]
 \centering\small
-\begin{tabular}{@{}lp{10cm}@{}}
+\begin{tabular}{@{}lp{9cm}@{}}
 \toprule
-\textbf{Section} & \textbf{Content} \\
+\textbf{章节} & \textbf{内容} \\
 \midrule
-Abstract & Training stability, not domain difference, drives barrier height \\
-\S1 Intro & Why this matters for model merging and understanding fine-tuning \\
-\S2 Related Work & LMC, model merging, fine-tuning analysis --- 24 citations \\
-\S3 Method & Pythia-1.4B full-FT, 11-point LMC, drive-putt LR schedule \\
-\S4.1 Weight Divergence & Per-block $\Delta W$, $r=0.995$ across domains \\
-\S4.2 LMC Barriers & Standard vs.\ high divergence, catastrophic intermediate spike \\
-\S4.3 Within-Domain & 4-domain stability spectrum; seed-pair compatibility (C(5,2)=10) \\
-\S4.4 Asymmetry & Medical FT transfers positively to code, but not vice versa \\
-\S4.5 Noise Floor & Identical $\approx$0, Random ref $\approx$0.150 \\
-\S4.6 Trajectory & Code inverted-U vs.\ medical monotonic \\
-\S4.7 Gaussian & Structured 9$\times$ unstructured displacement \\
-\S4.8 Layer-Selective & 75\% in layers 0--7, 0\% in layers 16--23 \\
-\S4.9 OPT & Cross-architecture: med/code ratio 3.6$\times$ (OPT) vs.\ 3.7$\times$ (Pythia) \\
-\S5 Theory & Hessian-aligned SGD diffusion; Peclet number; basin statistics \\
-\S6 Discussion & Merge quality, implications for continual learning \\
-\S7 Limitations & Permutation verified (neuron corr 0.984), single family addressed, convergence confound \\
+摘要 & 训练稳定性而非领域差异决定障碍高度 \\
+\S1 引言 & 为什么这对模型合并和理解微调很重要 \\
+\S2 相关工作 & LMC、模型合并、微调分析 --- 24 篇引用 \\
+\S3 方法 & Pythia-1.4B 全参数微调、11 点 LMC、drive-putt 学习率调度 \\
+\S4.1 权重散度 & 逐层 $\Delta W$，跨域 $r=0.995$ \\
+\S4.2 LMC 障碍 & 标准 vs.\ 高散度，中间散度的灾难性尖峰 \\
+\S4.3 域内基线 & 4 领域稳定性谱；种子对兼容性 (C(5,2)=10 对) \\
+\S4.4 不对称性 & Medical 微调正向迁移到 code，反之不然 \\
+\S4.5 噪声地板 & 同模型 $\approx$0，随机初始化参考 $\approx$0.150 \\
+\S4.6 训练轨迹 & Code 倒 U 形 vs.\ medical 单调增长 \\
+\S4.7 高斯扰动 & 结构化位移的障碍是随机噪声的 9$\times$ \\
+\S4.8 分层选择性插值 & 75\% 在 0--7 层，0\% 在 16--23 层 \\
+\S4.9 OPT 跨架构 & 跨架构复制：med/code 比值 OPT 3.6$\times$ vs.\ Pythia 3.7$\times$ \\
+\S5 理论 & Hessian 对齐的 SGD 扩散；佩克莱数；盆地统计 \\
+\S6 讨论 & 合并质量、对持续学习的启示 \\
+\S7 局限性 & 置换不变性已验证（神经元相关 0.984）、单模型家族已处理、收敛混淆 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{The Figures}
+\section{图表状态}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{table}[H]
 \centering\small
 \begin{tabular}{@{}cllp{4cm}@{}}
 \toprule
-\textbf{Fig} & \textbf{Panels} & \textbf{Status} & \textbf{Content} \\
+\textbf{图} & \textbf{面板} & \textbf{状态} & \textbf{内容} \\
 \midrule
-1 & A--F (6) & \good{Done} & LMC curves (4 panels) + bar chart + per-block divergence \\
-2 & A--D (4) & \good{Done} & Trajectory (2) + Gaussian calibration + layer-selective \\
-3 & A--B (2) & \good{Done} & Seed-pair heatmap + 4-domain stability spectrum \\
-4 & A--C (5) & \good{Done} & Pythia vs.\ OPT: barrier bars + ratio + trajectory + Gaussian + per-block \\
-5 & A--D (4) & \textcolor{warnorange}{Blocked} & Three-model cross-architecture (needs GPT-Neo + OPT redo) \\
-6 & A--B (2) & \textcolor{warnorange}{Blocked} & Three-model trajectory comparison (same blockers) \\
+1 & A--F (6) & \good{已完成} & LMC 曲线 (4) + 柱状图 + 逐层散度 \\
+2 & A--D (4) & \good{已完成} & 轨迹 (2) + 高斯校准 + 分层选择性 \\
+3 & A--B (2) & \good{已完成} & 种子对热力图 + 4 域稳定性谱 \\
+4 & A--C (5) & \good{已完成} & Pythia vs.\ OPT：障碍柱状图 + 比值 + 轨迹 + 高斯 + 逐层散度 \\
+5 & A--D (4) & \textcolor{orange}{待 GPT-Neo} & 三模型跨架构对比 \\
+6 & A--B (2) & \textcolor{orange}{待 GPT-Neo} & 三模型轨迹对比 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{Memory Budget: Why 121\,GB Can Fill Up}
+\section{内存预算：为什么 121\,GB 会满}
 % ═══════════════════════════════════════════════════════════════════
 
-The DGX has 121\,GB \emph{total} for CPU + GPU. Here's where it goes during training:
+DGX 总共有 121\,GB，CPU 和 GPU 共享。训练时的去向：
 
 \begin{itemize}
-  \item \textbf{Model params (bf16):} 1.4B $\times$ 2 bytes = 2.8\,GB
-  \item \textbf{Gradients (bf16):} 2.8\,GB
-  \item \textbf{AdamW optimizer states (fp32):} $m$ + $v$ = $2 \times 1.4\text{B} \times 4 = 11.2$\,GB
-  \item \textbf{Activations} (batch=128, L=256): $\approx$4\,GB
-  \item \textbf{Training data tensors:} $\approx$15\,GB (capped at 30\,GB)
-  \item \textbf{Overhead / CUDA context:} $\approx$5\,GB
+  \item \textbf{模型参数 (bf16)：} 1.4B $\times$ 2 bytes = 2.8\,GB
+  \item \textbf{梯度 (bf16)：} 2.8\,GB
+  \item \textbf{AdamW 优化器状态 (fp32)：} $m$ + $v$ = 2 $\times$ 1.4B $\times$ 4 = 11.2\,GB
+  \item \textbf{激活值} (batch=128, L=256)：$\approx$4\,GB
+  \item \textbf{训练数据张量：} $\approx$15\,GB（硬上限 30\,GB）
+  \item \textbf{开销 / CUDA 上下文：} $\approx$5\,GB
 \end{itemize}
 
-\textbf{Total: $\approx$41\,GB} for a typical training run. The data cap (30\,GB) prevents the 121\,GB limit from being reached.
+\textbf{合计：$\approx$41\,GB}（典型训练）。数据硬上限（30\,GB）防止触及 121\,GB 上限。
 
-\warn{The tokenization scripts were recently fixed --- the original code stored token IDs as Python \code{list[int]} (28 bytes each) instead of tensor int64 (8 bytes each). For 10 million steps, this alone wasted 72\,GB, causing OOM before training even started. See \code{docs/reports/BUGFIX\_TOKENIZE.md} and \code{INCIDENT\_REPORT\_TOKENIZE\_OOM.md}.}
+\begin{warnbox}
+\textbf{Tokenize 脚本刚修好} --- 原始代码把 token ID 存为 Python \code{list[int]}（每个 int 28 bytes），而不是 tensor int64（每个 8 bytes）。1000 万个训练步骤仅此一项就浪费了 72\,GB，训练还没开始就 OOM 了。详见 \code{docs/reports/BUGFIX\_TOKENIZE.md} 和 \code{INCIDENT\_REPORT\_TOKENIZE\_OOM.md}。
+\end{warnbox}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{Current Gaps (July 2026)}
+\section{当前差距（2026 年 7 月）}
 % ═══════════════════════════════════════════════════════════════════
 
-\subsection*{Bugs to Fix (0 GPU-hours)}
+\subsection*{Bug 待修（0 GPU-小时）}
 
 \begin{enumerate}
-  \item Barrier formula in \code{lmc\_barrier\_scan.py} computes \code{max(L) - L[0]} instead of the correct Frankle definition \code{max(L) - (L[0]+L[-1])/2}. Paper numbers were manually corrected.
-  \item Six fake LMC result files (lr=2e-4/3e-4) are byte-identical copies. Models exist but scans were never run.
-  \item \code{CLEANUP\_MANIFEST.md} claims 4 files were deleted but they still exist on disk (\code{VISION.md}, \code{DIRECTION.md}, \code{THEORY.md}, \code{OPT\_SECOND\_MODEL.md}).
+  \item \code{lmc\_barrier\_scan.py} 中的障碍公式计算的是 \code{max(L) - L[0]}，而不是正确的 Frankle 定义 \code{max(L) - (L[0]+L[-1])/2}。论文数字是手动修正的。
+  \item lr=2e-4/3e-4 的 6 个 LMC 结果文件是字节完全相同的副本（假数据）。模型确实存在，但扫描从未跑过。
+  \item \code{CLEANUP\_MANIFEST.md} 声称 4 个文件已删除，但它们仍然在磁盘上（\code{VISION.md}、\code{DIRECTION.md}、\code{THEORY.md}、\code{OPT\_SECOND\_MODEL.md}）。
 \end{enumerate}
 
-\subsection*{Experiments Needed}
+\subsection*{实验待做}
 
 \begin{enumerate}
-  \item \textbf{GPT-Neo-1.3B replication} (highest priority). Status: scripts exist, results unknown.
-  \item \textbf{OPT upgrade to 11-point scans} (currently 3-point only for trajectory/Gaussian).
-  \item \textbf{ICLR Sprint Plan Phase 1} ($\approx$9 GPU-hours): re-run lr=2e-4/3e-4 scans, resolve upper-bound ambiguity, expand high-div medical seeds.
-\end{enumerate}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{How to Be Productive as a Newcomer}
-% ═══════════════════════════════════════════════════════════════════
-
-\begin{enumerate}
-  \item \textbf{Read \code{CLAUDE.md} first.} It's the AI's instruction file --- it tells you what the project is, what NOT to do, and the 10 iron rules.
-  \item \textbf{Read \code{ENGINEERING.md} \S2.} The 23 bugs are better than any tutorial --- each one teaches a non-obvious property of this machine or codebase.
-  \item \textbf{Bookmark the key data locations:} \code{experiments/phase0\_ivn/results/} (122 JSONs), \code{paper.tex} (LaTeX source), \code{FIGURE\_SPEC\_V2.md} (figure specs).
-  \item \textbf{Start with a small experiment.} Train one model (\code{train\_agent.py --domain code}), verify $\Delta W$, run one LMC scan. This end-to-end path validates everything.
-  \item \textbf{Use \code{scripts/monitor.sh}} to check what's running and what's pending.
-  \item \textbf{When things break,} 90\% of the time it's a known bug. Search \code{ENGINEERING.md} before debugging from scratch.
-  \item \textbf{For new experiments,} copy the pattern from \code{phase1\_batch.sh} or \code{gptneo\_pipeline.sh}. Follow the 10 iron rules rigorously.
+  \item \textbf{GPT-Neo-1.3B 复制}（最高优先级）。状态：脚本存在，结果未知。
+  \item \textbf{OPT 升级到 11 点扫描}（目前轨迹/高斯仅用 3 点 LMC）。
+  \item \textbf{ICLR 冲刺计划 Phase 1}（$\approx$9 GPU-小时）：重跑 lr=2e-4/3e-4 扫描、解决上界矛盾、扩展高散度 medical 种子数。
 \end{enumerate}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{Quick Reference: Key Commands}
+\section{新人提效指南}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{enumerate}
+  \item \textbf{先读 \code{CLAUDE.md}。} 这是 AI 的指令文件 --- 它告诉你项目是什么、不能做什么、以及十条铁律。
+  \item \textbf{读 \code{ENGINEERING.md} \S2。} 23 条 Bug 比任何教程都好 --- 每条都教给你这个机器或代码库的一个非显而易见的特性。
+  \item \textbf{记住关键数据位置：} \code{experiments/phase0\_ivn/results/}（122 个 JSON）、\code{paper.tex}（LaTeX 源码）、\code{FIGURE\_SPEC\_V2.md}（图表规格）。
+  \item \textbf{从一个小实验开始。} 训练一个模型（\code{train\_agent.py --domain code}），验证 $\Delta W$，跑一次 LMC 扫描。这条端到端路径验证一切是否正常。
+  \item \textbf{用 \code{scripts/monitor.sh}} 检查正在跑什么和还有什么待做。
+  \item \textbf{出问题时，} 90\% 的情况是已知 Bug。先查 \code{ENGINEERING.md}，再从头调试。
+  \item \textbf{做新实验时，} 复制 \code{phase1\_batch.sh} 或 \code{gptneo\_pipeline.sh} 的模式。严格遵循十条铁律。
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{常用命令速查表}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{table}[H]
 \centering\small
 \begin{tabular}{@{}lp{8cm}@{}}
 \toprule
-\textbf{Task} & \textbf{Command} \\
+\textbf{任务} & \textbf{命令} \\
 \midrule
-Train code model & \code{\$VENV -u scripts/train\_agent.py --domain code --lr 1e-4} \\
-Train medical model & \code{\$VENV -u scripts/train\_agent.py --domain medical --lr 1e-4} \\
-LMC scan (11-pt) & \code{\$VENV -u scripts/lmc\_barrier\_scan.py} \\
-LMC scan (3-pt, fast) & \code{\$VENV -u scripts/lmc\_3pt\_scan.py --model-a DIR\_A --model-b DIR\_B} \\
-Verify $\Delta W$ after training & \code{\$VENV -c "import torch; a=torch.load('base.pt'); b=torch.load('trained.pt'); ..."} \\
-Monitor status & \code{bash scripts/monitor.sh} \\
-Generate figures & \code{\$VENV scripts/generate\_figures.py \&\& \$VENV scripts/generate\_fig4.py} \\
-Compile paper & \code{cd docs/internal \&\& pdflatex paper.tex \&\& pdflatex paper.tex \&\& cp paper.pdf ../../paper.pdf} \\
-Sync from GitHub & \code{git pull origin main} \\
-GPT-Neo pipeline & \code{bash scripts/gptneo\_pipeline.sh} \\
+训练 code 模型 & \code{\$VENV -u scripts/train\_agent.py --domain code --lr 1e-4} \\
+训练 medical 模型 & \code{\$VENV -u scripts/train\_agent.py --domain medical --lr 1e-4} \\
+LMC 扫描（11 点） & \code{\$VENV -u scripts/lmc\_barrier\_scan.py} \\
+LMC 扫描（3 点，快速） & \code{\$VENV -u scripts/lmc\_3pt\_scan.py --model-a DIR\_A --model-b DIR\_B} \\
+验证训练后 $\Delta W$ & \code{\$VENV -c "import torch; a=torch.load('base.pt'); b=torch.load('trained.pt'); ..."} \\
+查看状态 & \code{bash scripts/monitor.sh} \\
+生成论文图 & \code{\$VENV scripts/generate\_figures.py \&\& \$VENV scripts/generate\_fig4.py} \\
+编译论文 & \code{cd docs/internal \&\& pdflatex paper.tex \&\& pdflatex paper.tex \&\& cp paper.pdf ../../paper.pdf} \\
+从 GitHub 同步 & \code{git pull origin main} \\
+GPT-Neo 全流程 & \code{bash scripts/gptneo\_pipeline.sh} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{Color Palette (for Figures)}
+\section{配色方案（供画图参考）}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{table}[H]
 \centering\small
 \begin{tabular}{@{}lll@{}}
 \toprule
-\textbf{Entity} & \textbf{Hex} & \textbf{Color} \\
+\textbf{实体} & \textbf{色号} & \textbf{颜色} \\
 \midrule
-Pythia / Code domain & \#2196F3 & \colorbox{blue!50}{\quad} Blue \\
-Medical domain & \#F44336 & \colorbox{red!50}{\quad} Red \\
-OPT & \#FF5722 & \colorbox{orange!60}{\quad} Deep Orange \\
-GPT-Neo / General domain & \#4CAF50 & \colorbox{green!50}{\quad} Green \\
-Math domain & \#FF9800 & \colorbox{orange!40}{\quad} Orange \\
-Gaussian / Noise & \#9E9E9E & \colorbox{gray!50}{\quad} Gray \\
-High divergence & \#9C27B0 & \colorbox{purple!50}{\quad} Purple \\
+Pythia / Code 领域 & \#2196F3 & \colorbox{blue!50}{\quad} 蓝色 \\
+Medical 领域 & \#F44336 & \colorbox{red!50}{\quad} 红色 \\
+OPT & \#FF5722 & \colorbox{orange!60}{\quad} 深橙 \\
+GPT-Neo / General 领域 & \#4CAF50 & \colorbox{green!50}{\quad} 绿色 \\
+Math 领域 & \#FF9800 & \colorbox{orange!40}{\quad} 橙色 \\
+高斯 / 噪声 & \#9E9E9E & \colorbox{gray!50}{\quad} 灰色 \\
+高散度 & \#9C27B0 & \colorbox{purple!50}{\quad} 紫色 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -418,9 +433,9 @@ High divergence & \#9C27B0 & \colorbox{purple!50}{\quad} Purple \\
 \vfill
 \begin{center}
 \rule{0.5\textwidth}{0.4pt}\\[4pt]
-{\small\color{notegray}This guide is written in \LaTeX. Source: \code{docs/reports/ONBOARDING\_GUIDE.tex}.\\
-Recompile with: \code{pdflatex ONBOARDING\_GUIDE.tex}.\\
-Repository: \url{https://github.com/FauReam/AFP}}
+{\small\color{notegray}本指南用 \LaTeX 编写。源码：\code{docs/reports/ONBOARDING\_GUIDE.tex}。\\
+用 \code{xelatex ONBOARDING\_GUIDE.tex} 重新编译。\\
+仓库：\url{https://github.com/FauReam/AFP}}
 \end{center}
 
 \end{document}
