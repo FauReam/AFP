@@ -37,27 +37,27 @@
 \begin{document}
 
 \title{\textbf{AFP 项目完全指南}\\{\large 从零到专家的新人上手教程}}
-\author{编写给 DGX 实验机操作者\\\small NVIDIA DGX Spark GB10 \,|\, 121\,GB 统一内存 \,|\, ARM64 CUDA 13.0}
+\author{写给 DGX 实验机的操作者\\\small 硬件：NVIDIA DGX Spark GB10 \quad 121\,GB 统一内存 \quad ARM64 + CUDA 13.0}
 \date{\today}
 \maketitle
 \thispagestyle{fancy}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{30 秒理解这个项目}
+\section{三十秒搞懂这个项目}
 % ═══════════════════════════════════════════════════════════════════
 
-我们拿一个 13 亿参数的语言模型（Pythia），分别用代码推理数据和医学推理数据对它进行全参数微调，然后测量两件事：
+我们拿一个 13 亿参数的语言模型 Pythia，分别喂给它代码推理数据和医学推理数据，对它做全参数微调。然后测量两件事：
 
 \begin{enumerate}
-  \item \textbf{权重移动了多远？}（权重散度，$\Delta W$）
-  \item \textbf{两个模型之间能画一条直线而不碰到 loss 高峰吗？}（线性模式连通性，LMC）
+  \item \textbf{模型的权重被推了多远？}（学名叫``权重散度''，记作 $\Delta W$）
+  \item \textbf{两个微调后的模型之间，能直接画一条直线走过去吗？}（学名叫``线性模式连通性''，简称 LMC）
 \end{enumerate}
 
 \begin{keybox}
-\textbf{核心发现：决定 LMC 障碍高度的是训练稳定性，不是领域差异。医学训练的稳定性比代码训练差 3 倍。}
+\textbf{核心发现：决定连通性障碍高低的是训练稳定性，不是领域差异。医学数据上的训练稳定性比代码数据差 3 倍。}
 \end{keybox}
 
-论文标题：\textit{``Training Stability, Not Domain Difference, Determines Linear Mode Connectivity''}（训练稳定性，而非领域差异，决定线性模式连通性）。当前版本：v19，20 页，4 个领域，2 个模型家族，含理论章节。
+我们的论文标题是 \textit{Training Stability, Not Domain Difference, Determines Linear Mode Connectivity}，翻译过来就是：\textbf{训练稳定性，而非领域差异，决定线性模式连通性}。当前是第 19 版，一共 20 页，覆盖 4 个领域、2 个模型家族，还带一章理论分析。
 
 % ═══════════════════════════════════════════════════════════════════
 \section{你的硬件：DGX Spark GB10}
