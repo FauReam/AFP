@@ -1,440 +1,366 @@
 % !TEX program = xelatex
-\documentclass[11pt,a4paper]{ctexart}
-
-% ── 页面布局 ──
-\usepackage[hmargin=2.2cm,vmargin=2.5cm]{geometry}
+\documentclass[12pt,a4paper]{ctexart}
+\usepackage[hmargin=2.4cm,vmargin=2.8cm]{geometry}
 \usepackage{setspace}\onehalfspacing
-\usepackage{lmodern}\usepackage[T1]{fontenc}
-\usepackage{microtype}
-
-% ── 排版 ──
-\usepackage{amsmath,amssymb,bm}
+\usepackage{amsmath,amssymb}
 \usepackage{graphicx,float}
 \usepackage[labelfont=bf,font=small]{caption}
 \usepackage{booktabs}
-\usepackage[svgnames]{xcolor}
-\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=teal]{hyperref}
+\usepackage[svgnames,table]{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=teal]{hyperref}
 \usepackage{fancyhdr}
-\pagestyle{fancy}\fancyhf{}\fancyhead[L]{\small\color{gray}AFP 项目指南}\fancyhead[R]{\small\color{gray}\thepage}
+\pagestyle{fancy}\fancyhf{}\fancyhead[L]{\small\color{gray}AFP 项目 —— 新人教程}\fancyhead[R]{\small\color{gray}\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
-% ── 自定义盒子 ──
 \usepackage{tcolorbox}
 \tcbuselibrary{skins,breakable}
-\newtcolorbox{keybox}{colback=blue!6,colframe=blue!40,boxrule=0.5pt,arc=3pt,left=8pt,right=8pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt}
-\newtcolorbox{warnbox}{colback=orange!8,colframe=orange!50,boxrule=0.5pt,arc=3pt,left=8pt,right=8pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt}
-\newtcolorbox{goodbox}{colback=green!6,colframe=green!40,boxrule=0.5pt,arc=3pt,left=8pt,right=8pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt}
+\newtcolorbox{explainbox}{colback=blue!4,colframe=blue!35,boxrule=0.5pt,arc=3pt,left=10pt,right=10pt,top=6pt,bottom=6pt,before skip=10pt,after skip=10pt}
+\newtcolorbox{warnbox}{colback=orange!6,colframe=orange!45,boxrule=0.5pt,arc=3pt,left=10pt,right=10pt,top=6pt,bottom=6pt,before skip=10pt,after skip=10pt}
+\newtcolorbox{resultbox}{colback=green!4,colframe=green!35,boxrule=0.5pt,arc=3pt,left=10pt,right=10pt,top=6pt,bottom=6pt,before skip=10pt,after skip=10pt}
 
-\definecolor{codeblue}{RGB}{33,150,243}
 \definecolor{medred}{RGB}{244,67,54}
-\definecolor{notegray}{RGB}{120,120,120}
-
 \newcommand{\code}[1]{\texttt{\small #1}}
-\newcommand{\good}[1]{\textcolor{green!50!black}{\textbf{#1}}}
-\newcommand{\warn}[1]{\textcolor{orange!80!black}{\textbf{#1}}}
-\newcommand{\done}[1]{\textcolor{green!50!black}{#1}}
 
 \begin{document}
 
-\title{\textbf{AFP 项目完全指南}\\{\large 从零到专家的新人上手教程}}
-\author{写给 DGX 实验机的操作者\\\small 硬件：NVIDIA DGX Spark GB10 \quad 121\,GB 统一内存 \quad ARM64 + CUDA 13.0}
+\title{\textbf{AFP 项目教程}\\[4pt]{\Large 从零理解这个实验在做什么}}
+\author{写给新人 —— 不讲目录，只讲概念和数据}
 \date{\today}
 \maketitle
 \thispagestyle{fancy}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{三十秒搞懂这个项目}
+\section*{先讲一个故事}
 % ═══════════════════════════════════════════════════════════════════
 
-我们拿一个 13 亿参数的语言模型 Pythia，分别喂给它代码推理数据和医学推理数据，对它做全参数微调。然后测量两件事：
+你有一个预训练好的语言模型 Pythia-1.4B。它的 13 亿个参数构成了一个\emph{起点}。
+
+现在你把它复制两份。一份喂代码推理数据训练，变成\emph{代码专家}。另一份喂医学推理数据训练，变成\emph{医学专家}。
+
+训练结束后，两份模型的参数都变了。问题是：
 
 \begin{enumerate}
-  \item \textbf{模型的权重被推了多远？}（学名叫``权重散度''，记作 $\Delta W$）
-  \item \textbf{两个微调后的模型之间，能直接画一条直线走过去吗？}（学名叫``线性模式连通性''，简称 LMC）
+  \item \textbf{参数变了多少？} 这叫\emph{权重散度}（$\Delta W$）。
+  \item \textbf{变化之后，它们还``挨得近''吗？} 这用\emph{LMC 障碍}来衡量。
 \end{enumerate}
 
-\begin{keybox}
-\textbf{核心发现：决定连通性障碍高低的是训练稳定性，不是领域差异。医学数据上的训练稳定性比代码数据差 3 倍。}
-\end{keybox}
+直觉上，你会觉得：代码专家和医学专家应该走得挺远吧？毕竟学的东西完全不同。
 
-我们的论文标题是 \textit{Training Stability, Not Domain Difference, Determines Linear Mode Connectivity}，翻译过来就是：\textbf{训练稳定性，而非领域差异，决定线性模式连通性}。当前是第 19 版，一共 20 页，覆盖 4 个领域、2 个模型家族，还带一章理论分析。
+\textbf{但实验结果不是这样。} 决定两个模型``离多远''的，不是它们学了什么领域，而是\emph{这个领域本身的训练稳不稳定}。
 
 % ═══════════════════════════════════════════════════════════════════
-\section{你的硬件：DGX Spark GB10}
+\section{第一个概念：权重散度 \texorpdfstring{$\Delta W$}{}}
 % ═══════════════════════════════════════════════════════════════════
 
-\begin{itemize}
-  \item \textbf{121\,GB 统一内存} --- CPU 和 GPU \emph{共享同一块物理内存}，没有独立的显存。
-  \item \textbf{ARM64 CPU} --- 这意味着 \code{torch.compile()} \textbf{不可用}（Triton 只支持 x86）。
-  \item \textbf{CUDA 13.0}，Blackwell 架构（算力 12.1）。
-  \item 训练速度：Pythia-1.4B 全参数微调，batch=128，seq\_len=256：$\approx$\,5.5 秒/步（$\approx$\,42 分钟/epoch）。
-\end{itemize}
+\begin{explainbox}
+\textbf{权重散度就是：训练后参数相比训练前，偏移了多少。}
 
-\begin{warnbox}
-\textbf{绝对禁止：} 清除 CPU-GPU 共享内存。不要运行 \code{ipcrm}，不要手动清理 \code{/dev/shm}，不要做任何释放共享内存的操作。
+如果把模型的 13 亿个参数想象成 13 亿个坐标点，预训练模型是一个位置，微调后的模型是另一个位置。权重散度 $\Delta W$ 就是这两个位置之间的欧几里得距离，再除以预训练模型本身的``大小''（范数），得到一个百分比。
 
-\textbf{后果：} Tailscale 远程连接会永久丢失，只能物理接触机器才能恢复。DGX 的统一内存由 Tailscale 运行时状态和 GPU 计算共享，清除即断连。
-\end{warnbox}
+\[
+\Delta W = \frac{\|\theta_{\text{训练后}} - \theta_{\text{预训练}}\|_2}{\|\theta_{\text{预训练}}\|_2} \times 100\%
+\]
 
-% ═══════════════════════════════════════════════════════════════════
-\section{项目地图：每个文件是干什么的}
-% ═══════════════════════════════════════════════════════════════════
+通俗理解：\textbf{$\Delta W = 1.4\%$ 就是说，模型的参数平均偏移了 1.4\%。}
+\end{explainbox}
 
-\begin{table}[H]
-\centering\small
-\begin{tabular}{@{}llp{4.8cm}@{}}
-\toprule
-\textbf{路径} & \textbf{类型} & \textbf{内容} \\
-\midrule
-\code{CLAUDE.md} & 指令 & AI 必须遵守的规则；核心数据表；``禁止做''清单 \\
-\code{README.md} & 公开 & GitHub 首页；论文标题和摘要级概述 \\
-\code{paper.pdf} & 产出 & 编译好的 20 页论文（权威版本） \\
-\midrule
-\code{docs/internal/paper.tex} & 源码 & \textbf{LaTeX 源码 v19} --- 论文的权威文本 \\
-\code{docs/internal/PAPER.md} & 镜像 & 论文的 Markdown 版（LaTeX 才是权威） \\
-\code{docs/internal/APPENDIX.md} & 数据 & 附录数值表格 \\
-\code{docs/internal/ENGINEERING.md} & 手册 & \textbf{23 条已知 Bug}，含根因 + 修复 + 教训 \\
-\code{docs/internal/ICLR\_SPRINT\_PLAN.md} & 路线图 & 3 阶段实验计划、时间线、GPU 预算 \\
-\code{docs/internal/DATA\_INVENTORY.md} & 清单 & 全部 42+ 模型和 110+ 次扫描的完整目录 \\
-\code{docs/internal/EXPERT\_PANEL\_FINDINGS.md} & 评审 & 6 专家对抗评审（v4 时期，历史文档） \\
-\midrule
-\code{docs/reports/FIGURE\_SPEC\_V2.md} & 规格 & \textbf{图表规格} --- 精确数据、颜色、布局 \\
-\code{docs/reports/figure\_data.json} & 数据 & Pythia 主要结果（图 1--3） \\
-\code{docs/reports/fig*.pdf} & 产出 & 论文插图（矢量 PDF） \\
-\code{docs/reports/ONBOARDING\_GUIDE.pdf} & 教程 & 本文档 \\
-\code{docs/reports/BUGFIX\_TOKENIZE.md} & 报告 & Tokenize 内存爆炸修复详情 \\
-\code{docs/reports/INCIDENT\_REPORT\_TOKENIZE\_OOM.md} & 报告 & 完整事故报告 \\
-\midrule
-\code{scripts/train\_agent.py} & 代码 & 全参数微调，含 drive-putt 学习率调度 \\
-\code{scripts/lmc\_barrier\_scan.py} & 代码 & 11 点 LMC 障碍扫描 \\
-\code{scripts/lmc\_3pt\_scan.py} & 代码 & 快速 3 点 LMC 扫描（OPT 用） \\
-\code{scripts/gptneo\_pipeline.sh} & 流水线 & GPT-Neo 全流程：tokenize + 训练 + LMC \\
-\code{scripts/generate\_figures.py} & 可视化 & 从 \code{figure\_data.json} 生成图 1--3 \\
-\code{scripts/generate\_fig4.py} & 可视化 & 生成图 4（跨架构复制） \\
-\midrule
-\code{experiments/trained\_models/} & 数据 & Pythia-1.4B 检查点（288\,GB，240 个 \code{.pt} 文件） \\
-\code{experiments/trained\_models\_opt/} & 数据 & OPT-1.3B 检查点（184\,GB） \\
-\code{experiments/phase0\_ivn/results/} & 数据 & \textbf{122 个 LMC 障碍 JSON} --- 核心数据 \\
-\code{experiments/phase0\_opt/results/} & 数据 & OPT 复制实验结果 \\
-\code{data/versaprm/} & 数据 & 已 tokenize 的训练数据（2.1\,GB） \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsection*{真实数据长什么样}
 
-% ═══════════════════════════════════════════════════════════════════
-\section{核心数据表}
-% ═══════════════════════════════════════════════════════════════════
+我们训练了 4 组模型，每组 3 个不同随机种子（种子不同 = 训练数据的顺序不同）：
 
 \begin{table}[H]
 \centering
 \begin{tabular}{lccc}
 \toprule
-\textbf{条件} & $\mathbf{\Delta W}$ & \textbf{Code 障碍} & \textbf{Medical 障碍} \\
+\textbf{训练强度} & \textbf{Code 模型的 $\Delta W$} & \textbf{Medical 模型的 $\Delta W$} & \textbf{Code 和 Medical 之间的 $\Delta W$} \\
 \midrule
-标准散度 & 1.4\% & 0.053 $\pm$ 0.011 & 0.051 $\pm$ 0.013 \\
-高散度 & 8.0\% & 0.118 $\pm$ 0.031 & 0.228 $\pm$ 0.102 \\
-域内基线（code） & --- & 0.048 & --- \\
-域内基线（medical） & --- & --- & \textcolor{medred}{\textbf{0.147}} \\
-噪声地板（同模型） & --- & $\approx$0.000 & $\approx$0.000 \\
-噪声地板（随机初始化） & --- & 0.033 $\pm$ 0.001 & 0.150 $\pm$ 0.019 \\
+标准（学习率 $10^{-4}$） & 1.4\% & 1.5\% & 2.0\% \\
+高散度（学习率 $5\times10^{-4}$） & 8.0\% & 8.5\% & 11.6\% \\
 \bottomrule
 \end{tabular}
-\caption{核心结果表。来源：\code{CLAUDE.md} 和论文 \S4.2--4.5。}
+\caption{权重散度实测值。来源：论文 \S4.1。}
 \end{table}
 
-\subsection*{这些数字意味着什么}
+\textbf{关键观察：} 标准训练下，模型只挪了 1.4--1.5\%。就算刻意加大学习率（高散度条件），也只挪了 8\%。这说明微调对参数的影响远比你想象的小——模型基本上没走远。
 
-\begin{goodbox}
-\textbf{1. 标准微调下 LMC 成立。} 障碍 $\approx$\,0.05 很小。从同一个预训练检查点出发微调的 code 模型和 medical 模型，仍然在同一个 loss 盆地中。你可以在这两个模型之间做线性插值，不会遇到大的 loss 惩罚。
+\subsection*{还有一个重要细节：哪些层的参数变得多？}
 
-\textbf{2. Medical 异常。} Medical 的域内障碍（0.147）是跨域障碍（0.051）的 \textbf{3 倍}。两个在\emph{同一份}医学数据上训练的模型，它们在 loss 地貌中的差异，比一个 code 模型和一个 medical 模型还要大。医学数据的训练本质上更不稳定。
+我们把 24 层 Transformer 的每一层分别计算 $\Delta W$，发现：
 
-\textbf{3. Code 出奇稳定。} Code 域内 $\approx$ 跨域（0.048 $\approx$ 0.053）。对 code 来说，领域差异几乎不产生额外障碍。
+\begin{itemize}
+  \item \textbf{早期层（0--7 层）变得最多，} $\Delta W$ 达到 5--6\%。
+  \item \textbf{后期层（16--23 层）几乎没变，} $\Delta W$ 不到 1\%。
+  \item \textbf{Code 和 Medical 的变化模式几乎一模一样，} 相关度 $r = 0.995$。
+\end{itemize}
 
-\textbf{4. 障碍 $\neq$ 权重距离。} 对模型加 $\Delta W = 8\%$ 的高斯噪声，障碍只有 0.014。训练产生的 $\Delta W = 1.5\%$ 却产生障碍 0.053 --- \textbf{9 倍差异}。决定障碍的是权重变化的\emph{方向}，不是幅度。
-\end{goodbox}
+意思就是：微调主要改的是前面的层（特征提取层），后面的层（分类/输出层）基本不动。而且不管训练什么领域，改的都是同一批层——只是幅度略有不同。
 
 % ═══════════════════════════════════════════════════════════════════
-\section{所有实验一览}
+\section{第二个概念：LMC 障碍}
 % ═══════════════════════════════════════════════════════════════════
 
-\subsection*{核心测量（Pythia-1.4B，1 epoch）}
+\begin{explainbox}
+\textbf{LMC 障碍衡量的是：两个模型之间画一条直线，这条直线上 loss 最高点比两端平均高多少。}
 
+想象 loss 地貌是一张有山有谷的地图。两个微调后的模型是地图上的两个点。我们在它们之间画一条直线，在这条直线上均匀取 11 个点（就是 11 个插值模型），每个点都测一下 loss。
+
+如果两个模型在同一个``山谷''里，这条直线的 loss 应该接近两端平均——障碍 $\approx 0$。
+如果它们之间隔着一座山，直线经过山顶时 loss 会很高——障碍 $> 0$。
+
+\[
+\text{障碍} = \max_{\alpha} \mathcal{L}\big(\theta(\alpha)\big) \;-\; \frac{\mathcal{L}(\theta(0)) + \mathcal{L}(\theta(1))}{2}
+\]
+
+其中 $\theta(\alpha) = (1-\alpha)\,\theta_{\text{code}} + \alpha\,\theta_{\text{medical}}$，$\alpha$ 从 0 到 1。
+\end{explainbox}
+
+\subsection*{真实数据长什么样}
+
+跨域测量（code 模型和 medical 模型之间）：
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{条件} & \textbf{在 Code 测试集上的障碍} & \textbf{在 Medical 测试集上的障碍} \\
+\midrule
+标准散度（$\Delta W\approx2\%$） & 0.053 & 0.051 \\
+高散度（$\Delta W\approx12\%$） & 0.118 & 0.228 \\
+\bottomrule
+\end{tabular}
+\caption{跨域 LMC 障碍实测值。来源：论文 \S4.2。}
+\end{table}
+
+\textbf{关键观察：}
+\begin{itemize}
+  \item 标准训练下，障碍只有 0.05——\textbf{几乎是一条平路}。code 和 medical 模型虽然在两个不同领域训练的，但它们还在同一个 loss 盆地里。
+  \item 高散度下障碍翻了 2--5 倍，但依然不大。即使把权重推了 8\%，模型之间仍然没有出现一座大山。
+  \item Medical 在自身测试集上的障碍（0.228）明显比 Code 高——\textbf{这里埋着整篇论文最重要的发现}。
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{第三个概念：域内障碍 vs.\ 跨域障碍}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{explainbox}
+前面测的是 code 模型和 medical 模型之间的障碍——这是\emph{跨域障碍}。
+
+但我们还可以测\emph{域内障碍}：两个\emph{同一个领域、不同随机种子}的模型之间的障碍。
+
+为什么测这个？因为如果同域障碍本身就很高，那跨域障碍高就不奇怪——不是因为领域变了，而是因为这个领域的训练本身就不稳定。
+\end{explainbox}
+
+\subsection*{真实数据}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{域内配对} & \textbf{障碍} \\
+\midrule
+Code 种子 0 对 Code 种子 1 & 0.048 \\
+General 种子 0 对 General 种子 1 & 0.071 \\
+Math 种子 0 对 Math 种子 1 & 0.087 \\
+Medical 种子 0 对 Medical 种子 1 & \textcolor{medred}{\textbf{0.147}} \\
+\midrule
+\textbf{参考：Code 和 Medical 之间的跨域障碍} & \textbf{0.053} \\
+\bottomrule
+\end{tabular}
+\caption{域内障碍实测值（标准散度）。来源：论文 \S4.3。}
+\end{table}
+
+\begin{resultbox}
+\textbf{这里就是整篇论文最核心的发现。}
+
+Code 模型的域内障碍（0.048）和跨域障碍（0.053）\emph{差不多}。两个 code 模型之间的``距离''，和一个 code 模型与一个 medical 模型之间的``距离''是同一量级。领域差异？对 code 来说不存在。
+
+但 Medical 模型的域内障碍（0.147）是跨域障碍（0.051）的 \textbf{3 倍}！两个在\emph{同一份数据}上训练的 medical 模型，它们之间的 loss 地貌距离，比一个 code 模型和一个 medical 模型还要远。
+
+\textbf{结论：决定障碍的不是``领域不同''，而是``这个领域训练起来有多不稳定''。Medical 数据就是比 Code 数据更不稳定。}
+\end{resultbox}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{第四个概念：训练轨迹}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{explainbox}
+前面测的都是\emph{训练完成后}的模型之间。但我们还想知道：\textbf{训练过程中，障碍是怎么变化的？}
+
+我们每训练 40 步就保存一个检查点，然后测量\emph{这个检查点}和\emph{预训练起点}之间的 LMC 障碍。这样就得到了一条\emph{轨迹曲线}：
+
+\begin{itemize}
+  \item X 轴：训练步数（训练了多久）
+  \item Y 轴：当前模型和预训练模型之间的 LMC 障碍
+\end{itemize}
+\end{explainbox}
+
+\subsection*{真实数据}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccc}
+\toprule
+\textbf{训练步数} & \textbf{Code 障碍} & \textbf{Medical 障碍} \\
+\midrule
+40  & 0.029 & 0.173 \\
+80  & 0.027 & 0.163 \\
+120 & 0.037 & 0.157 \\
+160 & 0.043 & 0.150 \\
+\rowcolor{blue!8}200 & \textbf{0.043}（峰值）& 0.143 \\
+240 & 0.043 & 0.148 \\
+280 & 0.038 & 0.154 \\
+320 & 0.034 & 0.150 \\
+360 & 0.035 & 0.147 \\
+400 & 0.033（下降）& 0.151 \\
+\bottomrule
+\end{tabular}
+\caption{训练轨迹数据。来源：论文 \S4.6。}
+\end{table}
+
+\begin{resultbox}
+\textbf{Code 呈倒 U 形：}
+障碍先从 0.029 上升到 0.043（步 200），然后\emph{下降}到 0.033（步 400）。
+尽管步 400 时权重偏离预训练模型\emph{更远了}（$\Delta W$ 更大），但障碍反而\emph{变小了}。
+这说明 Code 模型在训练后期收敛到了一个``宽而平''的最小值，这个最小值反而离预训练起点更``近''（在连通性意义上）。
+
+\textbf{Medical 呈单调增长：}
+障碍从 0.173 一路升到 0.218（步 320），然后稳定在 0.21 左右。
+\emph{从未下降}。Medical 模型在训练后期没有回到预训练模型的``附近''——它发散到了一个更远、更窄的盆地。
+
+\textbf{一句话总结：}
+Code 训练会``走回来''，Medical 训练不会。
+\end{resultbox}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{其他实验：用来排除替代解释}
+% ═══════════════════════════════════════════════════════════════════
+
+论文还做了一系列对照实验，用来排除``可能是别的原因导致的''这种质疑。逐一说明：
+
+\subsection*{实验一：高斯噪声校准}
+
+\textbf{问：} 障碍是不是仅仅因为参数幅度变了？如果我对模型随机加噪声，让它也有 8\% 的 $\Delta W$，会不会也有障碍？
+
+\textbf{答：不会。} 实验结果是：即使加 $\Delta W = 8\%$ 的随机高斯噪声，障碍也只有 0.014——几乎为零。而训练产生的 $\Delta W = 1.5\%$ 却有障碍 0.053。
+
+\textbf{含义：} 障碍来自权重变化的\emph{方向}（结构化、任务对齐的更新），不是\emph{幅度}。随机扰动不产生障碍，定向训练才产生。
+
+\subsection*{实验二：分层选择性插值}
+
+\textbf{问：} 障碍集中在哪些层？
+
+\textbf{答：} 只合并前 8 层（层 0--7）时，障碍是 0.040，占全部障碍的 75\%。只合并中间 8 层（8--15）时，障碍只有 0.003。只合并后 8 层（16--23）时，障碍是\textbf{零}。
+
+\textbf{含义：} 如果你要做模型合并，深层可以直接平均，省心省力。障碍全在前面几层。
+
+\subsection*{实验三：种子对兼容性}
+
+\textbf{问：} 前面说 medical 域内障碍高（0.147），这是每个模型都高，还是某些模型对特别高？
+
+\textbf{答：} 我们训练了 5 个高散度 medical 模型，两两配对（总共 C(5,2) = 10 对），测量每对的障碍。结果：最低的一对只有 0.072（紧密连接），最高的一对高达 \textbf{1.213}（灾难性断裂）。差了 15 倍。
+
+更有意思的是，同一个种子 s4：和 s2 配对时障碍只有 0.080，和 s1 配对时障碍飙到 1.213。
+
+\textbf{含义：} 障碍不是``这个模型稳定、那个模型不稳定''，而是\emph{配对特定的}。取决于哪两个种子撞到了一起。这进一步证明了论文的核心论点：决定障碍的，不是单个模型的性质，而是两个模型各自走过的训练轨迹之间的几何关系。
+
+\subsection*{实验四：跨架构复制}
+
+\textbf{问：} 这些发现是 Pythia 特有的吗？换个模型架构还会成立吗？
+
+\textbf{答：} 我们用 OPT-1.3B（不同架构、不同训练数据、不同 tokenizer）重做了核心实验。结果：OPT 的绝对障碍值比 Pythia 大 4--8 倍（架构本身的差异），但 medical/code 域内障碍比值仍然是 3.6$\times$（对比 Pythia 的 3.7$\times$）。\textbf{相对排序被复制了。}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{模型} & \textbf{Code 域内障碍} & \textbf{Medical 域内障碍} & \textbf{Medical/Code 比值} \\
+\midrule
+Pythia-1.4B（2 epoch）& 0.063 & 0.231 & 3.7$\times$ \\
+OPT-1.3B（2 epoch）& 0.251 & 0.896 & 3.6$\times$ \\
+\bottomrule
+\end{tabular}
+\caption{跨架构复制结果。来源：论文 \S4.9。}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{论文是怎么解释这些现象的？（理论）}
+% ═══════════════════════════════════════════════════════════════════
+
+论文提出了一个理论框架，核心思想是：障碍取决于\emph{权重变化的方向和 loss 地貌的曲率是不是对齐的}。
+
+通俗理解：
+\begin{itemize}
+  \item 想象 loss 地貌像一块凹凸不平的橡胶。有些方向很``硬''（loss 变化大），有些方向很``软''（loss 变化小）。
+  \item 如果训练的权重更新恰好沿着``硬''方向走，就会撞出一个大障碍。
+  \item 如果沿着``软''方向走，权重虽然挪了很多，但障碍不大。
+  \item Medical 数据标签噪声大、推理步骤的正确性模棱两可，导致训练过程沿着更加``尖锐''的方向更新——于是障碍更高。
+  \item Code 数据标签干净、逻辑明确，训练收敛到宽而平的盆地——障碍自然低，甚至训练后期还会下降（倒 U 形）。
+\end{itemize}
+
+\textbf{已做的理论验证：}
 \begin{enumerate}
-  \item \textbf{权重散度：} 对每对模型，逐层计算 $\Delta W_i = \|\theta_i - \theta_{\text{base}}\|_2 \;/\; \|\theta_{\text{base}}\|_2$，然后取平均。
-  \item \textbf{LMC 障碍扫描：} 11 点线性插值 $\theta(\alpha) = (1-\alpha)\theta_{\text{code}} + \alpha\theta_{\text{medical}}$，$\alpha \in \{0, 0.1, \dots, 1.0\}$。每个域用 2,000 条测试样本测 BCE loss。障碍定义：$\text{barrier} = \max_\alpha \mathcal{L}(\theta(\alpha)) - (\mathcal{L}(\theta(0)) + \mathcal{L}(\theta(1)))/2$。
-  \item \textbf{域内基线：} 同域不同种子的模型对。障碍到底来自领域差异，还是种子方差？
-  \item \textbf{种子对兼容性：} 高散度 medical 的 $C(5,2)=10$ 对全部测量。发现 \textbf{15 倍范围}（0.072--1.213）--- 障碍是\emph{配对特定}的，不是\emph{模型特定}的。
+  \item \textbf{延长 Medical 训练到 2 epoch：} 障碍从 0.147 升到 0.182——不稳定性\emph{不随训练消失}，说明是数据本身的性质。
+  \item \textbf{给 Code 加 15\% 随机标签噪声：} 障碍不变（仍然是 0.046）——简单的随机噪声不足以制造 medical 级别的不稳定。Medical 的不稳定可能来自\emph{结构化的模糊性}（步骤对错的争议性），而不是随机错误。
+  \item \textbf{测量 Fisher 信息量（局部曲率）：} Code 模型的最小值\emph{曲率更高}（$1.44\times10^{-8}$），Medical 模型曲率反而更低（$5.76\times10^{-9}$）。这说明障碍不是因为最小值本身有多``陡''，而是因为两个最小值之间的\emph{盆地分离距离}更远。
 \end{enumerate}
-
-\subsection*{机制实验}
-
-\begin{enumerate}
-  \setcounter{enumi}{4}
-  \item \textbf{训练轨迹：} 每 40 步保存检查点。Code 呈现倒 U 形（步 200 达峰，然后下降）。Medical 单调增长（在 $\approx$0.21 趋于平稳）。
-  \item \textbf{高斯扰动：} 加 5 个 $\Delta W$ 级别的各向同性噪声。即使 8\% 散度也几乎没有障碍。证明障碍来自\emph{结构化}的权重变化。
-  \item \textbf{分层选择性插值：} 只合并部分层。75\% 的障碍集中在 0--7 层。深层（16--23）：几乎为零。
-  \item \textbf{合并质量基准：} 纯权重平均优于 TIES-Merging 和 Task Arithmetic。Accuracy barrier 远小于 loss barrier。
-\end{enumerate}
-
-\subsection*{跨架构复制（OPT-1.3B）}
-
-OPT-1.3B（不同架构、不同训练语料、不同 tokenizer）确认了 medical $>$ code 的域内障碍模式（比值：OPT 3.6$\times$ vs.\ Pythia 3.7$\times$）。绝对障碍值 OPT 大 4--8 倍，但\emph{相对排序保持一致}。
-
-\subsection*{GPT-Neo-1.3B}
-
-\textbf{状态：待完成。} 训练脚本已就绪（\code{gptneo\_pipeline.sh}），但结果尚未报告。
 
 % ═══════════════════════════════════════════════════════════════════
 \section{怎么跑实验}
 % ═══════════════════════════════════════════════════════════════════
 
-\subsection*{环境设置}
-
 \begin{verbatim}
+# 设置环境（每次开终端都要先跑这三行）
 export HF_ENDPOINT=https://hf-mirror.com
 export HF_DATASETS_OFFLINE=1
 export PYTHONUNBUFFERED=1
 cd /home/jiayu/AFP
 VENV=/home/jiayu/AFP/venv/bin/python3
-\end{verbatim}
 
-\subsection*{训练一个模型（$\approx$42 分钟）}
+# 训练一个模型（约 42 分钟）
+$VENV -u scripts/train_agent.py --domain code --lr 1e-4
 
-\begin{verbatim}
-$VENV -u scripts/train_agent.py \
-    --domain code --lr 1e-4 \
-    --model-id EleutherAI/pythia-1.4b
-\end{verbatim}
-
-输出到 \code{experiments/trained\_models/code/}。
-
-\subsection*{跑一次 LMC 障碍扫描（$\approx$15 分钟）}
-
-\begin{verbatim}
+# 跑 LMC 扫描（约 15 分钟，需要先有 code 和 medical 两个模型）
 $VENV -u scripts/lmc_barrier_scan.py
-\end{verbatim}
 
-\subsection*{批量流水线（$\approx$2--3 GPU-小时）}
+# 批量实验
+bash scripts/phase1_batch.sh
 
-\begin{verbatim}
-bash scripts/phase1_batch.sh        # 学习率扫描 + 域内基线
-bash scripts/final_batch.sh          # 合并基准 + OPT 轨迹
-bash scripts/theory_experiments.sh   # 标签噪声 + 延长 putt + Hessian
-\end{verbatim}
-
-\subsection*{快速状态检查}
-
-\begin{verbatim}
+# 查看状态
 bash scripts/monitor.sh
 \end{verbatim}
 
-% ═══════════════════════════════════════════════════════════════════
-\section{十条铁律}
-% ═══════════════════════════════════════════════════════════════════
-
-这些规则每一条都曾经被违反过，每一次都造成了真实的损失。
-
-\begin{enumerate}
-  \item \textbf{必须用 \code{nohup}} --- 所有批量实验必须以 \code{nohup ... \&} 启动。
-  \item \textbf{重定向输出} --- stdout/stderr 写到 \code{experiments/} 下的时间戳日志文件。
-  \item \textbf{零 stdin} --- 批量脚本里不能有 \code{input()} 或 \code{sys.stdin.read()}。
-  \item \textbf{\code{HF\_DATASETS\_OFFLINE=1}} --- 训练/评估期间全程零网络。永远。
-  \item \textbf{禁用 \code{set -e}} --- 一个实验挂了绝不能杀死整个批量。
-  \item \textbf{优雅失败} --- 用 \code{|| \{ log "ERROR"; return 1; \}}，绝不用 \code{exit 1}。
-  \item \textbf{输出存在即跳过} --- \code{[ -f "\$out" ] \&\& continue}，保证幂等重跑。
-  \item \textbf{训练后必须验证 $\Delta W > 0.1\%$} --- Bug 22 的教训：base 模型曾被当作``已训练''模型保存，重量变化为零，\textbf{使所有早期 LMC 实验无效}。
-  \item \textbf{启动后验证进程存活} --- \code{sleep 3 \&\& ps -p \$PID}。
-  \item \textbf{写崩溃日志} --- 结构化失败日志写到 \code{crashes/} 目录。
-\end{enumerate}
-
 \begin{warnbox}
-\textbf{第 8 条是最重要的。} Bug 22 浪费了数周的工作。每次训练后：计算 $\Delta W$ 对比 base 检查点。如果 $\Delta W < 0.1\%$，训练静默失败了，输出是垃圾。
+\textbf{训练后必须验证 $\Delta W > 0.1\%$。} 历史上 Bug 22 导致 base 模型（未训练）被当作``已训练''模型保存，所有 LMC 实验全部无效。每次训练后确认权重真的变了。
 \end{warnbox}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{绝对不能做的事}
+\section{几个重要的禁区}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{itemize}
-  \item \textbf{不要把 LR 写进结论或标题。} LR 只是制造散度的旋钮，不是科学贡献。
-  \item \textbf{不要提 AFP / IVN / gate。} 那个研究方向已废弃。\code{VISION.md} 仅为历史存档。
-  \item \textbf{不要追``LMC 破裂''叙事。} 实验证明它没破。故事是关于\emph{稳定性不对称}，不是失败。
-  \item \textbf{不要用软链接管理模型目录。} 每个模型独立放在 \code{\{domain\}\_lr\{lr\}\_s\{seed\}/}。
-  \item \textbf{不要盲目信任缓存。} 缓存文件名含 \code{MAX\_LEN}。如果改了配置，必须删旧缓存。
-  \item \textbf{不要在 tokenize 循环里用 \code{return\_tensors='pt'}。} 每个样本创建一个 tensor 对象 --- 大数据集直接 OOM。
-  \item \textbf{不要把 token ID 存为 Python \code{list[int]}。} Python int 比 tensor int64 大 3.5 倍。
+  \item \textbf{绝对不要清理共享内存}（\code{ipcrm}、\code{/dev/shm} 等）——会永久断开 Tailscale 远程连接。
+  \item \textbf{不要把学习率写成科学贡献。} LR 只是制造散度的工具，论文讲的是稳定性的故事。
+  \item \textbf{不要提 AFP / IVN / gate。} 那个方向已经废弃了。
+  \item \textbf{不要用软链接管理模型。} 每个模型独立放在 \code{\{domain\}\_lr\{lr\}\_s\{seed\}/} 下。
+  \item \textbf{不要信任缓存。} 改了 \code{MAX\_LEN} 之类配置后，必须删旧缓存重新 tokenize。
+  \item \textbf{不要用 Python list 存 token ID。} 用 tensor。Python int 比 tensor int64 大 3.5 倍，大数据集会 OOM。
 \end{itemize}
 
 % ═══════════════════════════════════════════════════════════════════
-\section{23 条已知 Bug 中最关键的 5 条}
-% ═══════════════════════════════════════════════════════════════════
-
-完整列表见 \code{docs/internal/ENGINEERING.md}。
-
-\begin{enumerate}
-  \item \textbf{Bug 11：内层循环 \code{.item()} → 10,416 次 GPU 同步。} MAS 重要性计算耗时 5+ 小时而非 1 分钟。修复：GPU 端累积，最后一次性同步。
-  \item \textbf{Bug 12：MAS 在 CPU 上跑。} \code{to\_device()} 调用在计算之后，不在之前。修复：在任何计算之前把模型移到 GPU。
-  \item \textbf{Bug 21：训练后未验证 $\Delta W$。} Base 模型被当作``已训练''保存，权重零变化。修复：强制训练后 $\Delta W$ 检查。
-  \item \textbf{Bug 22：\code{code\_e1} 实际上是没有训练过的 base 模型。} \textbf{所有早期 LMC 实验全部无效。} ``code''模型就是纯净的 Pythia-1.4B，零微调。
-  \item \textbf{Bug 23：多种子训练静默覆盖。} 输出路径没有区分种子。跑 3 个种子只产出了 1 个模型（最后一个）。
-\end{enumerate}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{论文结构}
-% ═══════════════════════════════════════════════════════════════════
-
-\begin{table}[H]
-\centering\small
-\begin{tabular}{@{}lp{9cm}@{}}
-\toprule
-\textbf{章节} & \textbf{内容} \\
-\midrule
-摘要 & 训练稳定性而非领域差异决定障碍高度 \\
-\S1 引言 & 为什么这对模型合并和理解微调很重要 \\
-\S2 相关工作 & LMC、模型合并、微调分析 --- 24 篇引用 \\
-\S3 方法 & Pythia-1.4B 全参数微调、11 点 LMC、drive-putt 学习率调度 \\
-\S4.1 权重散度 & 逐层 $\Delta W$，跨域 $r=0.995$ \\
-\S4.2 LMC 障碍 & 标准 vs.\ 高散度，中间散度的灾难性尖峰 \\
-\S4.3 域内基线 & 4 领域稳定性谱；种子对兼容性 (C(5,2)=10 对) \\
-\S4.4 不对称性 & Medical 微调正向迁移到 code，反之不然 \\
-\S4.5 噪声地板 & 同模型 $\approx$0，随机初始化参考 $\approx$0.150 \\
-\S4.6 训练轨迹 & Code 倒 U 形 vs.\ medical 单调增长 \\
-\S4.7 高斯扰动 & 结构化位移的障碍是随机噪声的 9$\times$ \\
-\S4.8 分层选择性插值 & 75\% 在 0--7 层，0\% 在 16--23 层 \\
-\S4.9 OPT 跨架构 & 跨架构复制：med/code 比值 OPT 3.6$\times$ vs.\ Pythia 3.7$\times$ \\
-\S5 理论 & Hessian 对齐的 SGD 扩散；佩克莱数；盆地统计 \\
-\S6 讨论 & 合并质量、对持续学习的启示 \\
-\S7 局限性 & 置换不变性已验证（神经元相关 0.984）、单模型家族已处理、收敛混淆 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{图表状态}
-% ═══════════════════════════════════════════════════════════════════
-
-\begin{table}[H]
-\centering\small
-\begin{tabular}{@{}cllp{4cm}@{}}
-\toprule
-\textbf{图} & \textbf{面板} & \textbf{状态} & \textbf{内容} \\
-\midrule
-1 & A--F (6) & \good{已完成} & LMC 曲线 (4) + 柱状图 + 逐层散度 \\
-2 & A--D (4) & \good{已完成} & 轨迹 (2) + 高斯校准 + 分层选择性 \\
-3 & A--B (2) & \good{已完成} & 种子对热力图 + 4 域稳定性谱 \\
-4 & A--C (5) & \good{已完成} & Pythia vs.\ OPT：障碍柱状图 + 比值 + 轨迹 + 高斯 + 逐层散度 \\
-5 & A--D (4) & \textcolor{orange}{待 GPT-Neo} & 三模型跨架构对比 \\
-6 & A--B (2) & \textcolor{orange}{待 GPT-Neo} & 三模型轨迹对比 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{内存预算：为什么 121\,GB 会满}
-% ═══════════════════════════════════════════════════════════════════
-
-DGX 总共有 121\,GB，CPU 和 GPU 共享。训练时的去向：
-
-\begin{itemize}
-  \item \textbf{模型参数 (bf16)：} 1.4B $\times$ 2 bytes = 2.8\,GB
-  \item \textbf{梯度 (bf16)：} 2.8\,GB
-  \item \textbf{AdamW 优化器状态 (fp32)：} $m$ + $v$ = 2 $\times$ 1.4B $\times$ 4 = 11.2\,GB
-  \item \textbf{激活值} (batch=128, L=256)：$\approx$4\,GB
-  \item \textbf{训练数据张量：} $\approx$15\,GB（硬上限 30\,GB）
-  \item \textbf{开销 / CUDA 上下文：} $\approx$5\,GB
-\end{itemize}
-
-\textbf{合计：$\approx$41\,GB}（典型训练）。数据硬上限（30\,GB）防止触及 121\,GB 上限。
-
-\begin{warnbox}
-\textbf{Tokenize 脚本刚修好} --- 原始代码把 token ID 存为 Python \code{list[int]}（每个 int 28 bytes），而不是 tensor int64（每个 8 bytes）。1000 万个训练步骤仅此一项就浪费了 72\,GB，训练还没开始就 OOM 了。详见 \code{docs/reports/BUGFIX\_TOKENIZE.md} 和 \code{INCIDENT\_REPORT\_TOKENIZE\_OOM.md}。
-\end{warnbox}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{当前差距（2026 年 7 月）}
-% ═══════════════════════════════════════════════════════════════════
-
-\subsection*{Bug 待修（0 GPU-小时）}
-
-\begin{enumerate}
-  \item \code{lmc\_barrier\_scan.py} 中的障碍公式计算的是 \code{max(L) - L[0]}，而不是正确的 Frankle 定义 \code{max(L) - (L[0]+L[-1])/2}。论文数字是手动修正的。
-  \item lr=2e-4/3e-4 的 6 个 LMC 结果文件是字节完全相同的副本（假数据）。模型确实存在，但扫描从未跑过。
-  \item \code{CLEANUP\_MANIFEST.md} 声称 4 个文件已删除，但它们仍然在磁盘上（\code{VISION.md}、\code{DIRECTION.md}、\code{THEORY.md}、\code{OPT\_SECOND\_MODEL.md}）。
-\end{enumerate}
-
-\subsection*{实验待做}
-
-\begin{enumerate}
-  \item \textbf{GPT-Neo-1.3B 复制}（最高优先级）。状态：脚本存在，结果未知。
-  \item \textbf{OPT 升级到 11 点扫描}（目前轨迹/高斯仅用 3 点 LMC）。
-  \item \textbf{ICLR 冲刺计划 Phase 1}（$\approx$9 GPU-小时）：重跑 lr=2e-4/3e-4 扫描、解决上界矛盾、扩展高散度 medical 种子数。
-\end{enumerate}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{新人提效指南}
+\section{现在还需要做什么}
 % ═══════════════════════════════════════════════════════════════════
 
 \begin{enumerate}
-  \item \textbf{先读 \code{CLAUDE.md}。} 这是 AI 的指令文件 --- 它告诉你项目是什么、不能做什么、以及十条铁律。
-  \item \textbf{读 \code{ENGINEERING.md} \S2。} 23 条 Bug 比任何教程都好 --- 每条都教给你这个机器或代码库的一个非显而易见的特性。
-  \item \textbf{记住关键数据位置：} \code{experiments/phase0\_ivn/results/}（122 个 JSON）、\code{paper.tex}（LaTeX 源码）、\code{FIGURE\_SPEC\_V2.md}（图表规格）。
-  \item \textbf{从一个小实验开始。} 训练一个模型（\code{train\_agent.py --domain code}），验证 $\Delta W$，跑一次 LMC 扫描。这条端到端路径验证一切是否正常。
-  \item \textbf{用 \code{scripts/monitor.sh}} 检查正在跑什么和还有什么待做。
-  \item \textbf{出问题时，} 90\% 的情况是已知 Bug。先查 \code{ENGINEERING.md}，再从头调试。
-  \item \textbf{做新实验时，} 复制 \code{phase1\_batch.sh} 或 \code{gptneo\_pipeline.sh} 的模式。严格遵循十条铁律。
+  \item \textbf{GPT-Neo-1.3B 复制}（最高优先级）。脚本已有，结果未知。这是论文缺失的最后一块实验拼图。
+  \item \textbf{修复 LMC 扫描脚本中的障碍公式 Bug。} 脚本算的是 \code{max(L) - L[0]}，正确的 Frankle 公式应该是 \code{max(L) - (L[0]+L[-1])/2}。论文里的数字是手动修正的，跑脚本会得到错误结果。
+  \item \textbf{删除 lr=2e-4/3e-4 的假结果文件。} 6 个文件是字节完全相同的副本，扫描从未真正跑过。
 \end{enumerate}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{常用命令速查表}
-% ═══════════════════════════════════════════════════════════════════
-
-\begin{table}[H]
-\centering\small
-\begin{tabular}{@{}lp{8cm}@{}}
-\toprule
-\textbf{任务} & \textbf{命令} \\
-\midrule
-训练 code 模型 & \code{\$VENV -u scripts/train\_agent.py --domain code --lr 1e-4} \\
-训练 medical 模型 & \code{\$VENV -u scripts/train\_agent.py --domain medical --lr 1e-4} \\
-LMC 扫描（11 点） & \code{\$VENV -u scripts/lmc\_barrier\_scan.py} \\
-LMC 扫描（3 点，快速） & \code{\$VENV -u scripts/lmc\_3pt\_scan.py --model-a DIR\_A --model-b DIR\_B} \\
-验证训练后 $\Delta W$ & \code{\$VENV -c "import torch; a=torch.load('base.pt'); b=torch.load('trained.pt'); ..."} \\
-查看状态 & \code{bash scripts/monitor.sh} \\
-生成论文图 & \code{\$VENV scripts/generate\_figures.py \&\& \$VENV scripts/generate\_fig4.py} \\
-编译论文 & \code{cd docs/internal \&\& pdflatex paper.tex \&\& pdflatex paper.tex \&\& cp paper.pdf ../../paper.pdf} \\
-从 GitHub 同步 & \code{git pull origin main} \\
-GPT-Neo 全流程 & \code{bash scripts/gptneo\_pipeline.sh} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-% ═══════════════════════════════════════════════════════════════════
-\section{配色方案（供画图参考）}
-% ═══════════════════════════════════════════════════════════════════
-
-\begin{table}[H]
-\centering\small
-\begin{tabular}{@{}lll@{}}
-\toprule
-\textbf{实体} & \textbf{色号} & \textbf{颜色} \\
-\midrule
-Pythia / Code 领域 & \#2196F3 & \colorbox{blue!50}{\quad} 蓝色 \\
-Medical 领域 & \#F44336 & \colorbox{red!50}{\quad} 红色 \\
-OPT & \#FF5722 & \colorbox{orange!60}{\quad} 深橙 \\
-GPT-Neo / General 领域 & \#4CAF50 & \colorbox{green!50}{\quad} 绿色 \\
-Math 领域 & \#FF9800 & \colorbox{orange!40}{\quad} 橙色 \\
-高斯 / 噪声 & \#9E9E9E & \colorbox{gray!50}{\quad} 灰色 \\
-高散度 & \#9C27B0 & \colorbox{purple!50}{\quad} 紫色 \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \vfill
 \begin{center}
-\rule{0.5\textwidth}{0.4pt}\\[4pt]
-{\small\color{notegray}本指南用 \LaTeX 编写。源码：\code{docs/reports/ONBOARDING\_GUIDE.tex}。\\
-用 \code{xelatex ONBOARDING\_GUIDE.tex} 重新编译。\\
+\rule{0.4\textwidth}{0.4pt}\\[6pt]
+{\small\color{gray}用 \code{xelatex ONBOARDING\_GUIDE.tex} 可重新编译本指南。\\
+完整工程文档见 \code{docs/internal/ENGINEERING.md}（23 条 Bug 记录）和 \code{CLAUDE.md}（AI 操作规则）。\\
 仓库：\url{https://github.com/FauReam/AFP}}
 \end{center}
 
