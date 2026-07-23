@@ -12,3 +12,7 @@ wandb/
 .env
 papers/
 data/
+docs/internal/paper.aux
+docs/internal/paper.out
+docs/internal/paper.log
+docs/internal/paper.pdf
