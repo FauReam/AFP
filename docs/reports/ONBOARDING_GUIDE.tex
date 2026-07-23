@@ -1,0 +1,426 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Layout ──
+\usepackage[hmargin=2.2cm,vmargin=2.5cm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{lmodern}\usepackage[T1]{fontenc}
+\usepackage{microtype}
+
+% ── Typography ──
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx,float}
+\usepackage[labelfont=bf,font=small]{caption}
+\usepackage{booktabs}
+\usepackage[svgnames]{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=teal]{hyperref}
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}\fancyhead[L]{\small\color{gray}AFP Project Guide}\fancyhead[R]{\small\color{gray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Custom ──
+\definecolor{codeblue}{RGB}{33,150,243}
+\definecolor{medred}{RGB}{244,67,54}
+\definecolor{warnorange}{RGB}{255,152,0}
+\definecolor{goodgreen}{RGB}{76,175,80}
+\definecolor{notegray}{RGB}{120,120,120}
+
+\newcommand{\keypoint}[1]{\noindent\colorbox{blue!8}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\small\bfseries #1}}\medskip}
+\newcommand{\warn}[1]{\noindent\colorbox{orange!12}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\small #1}}\medskip}
+\newcommand{\good}[1]{\noindent\colorbox{green!8}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\small #1}}\medskip}
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\begin{document}
+
+\title{\textbf{AFP Project}\\{\large A Complete Onboarding Guide for New Contributors}}
+\author{Prepared for the Experiment Machine Operator\\\small DGX Spark GB10 \,|\, 121\,GB Unified Memory \,|\, ARM64 CUDA 13.0}
+\date{\today}
+\maketitle
+\thispagestyle{fancy}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{In 30 Seconds: What Is This Project?}
+% ═══════════════════════════════════════════════════════════════════
+
+We take a 1.3-billion-parameter language model (Pythia), fine-tune it on two different domains (code reasoning and medical reasoning), and measure two things:
+
+\begin{enumerate}
+  \item \textbf{How far do the weights move?} (Weight Divergence, $\Delta W$)
+  \item \textbf{Can you draw a straight line between them without crossing a loss barrier?} (Linear Mode Connectivity, LMC)
+\end{enumerate}
+
+\vspace{4pt}
+\keypoint{Core finding: Training stability, not domain difference, determines the barrier height. Medical training is 3$\times$ less stable than code training.}
+
+The paper is titled: \textit{``Training Stability, Not Domain Difference, Determines Linear Mode Connectivity.''} Current version: v19 (20 pages, 4 domains, 2 model families, theory section).
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The Hardware: Your Machine}
+% ═══════════════════════════════════════════════════════════════════
+
+You're working on a \textbf{NVIDIA DGX Spark GB10}. Its key property:
+
+\begin{itemize}
+  \item \textbf{121\,GB unified memory} --- CPU and GPU \emph{share} the same physical RAM. There's no separate VRAM.
+  \item \textbf{ARM64 CPU} --- This means \code{torch.compile()} does NOT work (Triton is x86-only).
+  \item \textbf{CUDA 13.0} on Blackwell architecture (compute capability 12.1).
+  \item Training speed: Pythia-1.4B full-FT at batch=128, seq\_len=256: $\approx$5.5\,s/step ($\approx$42\,min per epoch).
+\end{itemize}
+
+\warn{Never run \code{ipcrm} or clear \code{/dev/shm}! The DGX's unified memory is shared with Tailscale's runtime state. Clearing it will permanently destroy remote access --- you'll need physical access to the machine to fix it.}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{Project Map: Where Everything Lives}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}llp{5.5cm}@{}}
+\toprule
+\textbf{Directory / File} & \textbf{Type} & \textbf{What's Inside} \\
+\midrule
+\code{CLAUDE.md} & Instruction & Rules the AI must follow; core data table; ``DO NOT'' list \\
+\code{README.md} & Public & GitHub landing page; paper title and abstract-level summary \\
+\code{paper.pdf} & Deliverable & Compiled 20-page paper (authoritative) \\
+\midrule
+\code{docs/internal/paper.tex} & Source & \textbf{LaTeX source v19} --- the authoritative paper text \\
+\code{docs/internal/PAPER.md} & Mirror & Markdown copy of the paper (convenience; LaTeX is authoritative) \\
+\code{docs/internal/APPENDIX.md} & Data & Numerical appendix tables \\
+\code{docs/internal/ENGINEERING.md} & Manual & \textbf{23 documented bugs} with root causes + fixes + lessons \\
+\code{docs/internal/ICLR\_SPRINT\_PLAN.md} & Roadmap & 3-phase experiment plan, timeline, GPU budget \\
+\code{docs/internal/EXPERT\_PANEL\_FINDINGS.md} & Review & 6-expert adversarial review (v4 era, historical) \\
+\code{docs/internal/DATA\_INVENTORY.md} & Catalog & Complete list of all 42+ models and 110+ scans \\
+\midrule
+\code{docs/reports/FIGURE\_SPEC\_V2.md} & Spec & \textbf{Figure specifications} --- exact data, colors, layout \\
+\code{docs/reports/figure\_data.json} & Data & Pythia primary results (Figs 1--3) \\
+\code{docs/reports/fig*.pdf} & Output & Vector figures for the paper \\
+\midrule
+\code{scripts/train\_agent.py} & Code & Full-FT training with drive-putt LR schedule \\
+\code{scripts/lmc\_barrier\_scan.py} & Code & 11-point LMC barrier measurement \\
+\code{scripts/lmc\_3pt\_scan.py} & Code & Fast 3-point LMC scan (used for OPT) \\
+\code{scripts/gptneo\_pipeline.sh} & Pipeline & GPT-Neo full workflow: tokenize + train + LMC \\
+\code{scripts/generate\_figures.py} & Viz & Generate Fig 1--3 from \code{figure\_data.json} \\
+\code{scripts/generate\_fig4.py} & Viz & Generate Fig 4 (cross-architecture) \\
+\midrule
+\code{experiments/trained\_models/} & Data & Pythia-1.4B checkpoints (288\,GB, 240 \code{.pt} files) \\
+\code{experiments/trained\_models\_opt/} & Data & OPT-1.3B checkpoints (184\,GB) \\
+\code{experiments/phase0\_ivn/results/} & Data & \textbf{122 LMC barrier JSONs} --- primary data \\
+\code{experiments/phase0\_opt/results/} & Data & OPT replication results \\
+\code{data/versaprm/} & Data & Tokenized training data (2.1\,GB) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The Core Numbers}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Condition} & $\mathbf{\Delta W}$ & \textbf{Code Barrier} & \textbf{Medical Barrier} \\
+\midrule
+Standard divergence & 1.4\% & 0.053 $\pm$ 0.011 & 0.051 $\pm$ 0.013 \\
+High divergence & 8.0\% & 0.118 $\pm$ 0.031 & 0.228 $\pm$ 0.102 \\
+Within-domain (code) & --- & 0.048 & --- \\
+Within-domain (medical) & --- & --- & \textcolor{medred}{\textbf{0.147}} \\
+Noise floor (identical) & --- & $\approx$0.000 & $\approx$0.000 \\
+Noise floor (random init) & --- & 0.033 $\pm$ 0.001 & 0.150 $\pm$ 0.019 \\
+\bottomrule
+\end{tabular}
+\caption{Core results table. Source: \code{CLAUDE.md} and paper \S4.2--4.5.}
+\end{table}
+
+\subsection*{What These Numbers Mean}
+
+\good{
+\textbf{1. Standard FT: LMC holds cleanly.} Barrier $\approx$\,0.05 is small. Models fine-tuned on code and medical from the same pretrained checkpoint remain in the same loss basin. You can linearly interpolate between them without a big loss penalty.
+
+\textbf{2. The Medical Anomaly.} Medical within-domain barrier (0.147) is 3$\times$ the cross-domain barrier (0.051). Two models trained on the \emph{same} medical data differ \emph{more} in the loss landscape than a code model and a medical model. Training on medical data is inherently less stable.
+
+\textbf{3. Code is Remarkably Stable.} Code within-domain $\approx$ cross-domain (0.048 $\approx$ 0.053). Domain difference contributes essentially nothing for code.
+
+\textbf{4. Barrier $\neq$ Weight Distance.} Gaussian noise at $\Delta W = 8\%$ produces barrier 0.014. Training at $\Delta W = 1.5\%$ produces barrier 0.053 --- 9$\times$ larger. It's the \emph{direction} of weight change, not the magnitude.
+}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The Experiments}
+% ═══════════════════════════════════════════════════════════════════
+
+\subsection*{Core Measurements (Pythia-1.4B, 1 epoch)}
+
+\begin{enumerate}
+  \item \textbf{Weight Divergence:} For each model pair, compute $\Delta W_i = \|\theta_i - \theta_{\text{base}}\|_2 / \|\theta_{\text{base}}\|_2$ for each layer, then average.
+  \item \textbf{LMC Barrier Scan:} 11-point linear interpolation $\theta(\alpha) = (1-\alpha)\theta_{\text{code}} + \alpha\theta_{\text{medical}}$, $\alpha \in \{0, 0.1, \dots, 1.0\}$. Measure BCE loss on 2,000 test samples per domain. Compute: $\text{barrier} = \max_\alpha \mathcal{L}(\theta(\alpha)) - (\mathcal{L}(\theta(0)) + \mathcal{L}(\theta(1)))/2$.
+  \item \textbf{Within-Domain Baseline:} Same-domain, different-seed pairs. Is the barrier from domain difference or from seed variance?
+  \item \textbf{Seed-Pair Compatibility:} All $C(5,2)=10$ pairs of high-divergence medical models. Found 15$\times$ range (0.072--1.213) --- \textbf{pair-specific, not model-specific}.
+\end{enumerate}
+
+\subsection*{Mechanistic Experiments}
+
+\begin{enumerate}
+  \setcounter{enumi}{4}
+  \item \textbf{Training Trajectory:} Checkpoints every 40 steps. Code shows inverted-U (peak at step 200, then declines). Medical shows monotonic growth (plateaus at $\approx$0.21).
+  \item \textbf{Gaussian Perturbation:} Add isotropic noise at 5 $\Delta W$ levels. Near-zero barriers even at 8\%. Proves barriers come from \emph{structured} weight changes.
+  \item \textbf{Layer-Selective Interpolation:} Merge only subsets of layers. 75\% of barrier lives in layers 0--7. Late layers (16--23): near-zero penalty.
+  \item \textbf{Merge Quality Benchmark:} Pure weight averaging beats TIES-Merging and Task Arithmetic. Accuracy barriers are much smaller than loss barriers.
+\end{enumerate}
+
+\subsection*{Cross-Architecture Replication (OPT-1.3B)}
+
+OPT-1.3B (different architecture, corpus, tokenizer) confirms the medical $>$ code within-domain pattern (ratio: 3.6$\times$ vs.\ Pythia's 3.7$\times$). Absolute barriers are 4--8$\times$ larger, but the relative ordering is preserved.
+
+\subsection*{GPT-Neo-1.3B}
+
+\textbf{Status: Pending.} Training scripts exist (\code{gptneo\_pipeline.sh}) but results are not yet reported.
+
+% ═══════════════════════════════════════════════════════════════════
+\section{How to Run Things}
+% ═══════════════════════════════════════════════════════════════════
+
+\subsection*{Environment Setup}
+
+\begin{verbatim}
+export HF_ENDPOINT=https://hf-mirror.com
+export HF_DATASETS_OFFLINE=1
+export PYTHONUNBUFFERED=1
+cd /home/jiayu/AFP
+VENV=/home/jiayu/AFP/venv/bin/python3
+\end{verbatim}
+
+\subsection*{Train a Single Model ($\approx$42 min)}
+
+\begin{verbatim}
+$VENV -u scripts/train_agent.py \
+    --domain code --lr 1e-4 \
+    --model-id EleutherAI/pythia-1.4b
+\end{verbatim}
+
+Output goes to \code{experiments/trained\_models/code/}.
+
+\subsection*{Run an LMC Barrier Scan ($\approx$15 min)}
+
+\begin{verbatim}
+$VENV -u scripts/lmc_barrier_scan.py
+\end{verbatim}
+
+\subsection*{Batch Pipeline ($\approx$2--3 GPU-hours)}
+
+\begin{verbatim}
+bash scripts/phase1_batch.sh        # LR sweeps + within-domain
+bash scripts/final_batch.sh          # Merge benchmark + OPT trajectory
+bash scripts/theory_experiments.sh   # Label noise + extended putt + Hessian
+\end{verbatim}
+
+\subsection*{Quick Status Check}
+
+\begin{verbatim}
+bash scripts/monitor.sh
+\end{verbatim}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The 10 Iron Rules}
+% ═══════════════════════════════════════════════════════════════════
+
+These rules exist because each one was violated at least once, causing real damage.
+
+\begin{enumerate}
+  \item \textbf{Use \code{nohup}} --- All batch experiments must launch with \code{nohup \dots \&}.
+  \item \textbf{Redirect output} --- stdout/stderr go to timestamped log files in \code{experiments/}.
+  \item \textbf{Zero stdin} --- No \code{input()} or \code{sys.stdin.read()} in batch scripts.
+  \item \textbf{\code{HF\_DATASETS\_OFFLINE=1}} --- Zero network during training/eval. Always.
+  \item \textbf{No \code{set -e}} --- One experiment crashing must NOT kill the entire batch.
+  \item \textbf{Fail gracefully} --- Use \code{|| \{ log "ERROR"; return 1; \}}, never \code{exit 1}.
+  \item \textbf{Skip if done} --- Check \code{[ -f "\$out" ] \&\& continue} for idempotent re-runs.
+  \item \textbf{Verify $\Delta W > 0.1\%$} --- After every training run. Bug\,22: base model was saved as ``trained'' model with zero weight change, invalidating ALL early LMC experiments.
+  \item \textbf{Verify process alive} --- \code{sleep 3 \&\& ps -p \$PID} after launch.
+  \item \textbf{Log crashes} --- Structured failure logs into \code{crashes/} directory.
+\end{enumerate}
+
+\warn{Rule \#8 is the most important. Bug\,22 cost weeks of work. After every training: compute $\Delta W$ vs.\ the base checkpoint. If $\Delta W < 0.1\%$, the training failed silently and the output is garbage.}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The ``DO NOT'' List}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{itemize}
+  \item \textbf{Do NOT mention LR in conclusions or titles.} LR is a knob for creating divergence, not a scientific contribution.
+  \item \textbf{Do NOT mention AFP / IVN / gate.} That research direction is abandoned. \code{VISION.md} is historical archive only.
+  \item \textbf{Do NOT chase an ``LMC broke'' narrative.} The experiments showed it didn't break. The story is about \emph{stability asymmetry}, not failure.
+  \item \textbf{Do NOT use symlinks for model directories.} Every model lives in its own \code{\{domain\}\_lr\{lr\}\_s\{seed\}/} directory.
+  \item \textbf{Do NOT trust caches blindly.} The cache filename includes \code{MAX\_LEN}. If you change the config, delete the old cache.
+  \item \textbf{Do NOT use \code{return\_tensors='pt'} in tokenization loops.} It creates one tensor object per sample --- OOM on large datasets.
+  \item \textbf{Do NOT store token IDs as Python \code{list[int]}.} Python ints are 3.5$\times$ larger than tensor int64.
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The 23 Known Bugs}
+% ═══════════════════════════════════════════════════════════════════
+
+Read \code{docs/internal/ENGINEERING.md} for full details. Here are the 5 most important:
+
+\begin{enumerate}
+  \item \textbf{Bug\,11: \code{.item()} in inner loop $\to$ 10,416 GPU syncs.} MAS importance computation took 5+ hours instead of 1 minute. Fix: accumulate on GPU, sync once.
+  \item \textbf{Bug\,12: MAS ran on CPU.} \code{to\_device()} was called after the computation, not before. Fix: move model to GPU before any computation.
+  \item \textbf{Bug\,21: $\Delta W$ not verified after training.} Base model was saved as ``trained'' with zero weight change. Fix: mandatory post-training $\Delta W$ check.
+  \item \textbf{Bug\,22: \code{code\_e1} was the untrained base model.} ALL early LMC experiments invalidated. The ``code'' model was just Pythia-1.4B with zero fine-tuning.
+  \item \textbf{Bug\,23: Multi-seed training silently overwrites.} Output paths lacked seed differentiation. Running 3 seeds produced 1 model (the last one).
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The Paper Structure}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lp{10cm}@{}}
+\toprule
+\textbf{Section} & \textbf{Content} \\
+\midrule
+Abstract & Training stability, not domain difference, drives barrier height \\
+\S1 Intro & Why this matters for model merging and understanding fine-tuning \\
+\S2 Related Work & LMC, model merging, fine-tuning analysis --- 24 citations \\
+\S3 Method & Pythia-1.4B full-FT, 11-point LMC, drive-putt LR schedule \\
+\S4.1 Weight Divergence & Per-block $\Delta W$, $r=0.995$ across domains \\
+\S4.2 LMC Barriers & Standard vs.\ high divergence, catastrophic intermediate spike \\
+\S4.3 Within-Domain & 4-domain stability spectrum; seed-pair compatibility (C(5,2)=10) \\
+\S4.4 Asymmetry & Medical FT transfers positively to code, but not vice versa \\
+\S4.5 Noise Floor & Identical $\approx$0, Random ref $\approx$0.150 \\
+\S4.6 Trajectory & Code inverted-U vs.\ medical monotonic \\
+\S4.7 Gaussian & Structured 9$\times$ unstructured displacement \\
+\S4.8 Layer-Selective & 75\% in layers 0--7, 0\% in layers 16--23 \\
+\S4.9 OPT & Cross-architecture: med/code ratio 3.6$\times$ (OPT) vs.\ 3.7$\times$ (Pythia) \\
+\S5 Theory & Hessian-aligned SGD diffusion; Peclet number; basin statistics \\
+\S6 Discussion & Merge quality, implications for continual learning \\
+\S7 Limitations & Permutation verified (neuron corr 0.984), single family addressed, convergence confound \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{The Figures}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}cllp{4cm}@{}}
+\toprule
+\textbf{Fig} & \textbf{Panels} & \textbf{Status} & \textbf{Content} \\
+\midrule
+1 & A--F (6) & \good{Done} & LMC curves (4 panels) + bar chart + per-block divergence \\
+2 & A--D (4) & \good{Done} & Trajectory (2) + Gaussian calibration + layer-selective \\
+3 & A--B (2) & \good{Done} & Seed-pair heatmap + 4-domain stability spectrum \\
+4 & A--C (5) & \good{Done} & Pythia vs.\ OPT: barrier bars + ratio + trajectory + Gaussian + per-block \\
+5 & A--D (4) & \textcolor{warnorange}{Blocked} & Three-model cross-architecture (needs GPT-Neo + OPT redo) \\
+6 & A--B (2) & \textcolor{warnorange}{Blocked} & Three-model trajectory comparison (same blockers) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{Memory Budget: Why 121\,GB Can Fill Up}
+% ═══════════════════════════════════════════════════════════════════
+
+The DGX has 121\,GB \emph{total} for CPU + GPU. Here's where it goes during training:
+
+\begin{itemize}
+  \item \textbf{Model params (bf16):} 1.4B $\times$ 2 bytes = 2.8\,GB
+  \item \textbf{Gradients (bf16):} 2.8\,GB
+  \item \textbf{AdamW optimizer states (fp32):} $m$ + $v$ = $2 \times 1.4\text{B} \times 4 = 11.2$\,GB
+  \item \textbf{Activations} (batch=128, L=256): $\approx$4\,GB
+  \item \textbf{Training data tensors:} $\approx$15\,GB (capped at 30\,GB)
+  \item \textbf{Overhead / CUDA context:} $\approx$5\,GB
+\end{itemize}
+
+\textbf{Total: $\approx$41\,GB} for a typical training run. The data cap (30\,GB) prevents the 121\,GB limit from being reached.
+
+\warn{The tokenization scripts were recently fixed --- the original code stored token IDs as Python \code{list[int]} (28 bytes each) instead of tensor int64 (8 bytes each). For 10 million steps, this alone wasted 72\,GB, causing OOM before training even started. See \code{docs/reports/BUGFIX\_TOKENIZE.md} and \code{INCIDENT\_REPORT\_TOKENIZE\_OOM.md}.}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{Current Gaps (July 2026)}
+% ═══════════════════════════════════════════════════════════════════
+
+\subsection*{Bugs to Fix (0 GPU-hours)}
+
+\begin{enumerate}
+  \item Barrier formula in \code{lmc\_barrier\_scan.py} computes \code{max(L) - L[0]} instead of the correct Frankle definition \code{max(L) - (L[0]+L[-1])/2}. Paper numbers were manually corrected.
+  \item Six fake LMC result files (lr=2e-4/3e-4) are byte-identical copies. Models exist but scans were never run.
+  \item \code{CLEANUP\_MANIFEST.md} claims 4 files were deleted but they still exist on disk (\code{VISION.md}, \code{DIRECTION.md}, \code{THEORY.md}, \code{OPT\_SECOND\_MODEL.md}).
+\end{enumerate}
+
+\subsection*{Experiments Needed}
+
+\begin{enumerate}
+  \item \textbf{GPT-Neo-1.3B replication} (highest priority). Status: scripts exist, results unknown.
+  \item \textbf{OPT upgrade to 11-point scans} (currently 3-point only for trajectory/Gaussian).
+  \item \textbf{ICLR Sprint Plan Phase 1} ($\approx$9 GPU-hours): re-run lr=2e-4/3e-4 scans, resolve upper-bound ambiguity, expand high-div medical seeds.
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{How to Be Productive as a Newcomer}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{enumerate}
+  \item \textbf{Read \code{CLAUDE.md} first.} It's the AI's instruction file --- it tells you what the project is, what NOT to do, and the 10 iron rules.
+  \item \textbf{Read \code{ENGINEERING.md} \S2.} The 23 bugs are better than any tutorial --- each one teaches a non-obvious property of this machine or codebase.
+  \item \textbf{Bookmark the key data locations:} \code{experiments/phase0\_ivn/results/} (122 JSONs), \code{paper.tex} (LaTeX source), \code{FIGURE\_SPEC\_V2.md} (figure specs).
+  \item \textbf{Start with a small experiment.} Train one model (\code{train\_agent.py --domain code}), verify $\Delta W$, run one LMC scan. This end-to-end path validates everything.
+  \item \textbf{Use \code{scripts/monitor.sh}} to check what's running and what's pending.
+  \item \textbf{When things break,} 90\% of the time it's a known bug. Search \code{ENGINEERING.md} before debugging from scratch.
+  \item \textbf{For new experiments,} copy the pattern from \code{phase1\_batch.sh} or \code{gptneo\_pipeline.sh}. Follow the 10 iron rules rigorously.
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{Quick Reference: Key Commands}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+\textbf{Task} & \textbf{Command} \\
+\midrule
+Train code model & \code{\$VENV -u scripts/train\_agent.py --domain code --lr 1e-4} \\
+Train medical model & \code{\$VENV -u scripts/train\_agent.py --domain medical --lr 1e-4} \\
+LMC scan (11-pt) & \code{\$VENV -u scripts/lmc\_barrier\_scan.py} \\
+LMC scan (3-pt, fast) & \code{\$VENV -u scripts/lmc\_3pt\_scan.py --model-a DIR\_A --model-b DIR\_B} \\
+Verify $\Delta W$ after training & \code{\$VENV -c "import torch; a=torch.load('base.pt'); b=torch.load('trained.pt'); ..."} \\
+Monitor status & \code{bash scripts/monitor.sh} \\
+Generate figures & \code{\$VENV scripts/generate\_figures.py \&\& \$VENV scripts/generate\_fig4.py} \\
+Compile paper & \code{cd docs/internal \&\& pdflatex paper.tex \&\& pdflatex paper.tex \&\& cp paper.pdf ../../paper.pdf} \\
+Sync from GitHub & \code{git pull origin main} \\
+GPT-Neo pipeline & \code{bash scripts/gptneo\_pipeline.sh} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════════════
+\section{Color Palette (for Figures)}
+% ═══════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Entity} & \textbf{Hex} & \textbf{Color} \\
+\midrule
+Pythia / Code domain & \#2196F3 & \colorbox{blue!50}{\quad} Blue \\
+Medical domain & \#F44336 & \colorbox{red!50}{\quad} Red \\
+OPT & \#FF5722 & \colorbox{orange!60}{\quad} Deep Orange \\
+GPT-Neo / General domain & \#4CAF50 & \colorbox{green!50}{\quad} Green \\
+Math domain & \#FF9800 & \colorbox{orange!40}{\quad} Orange \\
+Gaussian / Noise & \#9E9E9E & \colorbox{gray!50}{\quad} Gray \\
+High divergence & \#9C27B0 & \colorbox{purple!50}{\quad} Purple \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vfill
+\begin{center}
+\rule{0.5\textwidth}{0.4pt}\\[4pt]
+{\small\color{notegray}This guide is written in \LaTeX. Source: \code{docs/reports/ONBOARDING\_GUIDE.tex}.\\
+Recompile with: \code{pdflatex ONBOARDING\_GUIDE.tex}.\\
+Repository: \url{https://github.com/FauReam/AFP}}
+\end{center}
+
+\end{document}
